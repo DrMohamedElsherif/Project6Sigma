@@ -1,0 +1,25 @@
+## project
+sixapi/static/*
+.env
+
+## OS X
+.DS_Store
+.AppleDouble
+.LSOverride
+Icon
+._*
+.Spotlight-V100
+.Trashes
+.vscode
+
+## Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+## python
+__pycache__
+
+## ide
+.idea
