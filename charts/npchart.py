@@ -34,7 +34,7 @@ class Npchart(BaseChart):
         data['np'] = data['defects']/data['group_size']
 
         # Plot np-chart
-        self.figure = plt.figure(figsize=(15,7.5))
+        self.figure = plt.figure(figsize=(15, 11))
 
         plt.plot(data['np'], linestyle='-', marker='o', color='blue')
         # Define variables for use in line and label

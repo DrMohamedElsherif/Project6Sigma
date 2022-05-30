@@ -34,7 +34,7 @@ class Uchart(BaseChart):
         u['u'] = u['defects']/u['group_size']
 
         # Plot u-chart
-        self.figure = plt.figure(figsize=(15,7.5))
+        self.figure = plt.figure(figsize=(15, 11))
 
         plt.plot(u['u'], linestyle='-', marker='o', color='blue')
         # Define variables for use in line and label

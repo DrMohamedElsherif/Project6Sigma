@@ -40,7 +40,7 @@ class Schart(BaseChart):
                 x_bar.append(np.std(group[0]))
 
         # Plot x-bar and s charts
-        self.figure, axs = plt.subplots(2, figsize=(15,7.5))
+        self.figure, axs = plt.subplots(2, figsize=(15, 11))
 
         # x-bar chart
         axs[0].plot(x_bar, linestyle='-', marker='o', color='blue')

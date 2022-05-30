@@ -25,7 +25,7 @@ class Cchart(BaseChart):
         c = pd.DataFrame(c)
 
         # Plot c-chart
-        self.figure = plt.figure(figsize=(15,7.5))
+        self.figure = plt.figure(figsize=(15, 11))
 
         plt.plot(c['defects'], linestyle='-', marker='o', color='blue')
         # Define variables for use in line and label

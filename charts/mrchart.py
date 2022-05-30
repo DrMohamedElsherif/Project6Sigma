@@ -30,7 +30,7 @@ class Mrchart(BaseChart):
         data = pd.concat([x, MR], axis=1).rename(columns={0: "x", 1: "mR"})
 
         # Plot x and mR charts
-        self.figure, axs = plt.subplots(2, figsize=(15, 15), sharex=True)
+        self.figure, axs = plt.subplots(2, figsize=(15, 11), sharex=True)
 
         # x chart
         axs[0].plot(data['x'], linestyle='-', marker='o', color='blue')
