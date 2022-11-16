@@ -43,7 +43,7 @@ app.mount("/static", StaticFiles(directory=filePath), name="static")
 
 @app.post("/chart", response_model=ChartResult)
 async def generate(chart: Chart):
-    filename = str(uuid.uuid4()) + ".jpg"
+    filename = str(uuid.uuid4()) + ".png"
     savePath = str(filePath) + "/" + filename;
     result = ChartResult()
     result.url = staticUrl + "/" + filename
