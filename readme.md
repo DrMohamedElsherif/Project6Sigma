@@ -9,6 +9,7 @@ packages:
 * matplotlib
 * typing
 * fastapi
+* python-multipart
   server:
 * uvicorn
 
@@ -21,13 +22,20 @@ packages:
 start server:
 ```uvicorn main:app --reload```
 
-# query
+## generated api docs : 
+http://127.0.0.1:8000/docs#/
+
+# routes
+
+## chart 
 ```
 POST http://127.0.0.1:8000/chart
 Accept: application/json
 Content-Type: application/json
 
 {
+  "project": "project-id",
+  "step" : "currentstep",
   "type": "mrchart",
   "description": "string",
   "config": {
@@ -42,3 +50,5 @@ Content-Type: application/json
 }
 ```
 
+## status
+GET http://127.0.0.1:8000/status

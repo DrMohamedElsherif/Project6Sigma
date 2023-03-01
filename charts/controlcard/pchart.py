@@ -3,7 +3,7 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 import statistics
-from .basechart import BaseChart
+from charts.basechart import BaseChart
 
 class Pchart(BaseChart):
     def process(self):

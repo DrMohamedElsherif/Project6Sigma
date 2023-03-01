@@ -1,0 +1,7 @@
+FIGURE_SIZE_DEFAULT = [15,11]
+SIZE = 100
+CHART_EXTENSION = "png"
+TITLE_FONT_SIZE = 28
+COLORS = ['red', 'green' ,'blue', 'yellow']
+COLOR_BLUE = '#7EA6D7'
+COLOR_BLACK = 'black'

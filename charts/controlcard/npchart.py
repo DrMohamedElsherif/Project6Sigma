@@ -3,9 +3,9 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 import statistics
-from .basechart import BaseChart
+from charts.basechart import BaseChart
 
-class Uchart(BaseChart):
+class Npchart(BaseChart):
     def process(self):
         # Define data and parameters
         title = self.chart.config.title
@@ -22,39 +22,40 @@ class Uchart(BaseChart):
         else:
             data2 = self.chart.data[1]
 
-        u = {
+        data = {
             'defects': list(np.array(data1)),
             'group_size': list(np.array(data2))
         }
 
         # Convert data to data frame
-        u = pd.DataFrame(u)
+        data = pd.DataFrame(data)
 
-        # Add 'u' column to data frame
-        u['u'] = u['defects']/u['group_size']
+        # Add 'np' column to data frame
+        data['np'] = data['defects']/data['group_size']
 
-        # Plot u-chart
+        # Plot np-chart
         self.figure = plt.figure(figsize=(15, 11))
 
-        plt.plot(u['u'], linestyle='-', marker='o', color='blue')
+        plt.plot(data['np'], linestyle='-', marker='o', color='blue')
         # Define variables for use in line and label
-        U = statistics.mean(u['u'])
-        OEG = u['u'].mean()+3*np.sqrt(u['u'].mean() / u['group_size'])
-        UEG = u['u'].mean()-3*np.sqrt(u['u'].mean() / u['group_size'])
+        NP = statistics.mean(data['np'])
+        OEG = statistics.mean(data['np'])+3*(np.sqrt((statistics.mean(data['np'])*(1-statistics.mean(data['np'])))/statistics.mean(data['group_size'])))
+        UEG = statistics.mean(data['np'])-3*(np.sqrt((statistics.mean(data['np'])*(1-statistics.mean(data['np'])))/statistics.mean(data['group_size'])))
 
-        plt.step(x=range(0, len(u['u'])), y=OEG, color='red', linestyle='dashed', label='OEG=' + str(round(OEG[0], 2)))
-        plt.axhline(U, color='green', label='U=' + str(round(U, 1)))
-        plt.step(x=range(0, len(u['u'])), y=UEG, color='red', linestyle='dashed', label='UEG=' + str(round(UEG[0], 2)))
+        plt.axhline(OEG, color='red', linestyle='dashed', label='OEG=' + str(round(OEG, 2)))
+        plt.axhline(NP, color='green', label='np=' + str(round(NP, 1)))
+        plt.axhline(UEG, color='red', linestyle='dashed', label='UEG=' + str(round(UEG, 2)))
         plt.title(title, fontsize=28, pad=20)
         plt.xlabel('Sample')
-        plt.ylabel('Sample Count Per Unit')
+        plt.ylabel('Sample Count')
         plt.legend(loc='upper right', framealpha=1)
+
 
         # Validate points out of control limits
         i = 0
         control = True
-        for group in u['u']:
-            if group > u['u'].mean()+3*np.sqrt(u['u'].mean()/u['group_size'][i]) or group < u['u'].mean()-3*np.sqrt(u['u'].mean()/u['group_size'][i]):
+        for group in data['np']:
+            if group > (statistics.mean(data['np'])+3*(np.sqrt((statistics.mean(data['np'])*(1-statistics.mean(data['np'])))/statistics.mean(data['group_size'])))) or group < (statistics.mean(data['np'])-3*(np.sqrt((statistics.mean(data['np'])*(1-statistics.mean(data['np'])))/statistics.mean(data['group_size'])))):
                 self.message = 'Group', i, 'out of fraction defective cotrol limits!'
                 control = False
             i += 1

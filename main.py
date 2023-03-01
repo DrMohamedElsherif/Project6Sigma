@@ -1,4 +1,4 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, File, Form, UploadFile
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -8,13 +8,20 @@ import uuid
 
 from models.chart import Chart
 from models.chartresult import ChartResult
-from charts.mrchart import Mrchart
-from charts.cchart import Cchart
-from charts.npchart import Npchart
-from charts.rchart import Rchart
-from charts.schart import Schart
-from charts.pchart import Pchart
-from charts.uchart import Uchart
+from charts.controlcard.mrchart import Mrchart
+from charts.controlcard.cchart import Cchart
+from charts.controlcard.npchart import Npchart
+from charts.controlcard.rchart import Rchart
+from charts.controlcard.schart import Schart
+from charts.controlcard.pchart import Pchart
+from charts.controlcard.uchart import Uchart
+from charts.evaluation.boxplot1 import Boxplot1
+from charts.evaluation.boxplot2 import Boxplot2
+from charts.evaluation.boxplot3 import Boxplot3
+
+
+from charts.constants import *
+import shutil;
 
 origins = [
     "*",
@@ -41,12 +48,36 @@ staticUrl = os.environ.get("staticUrl")
 
 app.mount("/static", StaticFiles(directory=filePath), name="static")
 
+
+@app.post("/upload")
+async def create_file( project: str = Form(...), step: str =  Form(...), file: UploadFile = File(...)):
+    projectPath = filePath + "/" + project + "/" + step 
+    # check if dir exists
+    if not os.path.exists(projectPath):
+        os.makedirs(projectPath)
+
+    filename = str(uuid.uuid4()) + "." + CHART_EXTENSION
+    savePath = projectPath + "/" + filename;
+    url = staticUrl + "/" + project + "/" + step  + "/" + filename
+    
+    with open(savePath, "wb+") as file_object:
+        shutil.copyfileobj(file.file, file_object)
+
+    return {"filename": filename, 
+            "url" : url }
+
+
 @app.post("/chart", response_model=ChartResult)
 async def generate(chart: Chart):
-    filename = str(uuid.uuid4()) + ".png"
-    savePath = str(filePath) + "/" + filename;
+    projectPath = filePath + "/" + chart.project + "/" + chart.step 
+    # check if dir exists
+    if not os.path.exists(projectPath):
+        os.makedirs(projectPath)
+
+    filename = str(uuid.uuid4()) + "." + CHART_EXTENSION
+    savePath = projectPath + "/" + filename;
     result = ChartResult()
-    result.url = staticUrl + "/" + filename
+    result.url = staticUrl + "/" + chart.project + "/" + chart.step + "/" + filename
     result.status = 200;
 
     if chart.type == "mrchart":
@@ -63,6 +94,12 @@ async def generate(chart: Chart):
         generator = Pchart(chart)
     elif chart.type ==  "uchart":
         generator = Uchart(chart)
+    elif chart.type ==  "boxplot1":
+        generator = Boxplot1(chart)
+    elif chart.type ==  "boxplot2":
+        generator = Boxplot2(chart)
+    elif chart.type ==  "boxplot3":
+        generator = Boxplot3(chart)
     else:
         result.message = "not supported"
         result.status = 422
@@ -72,3 +109,9 @@ async def generate(chart: Chart):
     fig.savefig(savePath)
     result.message = generator.getProcessMessage()
     return result
+
+
+
+@app.get("/status")
+async def ping():
+    return {"status": "ok"}
