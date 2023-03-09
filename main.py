@@ -18,6 +18,10 @@ from charts.controlcard.uchart import Uchart
 from charts.evaluation.boxplot1 import Boxplot1
 from charts.evaluation.boxplot2 import Boxplot2
 from charts.evaluation.boxplot3 import Boxplot3
+from charts.evaluation.individual1 import Individual1
+from charts.evaluation.individual2 import Individual2
+from charts.evaluation.individual3 import Individual3
+from charts.evaluation.individual4 import Individual4
 
 
 from charts.constants import *
@@ -78,9 +82,7 @@ async def generate(chart: Chart):
     filename = str(uuid.uuid4()) + "." + CHART_EXTENSION
     savePath = projectPath + "/" + filename;
     result = ChartResult()
-    result.url = staticUrl + "/" + chart.project + "/" + chart.step + "/" + filename
-    result.status = 200;
-
+    
     if chart.type == "mrchart":
         generator = Mrchart(chart)
     elif chart.type == "cchart":
@@ -101,6 +103,14 @@ async def generate(chart: Chart):
         generator = Boxplot2(chart)
     elif chart.type ==  "boxplot3":
         generator = Boxplot3(chart)
+    elif chart.type ==  "individual1":
+        generator = Individual1(chart)
+    elif chart.type ==  "individual2":
+        generator = Individual2(chart)
+    elif chart.type ==  "individual3":
+        generator = Individual3(chart)
+    elif chart.type ==  "individual4":
+        generator = Individual4(chart)    
     else:
         result.message = "not supported"
         result.status = 422
@@ -109,6 +119,9 @@ async def generate(chart: Chart):
     fig = generator.process()
     fig.savefig(savePath)
     result.message = generator.getProcessMessage()
+    result.url = staticUrl + "/" + chart.project + "/" + chart.step + "/" + filename
+    result.status = 200;
+
     return result
 
 
