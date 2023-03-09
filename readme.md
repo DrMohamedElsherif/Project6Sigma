@@ -7,6 +7,7 @@ packages:
 * numpy
 * pandas
 * matplotlib
+* seaborn
 * typing
 * fastapi
 * python-multipart
@@ -42,6 +43,7 @@ Content-Type: application/json
     "title": "chart.config.title",
     "labelx" : "chart.config.labelx",
     "labely" : "chart.config.labely"
+    "labels" : ["eins","zwei", "drei"]
   },
   "data": [
     [27,31,83,14,15,46,17,48,59,10],
