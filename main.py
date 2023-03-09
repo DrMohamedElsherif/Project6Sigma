@@ -56,14 +56,15 @@ async def create_file( project: str = Form(...), step: str =  Form(...), file: U
     if not os.path.exists(projectPath):
         os.makedirs(projectPath)
 
-    filename = str(uuid.uuid4()) + "." + CHART_EXTENSION
+    tmp, file_extension = os.path.splitext(file.filename)
+    filename = str(uuid.uuid4()) + file_extension
     savePath = projectPath + "/" + filename;
     url = staticUrl + "/" + project + "/" + step  + "/" + filename
     
     with open(savePath, "wb+") as file_object:
         shutil.copyfileobj(file.file, file_object)
 
-    return {"filename": filename, 
+    return { "filename": filename, 
             "url" : url }
 
 
