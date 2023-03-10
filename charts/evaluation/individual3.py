@@ -5,7 +5,7 @@ import seaborn as sns
 from charts.basechart import BaseChart
 from charts.constants import COLOR_BLUE, FIGURE_SIZE_DEFAULT, COLOR_BLACK, TITLE_FONT_SIZE, COLORS
 
-class Individual3(BaseChart):
+class individual3(BaseChart):
     def process(self):
         
         # Create a sample pandas DataFrame with categorical variables

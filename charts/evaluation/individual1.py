@@ -5,7 +5,7 @@ import seaborn as sns
 from charts.basechart import BaseChart
 from charts.constants import COLOR_BLUE, FIGURE_SIZE_DEFAULT, COLOR_BLACK, TITLE_FONT_SIZE
 
-class Individual1(BaseChart):
+class individual1(BaseChart):
     def process(self):
         # Define data and parameters
         df = pd.DataFrame({'data1': self.chart.data[0]})

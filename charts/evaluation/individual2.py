@@ -5,7 +5,7 @@ import seaborn as sns
 from charts.basechart import BaseChart
 from charts.constants import COLOR_BLUE, FIGURE_SIZE_DEFAULT, COLOR_BLACK, TITLE_FONT_SIZE, COLORS
 
-class Individual2(BaseChart):
+class individual2(BaseChart):
     def process(self):
         # Define data and parameters
         title = "Einzelwertdiagramm mit kategorialen Variablen"

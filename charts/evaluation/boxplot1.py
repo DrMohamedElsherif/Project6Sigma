@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 from charts.basechart import BaseChart
 from charts.constants import COLOR_BLUE, FIGURE_SIZE_DEFAULT, COLOR_BLACK, TITLE_FONT_SIZE
 
-class Boxplot1(BaseChart):
+class boxplot1(BaseChart):
     def process(self):
         title = self.chart.config.title
         df = pd.DataFrame({'data': self.chart.data[0]})
