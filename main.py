@@ -80,7 +80,7 @@ async def generate(chart: Chart):
     result = ChartResult()
 
     try:
-        chart_class = str_to_class(chart.type + "." + chart.type)
+        chart_class = str_to_class(chart.type + "." + chart.type.capitalize())
     except AttributeError:
         chart_class = None
 

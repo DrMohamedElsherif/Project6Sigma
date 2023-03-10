@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 import statistics
 from charts.basechart import BaseChart
 
-class npchart(BaseChart):
+class Npchart(BaseChart):
     def process(self):
         # Define data and parameters
         title = self.chart.config.title

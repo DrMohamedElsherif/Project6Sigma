@@ -5,9 +5,9 @@ import seaborn as sns
 from charts.basechart import BaseChart
 from charts.constants import COLOR_BLUE, FIGURE_SIZE_DEFAULT, COLOR_BLACK, TITLE_FONT_SIZE, COLORS
 
-class individual4(BaseChart):
+
+class Individual4(BaseChart):
     def process(self):
-        
         # Create a sample pandas DataFrame with categorical variables
         df = pd.DataFrame({
             self.chart.config.labels[0]: self.chart.data[0],
@@ -15,7 +15,7 @@ class individual4(BaseChart):
             self.chart.config.labels[2]: self.chart.data[2]
         })
 
-       # Define size of figure
+        # Define size of figure
         sns.set(style="whitegrid")
 
         plt.subplots_adjust(left=0.1, bottom=0.1, right=0.9, top=0.9)

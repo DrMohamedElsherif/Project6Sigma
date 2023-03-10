@@ -6,7 +6,7 @@ import statistics
 from charts.basechart import BaseChart
 
 
-class mrchart(BaseChart):
+class Mrchart(BaseChart):
     def process(self):
         # Define data and parameters
         title = self.chart.config.title
