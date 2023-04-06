@@ -9,7 +9,7 @@ class Boxplot3(BaseChart):
     def process(self):
         title = self.chart.config.title
         df = pd.DataFrame(self.chart.data)
-        self.figure = plt.figure(figsize=(15, 11))
+        self.figure = plt.figure(figsize=(FIGURE_SIZE_DEFAULT))
         # Define the column count
         num_columns = 2
 
