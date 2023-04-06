@@ -5,7 +5,7 @@ from charts.basechart import BaseChart
 from charts.constants import COLOR_BLUE, FIGURE_SIZE_DEFAULT, COLOR_BLACK, TITLE_FONT_SIZE
 
 
-class Boxplot3(BaseChart):
+class Boxplot5(BaseChart):
     def process(self):
         title = self.chart.config.title
         df = pd.DataFrame(self.chart.data)
