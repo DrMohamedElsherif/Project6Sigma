@@ -5,7 +5,7 @@ import seaborn as sns
 from charts.basechart import BaseChart
 from charts.constants import FIGURE_SIZE_DEFAULT, COLOR_BLACK, TITLE_FONT_SIZE
 
-class Boxplot4(BaseChart):
+class Boxplot3(BaseChart):
     def process(self):
         title = self.chart.config.title
         df = pd.DataFrame(self.chart.data)

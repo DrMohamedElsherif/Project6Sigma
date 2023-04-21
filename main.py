@@ -93,7 +93,8 @@ async def generate(chart: Chart):
 
     fig = generator.process()
     fig.savefig(save_path)
-    fig.clf()  # clear the current figure
+    # clear the current figure
+    fig.clf()
     result.message = generator.getProcessMessage()
     result.url = staticUrl + "/" + chart.project + "/" + chart.step + "/" + filename
     result.status = 200

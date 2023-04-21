@@ -1,4 +1,5 @@
 # Import required libraries
+import pandas as pd
 import matplotlib.pyplot as plt
 from charts.basechart import BaseChart
 from charts.constants import COLOR_BLACK, COLOR_BLUE, TITLE_FONT_SIZE
@@ -7,7 +8,8 @@ from charts.constants import COLOR_BLACK, COLOR_BLUE, TITLE_FONT_SIZE
 class Histogram1(BaseChart):
     def process(self):
         # Define data and parameters
-        data = self.chart.data
+        df = pd.DataFrame(self.chart.data)
+        data = df.iloc[:, 0]
 
         # Initialize layout
         fig, ax = plt.subplots(figsize=(15, 11))

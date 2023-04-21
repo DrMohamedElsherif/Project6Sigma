@@ -8,13 +8,9 @@ from charts.basechart import BaseChart
 class Interval1(BaseChart):
     def process(self):
         # Define data and parameters
-        df = pd.DataFrame({
-            self.chart.config.labels[0]: self.chart.data[0],
-            self.chart.config.labels[1]: self.chart.data[1],
-            self.chart.config.labels[2]: self.chart.data[2]
-        })
+        df = pd.DataFrame(self.chart.data)
 
-        data = df[self.chart.config.labels[0]]
+        data = df.iloc[:, 0]
 
         # Calculate mean and standard deviation of the data
         mean = np.mean(data)
@@ -24,7 +20,8 @@ class Interval1(BaseChart):
         confidence_interval = 1.96 * stddev / np.sqrt(len(data))
 
         # Plot the data with error bars
-        plt.errorbar(x=1, y=mean, yerr=confidence_interval, fmt='o', capsize=15)
+        plt.errorbar(x=1, y=mean, yerr=confidence_interval,
+                     fmt='o', capsize=15)
 
         # Add labels and title to the plot
         plt.ylabel('Value')
