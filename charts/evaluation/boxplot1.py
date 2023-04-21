@@ -10,7 +10,7 @@ class Boxplot1(BaseChart):
         title = self.chart.config.title
         df = pd.DataFrame(self.chart.data)
 
-        self.figure = plt.figure(figsize=(15, 11))
+        self.figure = plt.figure(figsize=FIGURE_SIZE_DEFAULT)
 
         key, value = list(self.chart.data.items())[0]
         # Generate plot
