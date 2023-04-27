@@ -2,7 +2,7 @@
 import pandas as pd
 import matplotlib.pyplot as plt
 from charts.basechart import BaseChart
-from charts.constants import COLOR_BLUE, FIGURE_SIZE_DEFAULT, COLOR_BLACK, TITLE_FONT_SIZE
+from charts.constants import COLORS, FIGURE_SIZE_DEFAULT, COLOR_BLACK, TITLE_FONT_SIZE
 
 
 class Boxplot1(BaseChart):
@@ -18,7 +18,7 @@ class Boxplot1(BaseChart):
             column=[key],
             color=COLOR_BLACK,
             patch_artist=True,
-            boxprops=dict(facecolor=COLOR_BLUE),
+            boxprops=dict(facecolor=COLORS[0]),
             figsize=FIGURE_SIZE_DEFAULT
         )
         bp.set_title(title, fontsize=TITLE_FONT_SIZE, pad=20)
