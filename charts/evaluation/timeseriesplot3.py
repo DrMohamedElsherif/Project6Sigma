@@ -1,8 +1,7 @@
-# Import required libraries
 import pandas as pd
 import matplotlib.pyplot as plt
 from charts.basechart import BaseChart
-from charts.constants import FIGURE_SIZE_DEFAULT, TITLE_FONT_SIZE, COLORS
+from charts.constants import FIGURE_SIZE_DEFAULT, TITLE_FONT_SIZE, COLORS, MARKERS, LINES
 
 
 class Timeseriesplot3(BaseChart):
@@ -11,20 +10,17 @@ class Timeseriesplot3(BaseChart):
         # Define data and parameters
         df = pd.DataFrame(self.chart.data)
 
-        fig, ax = plt.subplots(figsize=FIGURE_SIZE_DEFAULT)
-        for i, (name, group) in enumerate(df.groupby(df.columns[1])):
-            ax.plot(group.index, group[df.columns[0]],
-                    marker='o', linestyle='-', label=name, color=COLORS[i])
+        plt.figure(figsize=FIGURE_SIZE_DEFAULT)
 
-        ax.legend()
-        ax.set_xlabel('Index')
-        ax.set_ylabel(df.columns[0])
+        fig, axes = plt.subplots(
+            ncols=len(df.iloc[:, 1].unique()), sharey=True)
 
-        plt.legend(loc='best')
+        for i, (k, g) in enumerate(df.groupby(df.columns[1])):
+            g[df.columns[0]].plot(ax=axes[i], marker='.')
+            axes[i].set_title(k)
+            axes[i].grid()
 
-        plt.title(title, fontsize=TITLE_FONT_SIZE, pad=20)
-
-        # Grid lines
-        plt.grid()
+        plt.suptitle(title, fontsize=TITLE_FONT_SIZE, y=0.98)
+        plt.tight_layout()
 
         return plt
