@@ -1,7 +1,7 @@
 import pandas as pd
 import matplotlib.pyplot as plt
 from charts.basechart import BaseChart
-from charts.constants import FIGURE_SIZE_DEFAULT, TITLE_FONT_SIZE, COLORS, MARKERS, LINES
+from charts.constants import FIGURE_SIZE_DEFAULT, TITLE_FONT_SIZE, MARKERS
 
 
 class Timeseriesplot3(BaseChart):
@@ -10,13 +10,11 @@ class Timeseriesplot3(BaseChart):
         # Define data and parameters
         df = pd.DataFrame(self.chart.data)
 
-        plt.figure(figsize=FIGURE_SIZE_DEFAULT)
-
         fig, axes = plt.subplots(
-            ncols=len(df.iloc[:, 1].unique()), sharey=True)
+            ncols=len(df.iloc[:, 1].unique()), sharey=True, figsize=FIGURE_SIZE_DEFAULT)
 
         for i, (k, g) in enumerate(df.groupby(df.columns[1])):
-            g[df.columns[0]].plot(ax=axes[i], marker='.')
+            g[df.columns[0]].plot(ax=axes[i], marker=MARKERS[0])
             axes[i].set_title(k)
             axes[i].grid()
 

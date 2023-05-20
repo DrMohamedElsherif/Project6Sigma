@@ -10,11 +10,6 @@ class Boxplot2(BaseChart):
         title = self.chart.config.title
         df = pd.DataFrame(self.chart.data)
 
-        self.figure = plt.figure(figsize=(15, 11))
-
-        # Melt data frame into long format
-        df_melted = pd.melt(df)
-
         # Get the column names as a list to plot
         columns = df.columns.tolist()
 
@@ -28,4 +23,5 @@ class Boxplot2(BaseChart):
         )
         bp.set_title(title, fontsize=TITLE_FONT_SIZE, pad=20)
         self.figure = bp.get_figure()
-        return self.figure
+
+        return plt
