@@ -5,7 +5,7 @@ from charts.basechart import BaseChart
 from charts.constants import COLOR_BLACK, TITLE_FONT_SIZE, COLORS, FIGURE_SIZE_DEFAULT
 
 
-class Histogram2(BaseChart):
+class Histogram4(BaseChart):
     def process(self):
         title = self.chart.config.title
         # Define data and parameters
@@ -31,7 +31,7 @@ class Histogram2(BaseChart):
         plt.ylabel("Frequency")
 
         # Plot
-        ax.hist(
+        handles = ax.hist(
             data,
             edgecolor=COLOR_BLACK,
             align="left",
