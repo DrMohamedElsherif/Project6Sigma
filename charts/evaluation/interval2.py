@@ -2,18 +2,15 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 from charts.basechart import BaseChart
+from charts.constants import FIGURE_SIZE_DEFAULT, TITLE_FONT_SIZE, TITLE_PADDING
 
 
 class Interval2(BaseChart):
     def process(self):
-        # Define data and parameters
-        df = pd.DataFrame({
-            self.chart.config.labels[0]: self.chart.data[0],
-            self.chart.config.labels[1]: self.chart.data[1],
-            self.chart.config.labels[2]: self.chart.data[2]
-        })
+        title = self.chart.config.title
+        df = pd.DataFrame(self.chart.data)
 
-        plt.figure(figsize=(15, 11))
+        plt.figure(figsize=FIGURE_SIZE_DEFAULT)
 
         # Loop over pd an genrate plots
         for (index, column) in enumerate(df):
@@ -24,13 +21,15 @@ class Interval2(BaseChart):
             confidence_interval = 1.96 * stddev / np.sqrt(len(df[column]))
 
             # Plot the data for each loop with error bars
-            plt.errorbar(x=index, y=mean, yerr=confidence_interval, fmt='o', capsize=15)
+            plt.errorbar(x=index, y=mean, yerr=confidence_interval,
+                         fmt='o', capsize=15, label=column)
 
         # Add labels, title, and legend to the plot
         plt.ylabel('Values')
         # Hide x-axis labels
         plt.xticks([])
-        plt.title(self.chart.config.title)
+        plt.title(title, fontsize=TITLE_FONT_SIZE, pad=TITLE_PADDING)
+        plt.legend(loc='best')
 
         # Enable grid lines
         plt.grid(b=True, which='both')
