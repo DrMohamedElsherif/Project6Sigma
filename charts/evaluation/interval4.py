@@ -16,11 +16,12 @@ class Interval4(BaseChart):
         plt.figure(figsize=FIGURE_SIZE_DEFAULT)
 
         if ad is not None and not ad.empty:
-            # Group the data by a categorical variable
-            grouped_data = df.groupby(ad.iloc[:, 0])
+            # Create a new dataframe with the data and grouping
+            df_grouped = pd.DataFrame(
+                {'Values': df.values.flatten(), 'Group': np.repeat(ad.iloc[:, 0], len(df.columns))})
 
-            # Define the order of categories
-            unique_values = ad.iloc[:, 0].unique()
+            # Group the data by a categorical variable
+            grouped_data = df_grouped.groupby('Group')
 
             # Determine the layout of subplots
             n_cols = 2
@@ -40,24 +41,23 @@ class Interval4(BaseChart):
             for i, column in enumerate(df.columns):
                 ax = axes[i]
 
-                # Loop over the unique values and categories simultaneously
-                for j, (value, category) in enumerate(zip(unique_values, ad.iloc[:, 0])):
-                    # Get the data for the current category and column
-                    group_df = grouped_data.get_group(category)
-                    values = group_df[column]
+                # Loop over the groups and generate plots
+                for j, (group, group_df) in enumerate(grouped_data):
+                    # Get the values for the current group and column
+                    values = group_df.loc[group_df['Group'] == group, 'Values']
 
                     # Calculate mean and confidence interval
                     mean = np.mean(values)
                     stddev = np.std(values)
                     confidence_interval = 1.96 * stddev / np.sqrt(len(values))
 
-                    # Plot the data for each category with error bars
+                    # Plot the data for each group with error bars
                     ax.errorbar(x=j, y=mean, yerr=confidence_interval,
-                                fmt='o', capsize=15, label=category)
+                                fmt='o', capsize=15, label=group)
 
                 # Set the x-axis tick positions and labels
-                ax.set_xticks(range(len(unique_values)))
-                ax.set_xticklabels(unique_values)
+                ax.set_xticks(range(len(grouped_data)))
+                ax.set_xticklabels(grouped_data.groups.keys())
 
                 # Add labels, title, and legend to the plot
                 ax.set_ylabel('Values')
