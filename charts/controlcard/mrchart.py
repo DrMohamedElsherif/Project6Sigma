@@ -4,6 +4,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import statistics
 from charts.basechart import BaseChart
+from charts.constants import FIGURE_SIZE_DEFAULT
 
 
 class Mrchart(BaseChart):
@@ -30,18 +31,23 @@ class Mrchart(BaseChart):
         data = pd.concat([x, MR], axis=1).rename(columns={0: "x", 1: "mR"})
 
         # Plot x and mR charts
-        self.figure, axs = plt.subplots(2, figsize=(15, 11), sharex=True)
+        self.figure, axs = plt.subplots(
+            2, figsize=FIGURE_SIZE_DEFAULT, sharex=True)
 
         # x chart
         axs[0].plot(data['x'], linestyle='-', marker='o', color='blue')
         # Define variables for use in line and label
         X = statistics.mean(data['x'])
-        UCL = statistics.mean(data['x'])+3*statistics.mean(data['mR'][1:len(data['mR'])])/1.128
-        LCL = statistics.mean(data['x'])-3*statistics.mean(data['mR'][1:len(data['mR'])])/1.128
+        UCL = statistics.mean(
+            data['x'])+3*statistics.mean(data['mR'][1:len(data['mR'])])/1.128
+        LCL = statistics.mean(
+            data['x'])-3*statistics.mean(data['mR'][1:len(data['mR'])])/1.128
 
-        axs[0].axhline(UCL, color='red', linestyle='dashed', label='UCL=' + str(round(UCL, 3)))
+        axs[0].axhline(UCL, color='red', linestyle='dashed',
+                       label='UCL=' + str(round(UCL, 3)))
         axs[0].axhline(X, color='green', label='X=' + str(round(X, 1)))
-        axs[0].axhline(LCL, color='red', linestyle='dashed', label='LCL=' + str(round(LCL, 3)))
+        axs[0].axhline(LCL, color='red', linestyle='dashed',
+                       label='LCL=' + str(round(LCL, 3)))
         axs[0].set_title(title, fontsize=28, pad=20)
         axs[0].set(xlabel='Observation', ylabel='Individual Value')
         axs[0].legend(loc='upper right', framealpha=1)
@@ -50,12 +56,16 @@ class Mrchart(BaseChart):
         axs[1].plot(data['mR'], linestyle='-', marker='o', color='blue')
         # Define variables for use in line and label
         MR = statistics.mean(data['mR'][1:len(data['mR'])])
-        UCL2 = statistics.mean(data['mR'][1:len(data['mR'])])+3*statistics.mean(data['mR'][1:len(data['mR'])])*0.8525
-        LCL2 = statistics.mean(data['mR'][1:len(data['mR'])])-3*statistics.mean(data['mR'][1:len(data['mR'])])*0.8525
+        UCL2 = statistics.mean(data['mR'][1:len(
+            data['mR'])])+3*statistics.mean(data['mR'][1:len(data['mR'])])*0.8525
+        LCL2 = statistics.mean(data['mR'][1:len(
+            data['mR'])])-3*statistics.mean(data['mR'][1:len(data['mR'])])*0.8525
 
         axs[1].axhline(MR, color='green', label='MR=' + str(round(MR, 3)))
-        axs[1].axhline(UCL2, color='red', linestyle='dashed', label='UCL=' + str(round(UCL2, 3)))
-        axs[1].axhline(LCL2, color='red', linestyle='dashed', label='LCL=' + str(round(LCL2, 3)))
+        axs[1].axhline(UCL2, color='red', linestyle='dashed',
+                       label='UCL=' + str(round(UCL2, 3)))
+        axs[1].axhline(LCL2, color='red', linestyle='dashed',
+                       label='LCL=' + str(round(LCL2, 3)))
         axs[1].set(xlabel='Observation', ylabel='Moving Range')
         axs[1].legend(loc='upper right', framealpha=1)
 

@@ -4,6 +4,8 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import statistics
 from charts.basechart import BaseChart
+from charts.constants import FIGURE_SIZE_DEFAULT
+
 
 class Uchart(BaseChart):
     def process(self):
@@ -11,7 +13,8 @@ class Uchart(BaseChart):
         title = self.chart.config.title
         data1 = self.chart.data[0]
         data2 = []
-        group_size = self.chart.group_size if bool(self.chart.group_size) else False
+        group_size = self.chart.group_size if bool(
+            self.chart.group_size) else False
         data_length = len(data1)
 
         # Check if `group_size` is provided
@@ -34,7 +37,7 @@ class Uchart(BaseChart):
         u['u'] = u['defects']/u['group_size']
 
         # Plot u-chart
-        self.figure = plt.figure(figsize=(15, 11))
+        self.figure = plt.figure(figsize=FIGURE_SIZE_DEFAULT)
 
         plt.plot(u['u'], linestyle='-', marker='o', color='blue')
         # Define variables for use in line and label
@@ -42,9 +45,11 @@ class Uchart(BaseChart):
         OEG = u['u'].mean()+3*np.sqrt(u['u'].mean() / u['group_size'])
         UEG = u['u'].mean()-3*np.sqrt(u['u'].mean() / u['group_size'])
 
-        plt.step(x=range(0, len(u['u'])), y=OEG, color='red', linestyle='dashed', label='OEG=' + str(round(OEG[0], 2)))
+        plt.step(x=range(0, len(u['u'])), y=OEG, color='red',
+                 linestyle='dashed', label='OEG=' + str(round(OEG[0], 2)))
         plt.axhline(U, color='green', label='U=' + str(round(U, 1)))
-        plt.step(x=range(0, len(u['u'])), y=UEG, color='red', linestyle='dashed', label='UEG=' + str(round(UEG[0], 2)))
+        plt.step(x=range(0, len(u['u'])), y=UEG, color='red',
+                 linestyle='dashed', label='UEG=' + str(round(UEG[0], 2)))
         plt.title(title, fontsize=28, pad=20)
         plt.xlabel('Sample')
         plt.ylabel('Sample Count Per Unit')

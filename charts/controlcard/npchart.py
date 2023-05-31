@@ -4,6 +4,8 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import statistics
 from charts.basechart import BaseChart
+from charts.constants import FIGURE_SIZE_DEFAULT
+
 
 class Npchart(BaseChart):
     def process(self):
@@ -11,7 +13,8 @@ class Npchart(BaseChart):
         title = self.chart.config.title
         data1 = self.chart.data[0]
         data2 = []
-        group_size = self.chart.group_size if bool(self.chart.group_size) else False
+        group_size = self.chart.group_size if bool(
+            self.chart.group_size) else False
         data_length = len(data1)
 
         # Check if `group_size` is provided
@@ -34,22 +37,25 @@ class Npchart(BaseChart):
         data['np'] = data['defects']/data['group_size']
 
         # Plot np-chart
-        self.figure = plt.figure(figsize=(15, 11))
+        self.figure = plt.figure(figsize=FIGURE_SIZE_DEFAULT)
 
         plt.plot(data['np'], linestyle='-', marker='o', color='blue')
         # Define variables for use in line and label
         NP = statistics.mean(data['np'])
-        OEG = statistics.mean(data['np'])+3*(np.sqrt((statistics.mean(data['np'])*(1-statistics.mean(data['np'])))/statistics.mean(data['group_size'])))
-        UEG = statistics.mean(data['np'])-3*(np.sqrt((statistics.mean(data['np'])*(1-statistics.mean(data['np'])))/statistics.mean(data['group_size'])))
+        OEG = statistics.mean(data['np'])+3*(np.sqrt((statistics.mean(data['np'])*(
+            1-statistics.mean(data['np'])))/statistics.mean(data['group_size'])))
+        UEG = statistics.mean(data['np'])-3*(np.sqrt((statistics.mean(data['np'])*(
+            1-statistics.mean(data['np'])))/statistics.mean(data['group_size'])))
 
-        plt.axhline(OEG, color='red', linestyle='dashed', label='OEG=' + str(round(OEG, 2)))
+        plt.axhline(OEG, color='red', linestyle='dashed',
+                    label='OEG=' + str(round(OEG, 2)))
         plt.axhline(NP, color='green', label='np=' + str(round(NP, 1)))
-        plt.axhline(UEG, color='red', linestyle='dashed', label='UEG=' + str(round(UEG, 2)))
+        plt.axhline(UEG, color='red', linestyle='dashed',
+                    label='UEG=' + str(round(UEG, 2)))
         plt.title(title, fontsize=28, pad=20)
         plt.xlabel('Sample')
         plt.ylabel('Sample Count')
         plt.legend(loc='upper right', framealpha=1)
-
 
         # Validate points out of control limits
         i = 0

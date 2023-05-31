@@ -4,6 +4,8 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import statistics
 from charts.basechart import BaseChart
+from charts.constants import FIGURE_SIZE_DEFAULT
+
 
 class Cchart(BaseChart):
     def process(self):
@@ -25,17 +27,21 @@ class Cchart(BaseChart):
         c = pd.DataFrame(c)
 
         # Plot c-chart
-        self.figure = plt.figure(figsize=(15, 11))
+        self.figure = plt.figure(figsize=FIGURE_SIZE_DEFAULT)
 
         plt.plot(c['defects'], linestyle='-', marker='o', color='blue')
         # Define variables for use in line and label
         C = statistics.mean(c['defects'])
-        OEG = statistics.mean(c['defects'])+3*np.sqrt(statistics.mean(c['defects']))
-        UEG = statistics.mean(c['defects'])-3*np.sqrt(statistics.mean(c['defects']))
+        OEG = statistics.mean(c['defects'])+3 * \
+            np.sqrt(statistics.mean(c['defects']))
+        UEG = statistics.mean(c['defects'])-3 * \
+            np.sqrt(statistics.mean(c['defects']))
 
-        plt.axhline(OEG, color='red', linestyle='dashed', label='OEG=' + str(round(OEG, 2)))
+        plt.axhline(OEG, color='red', linestyle='dashed',
+                    label='OEG=' + str(round(OEG, 2)))
         plt.axhline(C, color='green', label='C=' + str(round(C, 1)))
-        plt.axhline(UEG, color='red', linestyle='dashed', label='UEG=' + str(round(UEG, 2)))
+        plt.axhline(UEG, color='red', linestyle='dashed',
+                    label='UEG=' + str(round(UEG, 2)))
         plt.title(title, fontsize=28, pad=20)
         plt.xlabel('Sample')
         plt.ylabel('Defect Count')
