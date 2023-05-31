@@ -2,7 +2,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
 from charts.basechart import BaseChart
-from charts.constants import TITLE_FONT_SIZE, MARKERS, COLORS
+from charts.constants import TITLE_FONT_SIZE, MARKERS
 
 
 class Interval3(BaseChart):

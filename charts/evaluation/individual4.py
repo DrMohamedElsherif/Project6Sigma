@@ -3,29 +3,48 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
 from charts.basechart import BaseChart
-from charts.constants import COLOR_BLUE, FIGURE_SIZE_DEFAULT, COLOR_BLACK, TITLE_FONT_SIZE, COLORS
+from charts.constants import FIGURE_SIZE_DEFAULT, TITLE_FONT_SIZE, COLORS, MARKERS
 
 
 class Individual4(BaseChart):
     def process(self):
-        # Create a sample pandas DataFrame with categorical variables
-        df = pd.DataFrame({
-            self.chart.config.labels[0]: self.chart.data[0],
-            self.chart.config.labels[1]: self.chart.data[1],
-            self.chart.config.labels[2]: self.chart.data[2]
-        })
+        title = self.chart.config.title
+        df = pd.DataFrame(self.chart.data)
+        # Set additional data
+        ad = pd.DataFrame(self.chart.additional_data)
 
         # Define size of figure
+        sns.set(rc={'figure.figsize': FIGURE_SIZE_DEFAULT})
         sns.set(style="whitegrid")
 
-        plt.subplots_adjust(left=0.1, bottom=0.1, right=0.9, top=0.9)
-        fig, ax = plt.subplots(1, 2, figsize=(15, 11))
+        if "catVar" in ad:
+            # Combine the dataframes based on index
+            combined_df = pd.concat([df, ad], axis=1)
 
-        bp = sns.stripplot(y=df[self.chart.config.labels[0]], marker='o', size=10, jitter=False, ax=ax[0])
-        bp = sns.stripplot(y=df[self.chart.config.labels[1]], marker='o', size=10, jitter=False, ax=ax[1])
+            # Reshape the dataframe to have a single column for y-axis values
+            melted_df = combined_df.melt(
+                id_vars="catVar", var_name="column", value_name="value")
 
-        # add grid lines with both horizontal and vertical lines
+            sp = sns.stripplot(x="catVar", y="value", hue="column", data=melted_df, dodge=True,
+                               marker=MARKERS[0], size=10, jitter=False, palette=COLORS)
+
+            # Set custom labels for the x-axis, y-axis, and legend
+            sp.set_xlabel("Categorical Variable")
+            sp.set_ylabel("Values")
+            plt.legend(title="")
+        else:
+            sp = sns.stripplot(
+                data=df, marker=MARKERS[0], size=10, jitter=False, palette=COLORS)
+
+        sp.set_xticklabels(sp.get_xticklabels(), rotation=45, ha='right')
+
+        # Adjust the layout and padding to prevent xticklabels from being cut off
+        plt.tight_layout(pad=1.5)
+
+        # Add grid lines with both horizontal and vertical lines
         plt.grid(b=True, which='both')
-        bp.set_title(self.chart.config.title, fontsize=TITLE_FONT_SIZE, pad=20)
+
+        # Set the title for the plot
+        sp.set_title(title, fontsize=TITLE_FONT_SIZE, pad=20)
 
         return plt
