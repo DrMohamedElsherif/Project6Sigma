@@ -36,6 +36,7 @@ class Individual4(BaseChart):
             sp = sns.stripplot(
                 data=df, marker=MARKERS[0], size=10, jitter=False, palette=COLORS)
 
+        sp.set_xticks(range(len(sp.get_xticklabels())))
         sp.set_xticklabels(sp.get_xticklabels(), rotation=45, ha='right')
 
         # Adjust the layout and padding to prevent xticklabels from being cut off
