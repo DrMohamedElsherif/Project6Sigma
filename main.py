@@ -45,6 +45,7 @@ def str_to_class(string):
 load_dotenv()
 filePath = os.environ.get("staticFilePath")
 staticUrl = os.environ.get("staticUrl")
+useFullPath = os.environ.get("useFullPath")
 
 app.mount("/static", StaticFiles(directory=filePath), name="static")
 
@@ -59,7 +60,11 @@ async def create_file(project: str = Form(...), step: str = Form(...), file: Upl
     tmp, file_extension = os.path.splitext(file.filename)
     filename = str(uuid.uuid4()) + file_extension
     save_path = project_path + "/" + filename
-    url = staticUrl + "/" + project + "/" + step + "/" + filename
+    if useFullPath == "1":
+        url = save_path
+    else:
+        url = staticUrl + "/" + project + "/" + step + "/" + filename
+
 
     with open(save_path, "wb+") as file_object:
         shutil.copyfileobj(file.file, file_object)
@@ -95,8 +100,11 @@ async def generate(chart: Chart):
     fig.savefig(save_path)
     # clear the current figure
     fig.clf()
+    if useFullPath == "1":
+        result.url = filePath + "/" + chart.project + "/" + chart.step + "/" + filename
+    else:
+        result.url = staticUrl + "/" + chart.project + "/" + chart.step + "/" + filename
     result.message = generator.getProcessMessage()
-    result.url = staticUrl + "/" + chart.project + "/" + chart.step + "/" + filename
     result.status = 200
 
     return result
