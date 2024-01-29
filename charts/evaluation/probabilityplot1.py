@@ -29,7 +29,7 @@ class Probabilityplot1(BaseChart):
         # Get the distribution object based on the name
         dist = getattr(stats, dist_name)
 
-        # Anderson Test
+        # Anderson Darling Test
         result = stats.anderson(data)
 
         # Retrieve critical values
@@ -83,7 +83,6 @@ class Probabilityplot1(BaseChart):
 
         # Add text annotations
         text = f"Mean: {round(mean,3)}\nStDev: {round(stdev,3)}\nN: {n}\nAD: {round(ad_stat,3)}\nZ: {round(z,3)}\nP-Value: {round(p_value,3)}\n"
-
         plt.annotate(text, (0, 0), (0, -30), xycoords='axes fraction',
                      textcoords='offset points', va='top', fontsize=12)
 
