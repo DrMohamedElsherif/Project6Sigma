@@ -14,7 +14,7 @@ class Piechart1(BaseChart):
         plt.rcParams["figure.figsize"] = (FIGURE_SIZE_DEFAULT)
 
         # Count occurrences of each element in the data
-        data_counts = Counter(df['data1'])
+        data_counts = Counter(df)
 
         # Extract labels and counts for plotting, sorted by counts in ascending order
         sorted_labels, sorted_counts = zip(
