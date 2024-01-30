@@ -6,7 +6,7 @@ from charts.basechart import BaseChart
 from charts.constants import FIGURE_SIZE_DEFAULT, TITLE_FONT_SIZE
 
 
-class Piechart2(BaseChart):
+class Piechart1(BaseChart):
     def process(self):
         title = self.chart.config.title
         df = pd.DataFrame(self.chart.data)
