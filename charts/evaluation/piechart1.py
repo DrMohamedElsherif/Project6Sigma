@@ -6,7 +6,7 @@ from charts.basechart import BaseChart
 from charts.constants import FIGURE_SIZE_DEFAULT, TITLE_FONT_SIZE
 
 
-class Piechart1(BaseChart):
+class Piechart2(BaseChart):
     def process(self):
         title = self.chart.config.title
         df = pd.DataFrame(self.chart.data)
@@ -14,7 +14,7 @@ class Piechart1(BaseChart):
         plt.rcParams["figure.figsize"] = (FIGURE_SIZE_DEFAULT)
 
         # Count occurrences of each element in the data
-        data_counts = Counter(df)
+        data_counts = Counter(df.iloc[:, 0])
 
         # Extract labels and counts for plotting, sorted by counts in ascending order
         sorted_labels, sorted_counts = zip(
