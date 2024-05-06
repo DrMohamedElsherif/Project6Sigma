@@ -10,16 +10,17 @@ class Boxplot1(BaseChart):
         title = self.chart.config.title
         df = pd.DataFrame(self.chart.data)
 
-        with plt.figure(figsize=FIGURE_SIZE_DEFAULT) as self.figure:
-            key, value = list(self.chart.data.items())[0]
-            # Generate plot
-            bp = df.boxplot(
-                column=[key],
-                color=COLOR_BLACK,
-                patch_artist=True,
-                boxprops=dict(facecolor=COLORS[0]),
-                figsize=FIGURE_SIZE_DEFAULT
-            )
-            bp.set_title(title, fontsize=TITLE_FONT_SIZE, pad=20)
+        self.figure = plt.figure(figsize=FIGURE_SIZE_DEFAULT)
+
+        key, value = list(self.chart.data.items())[0]
+        # Generate plot
+        bp = df.boxplot(
+            column=[key],
+            color=COLOR_BLACK,
+            patch_artist=True,
+            boxprops=dict(facecolor=COLORS[0]),
+            figsize=FIGURE_SIZE_DEFAULT
+        )
+        bp.set_title(title, fontsize=TITLE_FONT_SIZE, pad=20)
 
         return self.figure
