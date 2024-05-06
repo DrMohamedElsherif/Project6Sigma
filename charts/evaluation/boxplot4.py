@@ -9,8 +9,6 @@ class Boxplot4(BaseChart):
     def process(self):
         title = self.chart.config.title
         df = pd.DataFrame(self.chart.data)
-        # Set additional data
-        ad = pd.DataFrame(self.chart.additional_data)
 
         # Generate plot
         bp = df.boxplot(
