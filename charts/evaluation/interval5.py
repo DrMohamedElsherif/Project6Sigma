@@ -6,7 +6,7 @@ from charts.basechart import BaseChart
 from charts.constants import FIGURE_SIZE_DEFAULT, TITLE_FONT_SIZE, TITLE_PADDING
 
 
-class Interval4(BaseChart):
+class Interval5(BaseChart):
     def process(self):
         title = self.chart.config.title
         df = pd.DataFrame(self.chart.data)

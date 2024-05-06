@@ -7,7 +7,7 @@ from charts.basechart import BaseChart
 from charts.constants import TITLE_FONT_SIZE
 
 
-class Individual5(BaseChart):
+class Individual6(BaseChart):
     def process(self):
         title = self.chart.config.title
         df = pd.DataFrame(self.chart.data)
