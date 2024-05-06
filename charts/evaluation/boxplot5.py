@@ -2,38 +2,42 @@
 import pandas as pd
 import matplotlib.pyplot as plt
 from charts.basechart import BaseChart
-from charts.constants import COLOR_BLUE, FIGURE_SIZE_DEFAULT, COLOR_BLACK, TITLE_FONT_SIZE
+from charts.constants import FIGURE_SIZE_DEFAULT, TITLE_FONT_SIZE, COLOR_BLACK, COLOR_BLUE
 
 
 class Boxplot5(BaseChart):
     def process(self):
         title = self.chart.config.title
         df = pd.DataFrame(self.chart.data)
-        self.figure = plt.figure(figsize=(FIGURE_SIZE_DEFAULT))
-        # Define the column count
-        num_columns = 2
+        # Set additional data
+        ad = pd.DataFrame(self.chart.additional_data)
 
-        # Count the number of columns
-        num_datasets = len(df.columns)
+        if ad is not None and not ad.empty:
+            # Count unique values
+            unique_values = ad.iloc[:, 0].unique()
+            count = len(unique_values)
 
-        # Find the number of rows needed
-        num_rows = num_datasets // 2 + num_datasets % 2
+            fig, axes = plt.subplots(
+                1, count, figsize=FIGURE_SIZE_DEFAULT, sharex=True, sharey=True)
 
-        # Get the column names as a list to plot
-        columns = df.columns.tolist()
+            for i, (category, data) in enumerate(df.join(ad).groupby(ad.columns[0])):
+                ax = axes[i]
+                data.boxplot(rot=45, color=COLOR_BLACK, patch_artist=True,
+                             boxprops=dict(facecolor=COLOR_BLUE), ax=ax)
+                ax.set_xlabel(unique_values[i])
 
-        # Generate plots
-        bp = df[columns].plot.box(
-            subplots=True,
-            layout=(num_rows, num_columns),
-            color=COLOR_BLACK,
-            patch_artist=True,
-            grid=True,
-            boxprops=dict(facecolor=COLOR_BLUE),
-            title=columns, figsize=FIGURE_SIZE_DEFAULT
-        )
+            plt.suptitle(title, fontsize=TITLE_FONT_SIZE, y=0.99)
+            plt.tight_layout()
 
-        # Set main title for plot
-        plt.suptitle(title, fontsize=TITLE_FONT_SIZE)
+        else:
+            # Generate plot
+            bp = df.boxplot(
+                color=COLOR_BLACK,
+                patch_artist=True,
+                boxprops=dict(facecolor=COLOR_BLUE),
+                figsize=FIGURE_SIZE_DEFAULT
+            )
+
+            bp.set_title(title, fontsize=TITLE_FONT_SIZE, pad=20)
 
         return plt
