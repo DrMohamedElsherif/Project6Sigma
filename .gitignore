@@ -1,5 +1,6 @@
 ## project
 static/*
+env/
 .env
 
 ## OS X
