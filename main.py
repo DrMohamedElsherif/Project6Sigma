@@ -82,7 +82,11 @@ async def generate(chart: Chart):
 
     filename = str(uuid.uuid4()) + "." + constants.CHART_EXTENSION
     save_path = project_path + "/" + filename
-    result = ChartResult()
+    result = ChartResult(
+        status=None,
+        message=None,
+        url=None
+    )
 
     try:
         chart_class = str_to_class(chart.type + "." + chart.type.capitalize())
