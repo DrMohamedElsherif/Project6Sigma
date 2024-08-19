@@ -14,6 +14,7 @@ from models.chartresult import ChartResult
 
 # import all charts
 from charts.controlcard import *
+from charts.msa import *
 from charts.evaluation import *
 
 import shutil
@@ -76,6 +77,7 @@ async def create_file(project: str = Form(...), step: str = Form(...), file: Upl
 @app.post("/chart", response_model=ChartResult)
 async def generate(chart: Chart):
     project_path = filePath + "/" + chart.project + "/" + chart.step
+
     # check if dir exists
     if not os.path.exists(project_path):
         os.makedirs(project_path)

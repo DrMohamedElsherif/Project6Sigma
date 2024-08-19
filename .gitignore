@@ -2,6 +2,7 @@
 static/*
 env/
 .env*
+apiTests/*
 
 ## OS X
 .DS_Store
