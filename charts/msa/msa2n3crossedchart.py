@@ -13,18 +13,22 @@ from statsmodels.formula.api import ols
 from charts.basechart import BaseChart
 
 
-class Msa2crossedchart(BaseChart):
+class Msa2n3crossedchart(BaseChart):
     def process(self):
         # Extracting data directly from the API response
         title = self.chart.config.title
         values = self.chart.data["values"]  # Values (measurements)
         parts = self.chart.data["parts"]  # Part IDs
-        operators = self.chart.data["operators"]  # Operator IDs
 
-        # Additional parameters if needed (e.g., for further calculations or tolerance checks)
-        reference = float(self.chart.config.reference)
-        tolerance = float(self.chart.config.tolerance)
-        percentage_of_tolerance = float(self.chart.config.percentage_of_tolerance)
+        # Check if the chart has operators else use devices else throw an error
+        if "operators" in self.chart.data:
+            operators = self.chart.data["operators"]
+        elif "devices" in self.chart.data:
+            operators = self.chart.data["devices"]
+        else:
+            raise ValueError("The chart data must have either 'operators' or 'devices'")
+
+        label = self.chart.config.labelx  # Label (Operator or Device)
 
         # Create DataFrame from the API data
         data = pd.DataFrame({
@@ -102,10 +106,10 @@ class Msa2crossedchart(BaseChart):
             self._plot_value_by_part(data, data_grouped_by_part, axes[0])
 
             # Plot Value by Operator Boxplot
-            self._plot_value_by_operator(data, data_grouped_by_operator, axes[1])
+            self._plot_value_by_operator(data, label, data_grouped_by_operator, axes[1])
 
             # Plot Part by Operator Interaction Scatter Plot
-            self._plot_part_operator_interaction(data_grouped_by_operator_and_part, axes[2])
+            self._plot_part_operator_interaction(data_grouped_by_operator_and_part, label, axes[2])
 
             pdf.savefig(fig)  # Save the current page
             plt.close(fig)
@@ -123,8 +127,8 @@ class Msa2crossedchart(BaseChart):
                             data_grouped_by_operator_and_part_stats["Operator"] == operator]
                         ax_xbar = fig.add_subplot(gs[j * 2])
                         ax_r = fig.add_subplot(gs[j * 2 + 1])
-                        self._plot_xbar_chart_by_operator(operator_data, ax_xbar)
-                        self._plot_r_chart_by_operator(operator_data, ax_r)
+                        self._plot_xbar_chart_by_operator(operator_data, label, ax_xbar)
+                        self._plot_r_chart_by_operator(operator_data, label, ax_r)
                     else:
                         # Hide unused subplots
                         ax_xbar = fig.add_subplot(gs[j * 2])
@@ -233,15 +237,16 @@ class Msa2crossedchart(BaseChart):
         ax.set_xlabel("Part")
         ax.grid(color="lightgrey")
 
-    def _plot_value_by_operator(self, data, data_grouped_by_operator, ax):
+    def _plot_value_by_operator(self, data, label, data_grouped_by_operator, ax):
         sns.boxplot(x="Operator", y="Value", data=data, color="#7DA7D9", width=0.4, ax=ax)
         ax.plot(data_grouped_by_operator["Operator"], data_grouped_by_operator["Value"], color="grey")
         ax.scatter(x=data_grouped_by_operator["Operator"], y=data_grouped_by_operator["Value"], facecolors="none",
                    edgecolors="grey")
-        ax.set_title("Value by Operator")
+        ax.set_title(f"Value by {label}")
+        ax.set_xlabel(label)
         ax.grid(color="lightgrey")
 
-    def _plot_part_operator_interaction(self, data_grouped_by_operator_and_part, ax):
+    def _plot_part_operator_interaction(self, data_grouped_by_operator_and_part, label, ax):
         colors = ["#0051A5", "#971817", "#4DA862", "orange", "yellow", "pink", "lightgreen", "purple", "brown", "grey"]
         markers = ["o", "s", "D", "^", "v", "+", "x", "H", "<", ">"]
         linestyles = ["solid", "dashed", "dotted", "dashdot", "solid", "dotted", "dashed", "dashdot", "solid", "dotted"]
@@ -263,14 +268,14 @@ class Msa2crossedchart(BaseChart):
             i += 1
 
         ax.set_xticks(list(data_grouped_by_operator_and_part["Part"]))
-        ax.set_title("Part * Operator Interaction")
+        ax.set_title(f"Part * {label} Interaction")
         ax.set_xlabel("Part")
         ax.set_ylabel("Average")
         ax.legend()
         ax.grid(color="lightgrey")
 
     @staticmethod
-    def _plot_xbar_chart_by_operator(operator_data, ax):
+    def _plot_xbar_chart_by_operator(operator_data, label, ax):
         ax.scatter(x=operator_data["Part"], y=operator_data["Mean"])
         ax.plot(operator_data["Part"], operator_data["Mean"])
         ax.axhline(operator_data["Mean"].mean(), color="green", label="X-bar", linewidth=0.7)
@@ -279,14 +284,14 @@ class Msa2crossedchart(BaseChart):
         ax.axhline(operator_data["Mean"].mean() - (1.023 * operator_data["Range"].mean()), color="red", label="LCL",
                    linewidth=0.7)
         ax.set_xticks(list(operator_data["Part"]))
-        ax.set_title(f"Xbar Chart by Operator - {operator_data['Operator'].iloc[0]}")
+        ax.set_title(f"Xbar Chart by {label} - {operator_data['Operator'].iloc[0]}")
         ax.set_xlabel("Part")
         ax.set_ylabel("Sample Mean")
         ax.set_ylim(operator_data["Mean"].min() - 1, operator_data["Mean"].max() + 1)
         ax.legend(fontsize='small')
 
     @staticmethod
-    def _plot_r_chart_by_operator(operator_data, ax):
+    def _plot_r_chart_by_operator(operator_data, label, ax):
         ax.scatter(x=operator_data["Part"], y=operator_data["Range"])
         ax.plot(operator_data["Part"], operator_data["Range"])
         ax.axhline(operator_data["Range"].mean(), color="green", label="R-bar", linewidth=0.7)
@@ -295,7 +300,7 @@ class Msa2crossedchart(BaseChart):
         ax.axhline(operator_data["Range"].mean() - (1.023 * operator_data["Range"].std()), color="red", label="LCL",
                    linewidth=0.7)
         ax.set_xticks(list(operator_data["Part"]))
-        ax.set_title(f"R Chart by Operator - {operator_data['Operator'].iloc[0]}")
+        ax.set_title(f"R Chart by {label} - {operator_data['Operator'].iloc[0]}")
         ax.set_xlabel("Part")
         ax.set_ylabel("Range")
         ax.set_ylim(operator_data["Range"].min() - 1, operator_data["Range"].max() + 1)

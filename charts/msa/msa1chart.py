@@ -8,7 +8,7 @@ from charts.basechart import BaseChart
 from charts.constants import FIGURE_SIZE_DEFAULT
 
 
-class Cgchart(BaseChart):
+class Msa1chart(BaseChart):
     def process(self):
         # Define data and parameters
         title = self.chart.config.title
