@@ -10,6 +10,8 @@ import uuid
 import sys
 from functools import reduce
 
+from seaborn import FacetGrid
+
 from charts import constants
 from models.chart import Chart
 from models.chartresult import ChartResult
@@ -105,13 +107,19 @@ async def generate(chart: Chart):
         return result
 
     fig = generator.process()
+
     if type(fig) == io.BytesIO:
         with open(save_path + raw_filename + ".pdf", 'wb') as f:
             f.write(fig.read())
+    elif type(fig) == FacetGrid:
+        fig.savefig(save_path + filename)
     else:
         fig.savefig(save_path + filename)
         # clear the current figure
         fig.clf()
+
+
+
     if useFullPath == "1":
         result.url = filePath + "/" + chart.project + "/" + chart.step + "/" + filename
     else:
