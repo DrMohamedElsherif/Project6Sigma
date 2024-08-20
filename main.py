@@ -1,3 +1,5 @@
+import io
+
 from fastapi import FastAPI, File, Form, UploadFile
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
@@ -66,7 +68,6 @@ async def create_file(project: str = Form(...), step: str = Form(...), file: Upl
     else:
         url = staticUrl + "/" + project + "/" + step + "/" + filename
 
-
     with open(save_path, "wb+") as file_object:
         shutil.copyfileobj(file.file, file_object)
 
@@ -82,8 +83,9 @@ async def generate(chart: Chart):
     if not os.path.exists(project_path):
         os.makedirs(project_path)
 
-    filename = str(uuid.uuid4()) + "." + constants.CHART_EXTENSION
-    save_path = project_path + "/" + filename
+    raw_filename = str(uuid.uuid4())
+    filename = raw_filename + "." + constants.CHART_EXTENSION
+    save_path = project_path + "/"
     result = ChartResult(
         status=None,
         message=None,
@@ -103,9 +105,13 @@ async def generate(chart: Chart):
         return result
 
     fig = generator.process()
-    fig.savefig(save_path)
-    # clear the current figure
-    fig.clf()
+    if type(fig) == io.BytesIO:
+        with open(save_path + raw_filename + ".pdf", 'wb') as f:
+            f.write(fig.read())
+    else:
+        fig.savefig(save_path + filename)
+        # clear the current figure
+        fig.clf()
     if useFullPath == "1":
         result.url = filePath + "/" + chart.project + "/" + chart.step + "/" + filename
     else:
