@@ -12,3 +12,5 @@ class Config(BaseModel):
     percentage_of_tolerance: Optional[float] = None
     lcl: Optional[float] = None
     ucl: Optional[float] = None
+    lower_bound: Optional[float] = None
+    upper_bound: Optional[float] = None
