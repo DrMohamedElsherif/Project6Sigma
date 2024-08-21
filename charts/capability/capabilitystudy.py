@@ -3,6 +3,7 @@ from scipy.stats import normaltest, shapiro
 
 from charts.basechart import BaseChart
 from charts.capability.continuous.normal import I_MR_chart
+from charts.capability.continuous.notnormal import I_MR_chart_transformed
 
 
 class Capabilitystudy(BaseChart):
@@ -30,8 +31,10 @@ class Capabilitystudy(BaseChart):
                 return I_MR_chart(data, title, target=100, subgroup_size=1, USL=usl, LSL=lsl)
             # If data is not normally distributed
             else:
-                print("Data is not normally distributed")
-                # I_MR_transformed_chart(data, target=100, subgroup_size=1, LSL=5, USL=10)
+                return I_MR_chart_transformed(data, "My Process", target=10, subgroup_size=1, LSL=5, USL=10)
+
+
+
 
         # Discrete data:
         else:

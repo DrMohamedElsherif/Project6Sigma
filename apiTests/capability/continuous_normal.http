@@ -6,10 +6,10 @@ Content-Type: application/json
   "type": "capabilitystudy",
   "description": "string",
   "config": {
-    "title": "MSA 2 Test",
+    "title": "Normal",
     "reference": "100",
     "lower_bound": 96.0,
-    "upper_bound": 104.0
+    "upper_bound": 110.0
   },
   "project": "1f1f90e9-9820-4008-b850-571fd0d5740e",
   "step": "measure",
