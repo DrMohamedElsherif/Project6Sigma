@@ -81,7 +81,6 @@ async def create_file(project: str = Form(...), step: str = Form(...), file: Upl
 @app.post("/chart", response_model=ChartResult)
 async def generate(chart: Chart):
     project_path = filePath + "/" + chart.project + "/" + chart.step
-    print(str_to_class(chart.type + "." + chart.type.capitalize()))
     # check if dir exists
     if not os.path.exists(project_path):
         os.makedirs(project_path)
