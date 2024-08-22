@@ -7,9 +7,10 @@ Content-Type: application/json
   "description": "string",
   "config": {
     "title": "Not Normal",
-    "reference": "100",
-    "lower_bound": 105.0,
-    "upper_bound": 110.0
+    "target": 10,
+    "subgroup_size": 1,
+    "lower_bound": 0,
+    "upper_bound": 25
   },
   "project": "1f1f90e9-9820-4008-b850-571fd0d5740e",
   "step": "measure",

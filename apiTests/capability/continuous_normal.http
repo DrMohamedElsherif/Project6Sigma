@@ -7,7 +7,8 @@ Content-Type: application/json
   "description": "string",
   "config": {
     "title": "Normal",
-    "reference": "100",
+    "target": 100,
+    "subgroup_size": 1,
     "lower_bound": 96.0,
     "upper_bound": 110.0
   },

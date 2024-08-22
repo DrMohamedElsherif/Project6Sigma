@@ -10,6 +10,26 @@ from statsmodels.graphics.gofplots import qqplot
 
 def I_MR_chart_transformed(data, title, target=0, subgroup_size=1, LSL=0, USL=0):
     # (Die Validierungen bleiben unverändert)
+    if target < 0:
+        return print("Error. A non-negative target value must be specified.")
+    if subgroup_size <= 0:
+        return print("Error. The subgroup size must be a positive value greater than zero.")
+    if LSL < 0:
+        return print("Error. A non-negative Lower Specification Limit (LSL) must be specified.")
+    if USL < 0:
+        return print("Error. A non-negative Upper Specification Limit (USL) must be specified.")
+    if LSL >= 0 and target > 0:
+        if target < LSL:
+            return print(f"Error. Target value ({target}) is lower than Lower Specification Limit ({LSL}).")
+    if USL >= 0 and target > 0:
+        if target > USL:
+            return print(f"Error. Target value ({target}) is greater than Upper Specification Limit ({USL}).")
+    if LSL > 0 and USL > 0:
+        if USL < LSL:
+            return print(f"Error. Upper Specification Limit ({USL}) is lower than Lower Specification Limit ({LSL}).")
+        if USL == LSL:
+            return print(f"Error. Upper Specification Limit ({USL}) is equal to Lower Specification Limit ({LSL}).")
+
 
     # Update dataframe
     data.rename(columns={0: "value"}, inplace=True)
@@ -126,8 +146,6 @@ def I_MR_chart_transformed(data, title, target=0, subgroup_size=1, LSL=0, USL=0)
             # Box-Cox transformed LSL and USL
             LSL_transformed = stats.boxcox(np.array([LSL]), lmbda=lambda_value)[0]
             USL_transformed = stats.boxcox(np.array([USL]), lmbda=lambda_value)[0]
-
-            print(LSL_transformed, USL_transformed)
 
             # Plot for Transformed Data
             sns.histplot(data["value_transformed"], kde=True, ax=axs["Transformed"], bins=15, color="#7DA7D9", edgecolor="black", stat="density")

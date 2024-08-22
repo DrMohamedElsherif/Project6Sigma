@@ -143,7 +143,6 @@ def U_chart(data, title, acceptable_DPU=0, subgroup_size=1):
         axs["Process Capability"].axis('off')
         axs["Process Capability"].set_title("Process Capability", pad=20)
 
-        # print nothing for now
         axs["Probability Plot"].axis('off')
 
         pdf.savefig(fig)
