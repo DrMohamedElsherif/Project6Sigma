@@ -69,6 +69,7 @@ class Msagagereportchart(BaseChart):
 
         # Adjust layout: larger margins and more space between plots
         fig.subplots_adjust(left=0.15, right=0.85, top=0.85, bottom=0.1, hspace=0.4)
+        fig.suptitle(title, fontsize=16, weight="bold", y=0.93)
 
         # First plot
         axs[0].scatter(data["Known-Value"], data["Percent Pass"], label="Data")
@@ -88,7 +89,6 @@ class Msagagereportchart(BaseChart):
 
         result = minimize_scalar(objective, args=tuple(popt))
         l_limit_estimate = result.x if result.success else None
-        print(f"Estimated L Limit: {l_limit_estimate}")
 
         # Second plot
         probscale.probplot(data=data["Known-Value"], probax="y", plottype="prob", bestfit=True, ax=axs[1])
