@@ -6,7 +6,7 @@ Content-Type: application/json
   "type": "msa2n3gagerrchart",
   "description": "string",
   "config": {
-    "title": "Test",
+    "title": "MSA 2 Gage Report",
     "labelx": "Operator"
   },
   "project": "1f1f90e9-9820-4008-b850-571fd0d5740e",

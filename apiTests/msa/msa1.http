@@ -6,7 +6,7 @@ Content-Type: application/json
   "type": "msa1chart",
   "description": "string",
   "config": {
-    "title": "Test",
+    "title": "MSA 1",
     "reference": 0.025,
     "tolerance": 0.0007,
     "percentage_of_tolerance": 0.10

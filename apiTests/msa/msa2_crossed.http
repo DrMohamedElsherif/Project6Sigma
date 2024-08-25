@@ -6,7 +6,7 @@ Content-Type: application/json
   "type": "msa2n3crossedchart",
   "description": "string",
   "config": {
-    "title": "MSA 2 Test",
+    "title": "MSA 2 Crossed",
     "labelx": "Operator"
   },
   "project": "1f1f90e9-9820-4008-b850-571fd0d5740e",

@@ -6,8 +6,8 @@ Content-Type: application/json
   "type": "msa2n3nestedchart",
   "description": "string",
   "config": {
-    "title": "MSA 2 Nested",
-    "labelx": "Operator"
+    "title": "MSA 3 Nested",
+    "labelx": "Device"
   },
   "project": "1f1f90e9-9820-4008-b850-571fd0d5740e",
   "step": "measure",

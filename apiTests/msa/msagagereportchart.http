@@ -6,7 +6,7 @@ Content-Type: application/json
   "type": "msagagereportchart",
   "description": "string",
   "config": {
-    "title": "Test with More Data",
+    "title": "MSA Gage R&R Report",
     "trials": 50,
     "ucl": 0.03
   },

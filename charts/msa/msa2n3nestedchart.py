@@ -12,11 +12,24 @@ from charts.basechart import BaseChart
 
 class Msa2n3nestedchart(BaseChart):
     def process(self):
-        # Extracting data directly from the API response
-        title = self.chart.config.title
-        values = self.chart.data["values"]  # Values (measurements)
-        parts = self.chart.data["parts"]  # Part IDs
-        operators = self.chart.data["operators"]  # Operator IDs
+        try:
+            # Extracting data directly from the API response
+            title = self.chart.config.title
+            values = self.chart.data["values"]  # Values (measurements)
+            parts = self.chart.data["parts"]  # Part IDs
+
+            # Check if the chart has operators else use devices else throw an error
+            if "operators" in self.chart.data:
+                operators = self.chart.data["operators"]
+            elif "devices" in self.chart.data:
+                operators = self.chart.data["devices"]
+            else:
+                raise ValueError("The chart data must have either 'operators' or 'devices'")
+
+            label = self.chart.config.labelx  # Label (Operator or Device)
+        except Exception as e:
+            print(f"Error reading the Excel file: {e}")
+            return None
 
         # Create DataFrame from the API data
         data = pd.DataFrame({
@@ -54,7 +67,7 @@ class Msa2n3nestedchart(BaseChart):
         data_grouped_by_operator_and_part = data_grouped_by_operator_and_part.reindex(
             list(dict.fromkeys(data["Part"]))).reset_index()
 
-        anova_table, gage_rr_var_comp_df, gage_evaluation_df = self._perform_two_way_anova(data)
+        anova_table, gage_rr_var_comp_df, gage_evaluation_df = self._perform_two_way_anova(label, data)
 
         # Create a BytesIO object to save the PDF in-memory
         pdf_io = io.BytesIO()
@@ -69,7 +82,7 @@ class Msa2n3nestedchart(BaseChart):
             # Plot Value by Part Scatter Plot
             self._plot_value_by_part(data, data_grouped_by_part, axes[0])
 
-            self._plot_value_by_operator(data, data_grouped_by_operator, axes[1])
+            self._plot_value_by_operator(data, label, data_grouped_by_operator, axes[1])
             pdf.savefig(fig)
             plt.close(fig)
 
@@ -123,8 +136,8 @@ class Msa2n3nestedchart(BaseChart):
                         operator = operators[i + j]
                         ax_xbar = fig.add_subplot(gs[j * 2])
                         ax_r = fig.add_subplot(gs[j * 2 + 1])
-                        self._plot_xbar_chart_by_operator(operator, data_grouped_by_operator_and_part_stats, ax_xbar)
-                        self._plot_r_chart_by_operator(operator, data_grouped_by_operator_and_part_stats, ax_r)
+                        self._plot_xbar_chart_by_operator(label, operator, data_grouped_by_operator_and_part_stats, ax_xbar)
+                        self._plot_r_chart_by_operator(label, operator, data_grouped_by_operator_and_part_stats, ax_r)
                     else:
                         # Hide unused subplots
                         ax_xbar = fig.add_subplot(gs[j * 2])
@@ -193,7 +206,7 @@ class Msa2n3nestedchart(BaseChart):
         pdf_io.seek(0)
         return pdf_io
 
-    def _perform_two_way_anova(self, data):
+    def _perform_two_way_anova(self, label, data):
         # Eindeutigen Identifikator für jedes Teil innerhalb jedes Operators erstellen
         data['Part_Operator'] = data['Operator'].astype(str) + '_' + data['Part'].astype(str)
 
@@ -236,7 +249,7 @@ class Msa2n3nestedchart(BaseChart):
 
         # Ergebnistabelle erstellen und umbenennen
         anova_table = pd.DataFrame({
-            'Source': ['Operator', 'Part (Operator)', 'Repeatability', 'Total'],
+            'Source': [f'{label}', f'Part ({label})', 'Repeatability', 'Total'],
             'DF': [df_operator, df_part_operator, df_residual, len(data) - 1],
             'SS': [ss_operator, ss_part_operator, ss_residual, ss_total],
             'MS': [ms_operator, ms_part_operator, ms_residual, np.nan],
@@ -290,7 +303,7 @@ class Msa2n3nestedchart(BaseChart):
 
         # Gage R&R Varianzkomponenten-Tabelle erstellen
         gage_rr_var_comp_df = pd.DataFrame({
-            'Source': ['Total Gage R&R', '  Repeatability', '  Reproducibility', 'Part-To-Part', 'Total Variation'],
+            'Source': ['Total Gage R&R', 'Repeatability', 'Reproducibility', 'Part-To-Part', 'Total Variation'],
             'VarComp': [var_gage_rr, var_repeatability, var_reproducibility, var_part, var_total],
             '%Contribution (of VarComp)': [contrib_gage_rr, contrib_repeatability, contrib_reproducibility,
                                            contrib_part, 100.00]
@@ -298,7 +311,7 @@ class Msa2n3nestedchart(BaseChart):
 
         # Gage Evaluation Tabelle erstellen
         gage_evaluation_df = pd.DataFrame({
-            'Source': ['Total Gage R&R', '  Repeatability', '  Reproducibility', 'Part-To-Part', 'Total Variation'],
+            'Source': ['Total Gage R&R', 'Repeatability', 'Reproducibility', 'Part-To-Part', 'Total Variation'],
             'StdDev (SD)': [std_dev_gage_rr, std_dev_repeatability, std_dev_reproducibility, std_dev_part,
                             std_dev_total],
             'Study Var (6 × SD)': [study_var_gage_rr, study_var_repeatability, study_var_reproducibility,
@@ -341,15 +354,16 @@ class Msa2n3nestedchart(BaseChart):
         ax.set_xlabel("Part")
         ax.grid(color="lightgrey")
 
-    def _plot_value_by_operator(self, data, data_grouped_by_operator, ax):
+    def _plot_value_by_operator(self, data, label, data_grouped_by_operator, ax):
         sns.boxplot(x="Operator", y="Value", data=data, color="#7DA7D9", width=0.4, ax=ax)
+        ax.set_xlabel(label)
         ax.plot(data_grouped_by_operator["Operator"], data_grouped_by_operator["Value"], color="grey")
         ax.scatter(x=data_grouped_by_operator["Operator"], y=data_grouped_by_operator["Value"], facecolors="none",
                    edgecolors="grey")
-        ax.set_title("Value by Operator")
+        ax.set_title(f"Value by {label}")
         ax.grid(color="lightgrey")
 
-    def _plot_xbar_chart_by_operator(self, operator, data_grouped_by_operator_and_part_stats, ax):
+    def _plot_xbar_chart_by_operator(self, label, operator, data_grouped_by_operator_and_part_stats, ax):
         ax.scatter(
             x=data_grouped_by_operator_and_part_stats[data_grouped_by_operator_and_part_stats["Operator"] == operator][
                 "Part"],
@@ -367,14 +381,14 @@ class Msa2n3nestedchart(BaseChart):
         ax.axhline(data_grouped_by_operator_and_part_stats["Mean"].mean() - (
                 1.023 * data_grouped_by_operator_and_part_stats["Range"].mean()), color="red", label="LCL",
                    linewidth=0.7)
-        ax.set_title(f"Xbar Chart by Operator - {operator}")
+        ax.set_title(f"Xbar Chart by {label} - {operator}")
         ax.set_xlabel("Part")
         ax.set_ylabel("Sample Mean")
         ax.set_ylim(data_grouped_by_operator_and_part_stats["Mean"].min() - 1,
                     data_grouped_by_operator_and_part_stats["Mean"].max() + 1)
         ax.legend()
 
-    def _plot_r_chart_by_operator(self, operator, data_grouped_by_operator_and_part_stats, ax):
+    def _plot_r_chart_by_operator(self, label, operator, data_grouped_by_operator_and_part_stats, ax):
         ax.scatter(
             x=data_grouped_by_operator_and_part_stats[data_grouped_by_operator_and_part_stats["Operator"] == operator][
                 "Part"],
@@ -389,7 +403,7 @@ class Msa2n3nestedchart(BaseChart):
         ax.axhline(2.574 * data_grouped_by_operator_and_part_stats["Range"].mean(), color="red", label="UCL",
                    linewidth=0.7)
         ax.axhline(0 * data_grouped_by_operator_and_part_stats["Range"].mean(), color="red", label="LCL", linewidth=0.7)
-        ax.set_title(f"R Chart by Operator - {operator}")
+        ax.set_title(f"R Chart by {label} - {operator}")
         ax.set_xlabel("Part")
         ax.set_ylabel("Sample Range")
         ax.set_ylim(max(0, data_grouped_by_operator_and_part_stats["Range"].min() - 1),
