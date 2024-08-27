@@ -8,6 +8,7 @@ from scipy import stats
 from scipy.stats import normaltest, probplot
 from statsmodels.graphics.gofplots import qqplot
 
+
 def I_MR_chart_transformed(data, title, target=0, subgroup_size=1, LSL=0, USL=0):
     # (Die Validierungen bleiben unverändert)
     if target < 0:
@@ -29,7 +30,6 @@ def I_MR_chart_transformed(data, title, target=0, subgroup_size=1, LSL=0, USL=0)
             return print(f"Error. Upper Specification Limit ({USL}) is lower than Lower Specification Limit ({LSL}).")
         if USL == LSL:
             return print(f"Error. Upper Specification Limit ({USL}) is equal to Lower Specification Limit ({LSL}).")
-
 
     # Update dataframe
     data.rename(columns={0: "value"}, inplace=True)
@@ -104,7 +104,7 @@ def I_MR_chart_transformed(data, title, target=0, subgroup_size=1, LSL=0, USL=0)
                 if key[1] == 0:  # key[1] corresponds to the column index
                     cell.set_text_props(fontweight='bold')
                 cell.set_height(0.18)
-            axs["Normality Test"].set_title("Normality Test")
+            axs["Normality Test"].set_title("Normality Test (Transformed)")
             axs["Normality Test"].axis('tight')
             axs["Normality Test"].axis('off')
 
@@ -123,7 +123,8 @@ def I_MR_chart_transformed(data, title, target=0, subgroup_size=1, LSL=0, USL=0)
             plt.subplots_adjust(left=0.1, right=0.9, top=0.9, bottom=0.1, hspace=0.6, wspace=0.1)
 
             # Plot Normality Plot (Q-Q plot) in the "Normal" section of the mosaic
-            sns.histplot(data["value"], kde=True, ax=axs["Normal"], bins=30, color="#7DA7D9", edgecolor="black", stat="density")
+            sns.histplot(data["value"], kde=True, ax=axs["Normal"], bins=30, color="#7DA7D9", edgecolor="black",
+                         stat="density")
 
             # Add vertical lines for target, LSL, and USL
             axs["Normal"].axvline(target, linestyle="--", color="green")
@@ -144,17 +145,18 @@ def I_MR_chart_transformed(data, title, target=0, subgroup_size=1, LSL=0, USL=0)
             axs["Normal"].grid(color="lightgray", linestyle="--", linewidth=0.5)
 
             # Box-Cox transformed LSL and USL
-            LSL_transformed = stats.boxcox(np.array([LSL]), lmbda=lambda_value)[0]
-            USL_transformed = stats.boxcox(np.array([USL]), lmbda=lambda_value)[0]
+            LSL_transformed = stats.boxcox([LSL, USL])[0][0]
+            USL_transformed = stats.boxcox([LSL, USL])[0][1]
 
             # Plot for Transformed Data
-            sns.histplot(data["value_transformed"], kde=True, ax=axs["Transformed"], bins=15, color="#7DA7D9", edgecolor="black", stat="density")
+            sns.histplot(data["value_transformed"], kde=True, ax=axs["Transformed"], bins=15, color="#7DA7D9",
+                         edgecolor="black", stat="density")
             axs["Transformed"].axvline(LSL_transformed, linestyle="--", color="#A50021")
             axs["Transformed"].axvline(USL_transformed, linestyle="--", color="#A50021")
 
             # Add annotations for transformed LSL and USL
-            axs["Transformed"].annotate("USL", xy=(USL_transformed-0.5, 0), color="#A50021")
-            axs["Transformed"].annotate("LSL", xy=(LSL_transformed-0.5, 0), color="#A50021")
+            axs["Transformed"].annotate("USL", xy=(USL_transformed - 0.5, 0), color="#A50021")
+            axs["Transformed"].annotate("LSL", xy=(LSL_transformed - 0.5, 0), color="#A50021")
 
             # Set the title and labels for the "Transformed" plot
             axs["Transformed"].set_title("Transformed Data", pad=20)
@@ -163,9 +165,11 @@ def I_MR_chart_transformed(data, title, target=0, subgroup_size=1, LSL=0, USL=0)
             axs["Transformed"].grid(color="lightgray", linestyle="--", linewidth=0.5)
 
             # Calculate process capability indices Pp and Ppk
-            Pp = round((USL_transformed-LSL_transformed)/(6*np.std(data["value_transformed"], ddof=1)), 2)
-            Ppk = round(min((USL_transformed-np.mean(data["value_transformed"]))/(3*np.std(data["value_transformed"], ddof=1)),
-                            (np.mean(data["value_transformed"])-LSL_transformed)/(3*np.std(data["value_transformed"], ddof=1))), 2)
+            Pp = round((USL_transformed - LSL_transformed) / (6 * np.std(data["value_transformed"], ddof=1)), 2)
+            Ppk = round(min((USL_transformed - np.mean(data["value_transformed"])) / (
+                        3 * np.std(data["value_transformed"], ddof=1)),
+                            (np.mean(data["value_transformed"]) - LSL_transformed) / (
+                                        3 * np.std(data["value_transformed"], ddof=1))), 2)
 
             process_characterization_df = pd.DataFrame({
                 "Total N": [len(data["value"])],
@@ -180,11 +184,13 @@ def I_MR_chart_transformed(data, title, target=0, subgroup_size=1, LSL=0, USL=0)
             process_capability_df = pd.DataFrame({
                 "Pp": [Pp],
                 "Ppk": Ppk,
-                "% Out of spec (observed)": len(data[data["value"] < LSL]["value"]),
-                "PPM (DPMO) (observed)": (len(data[data["value"] < LSL]["value"])) * 10000
+                "% Out of spec (observed)": len(data[data["value"] > USL]["value"]) + len(
+                    data[data["value"] < LSL]["value"]),
+                "PPM (DPMO) (observed)": (len(data[data["value"] > USL]["value"]) + len(
+                    data[data["value"] < LSL]["value"])) * 10000
             }).T
 
-            process_capability_df.rename(columns={0:"Value"}, inplace=True)
+            process_capability_df.rename(columns={0: "Value"}, inplace=True)
 
             # Convert process_characterization_df to a table and add it to the "Process Table" subplot
             process_characterization_table = axs["Process Table"].table(
@@ -197,7 +203,7 @@ def I_MR_chart_transformed(data, title, target=0, subgroup_size=1, LSL=0, USL=0)
                 bbox=[0.55, 0.5, 0.5, 0.5]
             )
             axs["Process Table"].axis('off')  # Hide the axis for the table
-            process_characterization_table.scale(1,1)  # Scale the table to fit the subplot
+            process_characterization_table.scale(1, 1)  # Scale the table to fit the subplot
             axs["Process Table"].set_title("Process Characterization", pad=20)
 
             # Add Process Capability table to the "Capability Table" subplot

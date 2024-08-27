@@ -125,28 +125,16 @@ class Msa2n3nestedchart(BaseChart):
             data_grouped_by_operator_and_part_stats = data_grouped_by_operator_and_part_stats.reindex(
                 list(dict.fromkeys(data["Part"]))).reset_index()
 
-            # Plot X-bar and R charts by Operator
-            operators = data_grouped_by_operator_and_part_stats["Operator"].unique()
-            for i in range(0, len(operators), 2):
-                fig = plt.figure(figsize=(8.27, 11.69))  # A4 size in inches
-                gs = fig.add_gridspec(4, 1, hspace=0.6)  # Adjust hspace for vertical spacing
+            # NEW PDF PAGE - X-bar and R Charts for all Operators in single charts
+            fig, (ax_xbar, ax_r) = plt.subplots(2, 1, figsize=(11.69, 8.27))  # A4 size in landscape
+            fig.subplots_adjust(hspace=0.35, top=0.85)
+            fig.suptitle(f"{title}\nX-bar and R Charts by {label}", fontsize=16, weight='bold', y=0.95)
 
-                for j in range(2):
-                    if i + j < len(operators):
-                        operator = operators[i + j]
-                        ax_xbar = fig.add_subplot(gs[j * 2])
-                        ax_r = fig.add_subplot(gs[j * 2 + 1])
-                        self._plot_xbar_chart_by_operator(label, operator, data_grouped_by_operator_and_part_stats, ax_xbar)
-                        self._plot_r_chart_by_operator(label, operator, data_grouped_by_operator_and_part_stats, ax_r)
-                    else:
-                        # Hide unused subplots
-                        ax_xbar = fig.add_subplot(gs[j * 2])
-                        ax_r = fig.add_subplot(gs[j * 2 + 1])
-                        ax_xbar.axis('off')
-                        ax_r.axis('off')
+            self._plot_r_chart_all_operators(data_grouped_by_operator_and_part_stats, label, ax_xbar)
+            self._plot_xbar_chart_all_operators(data_grouped_by_operator_and_part_stats, label, ax_r)
 
-                pdf.savefig(fig)  # Save the current page
-                plt.close(fig)
+            pdf.savefig(fig)
+            plt.close(fig)
 
             # NEW PDF PAGE - Tables
             fig, axes = plt.subplots(4, 1, figsize=(8.27, 11.69))  # A4 size in inches
@@ -363,49 +351,95 @@ class Msa2n3nestedchart(BaseChart):
         ax.set_title(f"Value by {label}")
         ax.grid(color="lightgrey")
 
-    def _plot_xbar_chart_by_operator(self, label, operator, data_grouped_by_operator_and_part_stats, ax):
-        ax.scatter(
-            x=data_grouped_by_operator_and_part_stats[data_grouped_by_operator_and_part_stats["Operator"] == operator][
-                "Part"],
-            y=data_grouped_by_operator_and_part_stats[data_grouped_by_operator_and_part_stats["Operator"] == operator][
-                "Mean"])
-        ax.plot(
-            data_grouped_by_operator_and_part_stats[data_grouped_by_operator_and_part_stats["Operator"] == operator][
-                "Part"],
-            data_grouped_by_operator_and_part_stats[data_grouped_by_operator_and_part_stats["Operator"] == operator][
-                "Mean"])
-        ax.axhline(data_grouped_by_operator_and_part_stats["Mean"].mean(), color="green", label="X-bar", linewidth=0.7)
-        ax.axhline(data_grouped_by_operator_and_part_stats["Mean"].mean() + (
-                1.023 * data_grouped_by_operator_and_part_stats["Range"].mean()), color="red", label="UCL",
-                   linewidth=0.7)
-        ax.axhline(data_grouped_by_operator_and_part_stats["Mean"].mean() - (
-                1.023 * data_grouped_by_operator_and_part_stats["Range"].mean()), color="red", label="LCL",
-                   linewidth=0.7)
-        ax.set_title(f"Xbar Chart by {label} - {operator}")
+    def _plot_xbar_chart_all_operators(self, data, label, ax):
+        operators = data['Operator'].unique()
+        overall_mean = data['Mean'].mean()
+        overall_range_mean = data['Range'].mean()
+
+        colors = plt.cm.tab10(np.linspace(0, 1, len(operators)))
+        cumulative_parts = 0
+
+        for i, operator in enumerate(operators):
+            operator_data = data[data['Operator'] == operator]
+            n_parts = len(operator_data)
+            x = np.arange(cumulative_parts, cumulative_parts + n_parts)
+            ax.plot(x, operator_data['Mean'], marker='o', color=colors[i])
+            cumulative_parts += n_parts
+
+        ax.axhline(overall_mean, color="green", label="Overall X-bar", linewidth=0.9)
+        ax.axhline(overall_mean + (1.023 * overall_range_mean), color="red", label="UCL", linewidth=0.9)
+        ax.axhline(overall_mean - (1.023 * overall_range_mean), color="red", label="LCL", linewidth=0.9)
+
+        x_max = ax.get_xlim()[1]
+        x_min = ax.get_xlim()[0]
+        space = x_max + (x_max - x_min) * 0.01
+        ax.text(space, overall_mean, f'{overall_mean:.2f}', color="green", va='center')
+        ax.text(space, overall_mean + (1.023 * overall_range_mean), f'{(overall_mean + 1.023 * overall_range_mean):.2f}', color="red", va='center')
+        ax.text(space, overall_mean - (1.023 * overall_range_mean), f'{(overall_mean - 1.023 * overall_range_mean):.2f}', color="red", va='center')
+
+        ax.set_title(f"X-bar Chart by {label}")
         ax.set_xlabel("Part")
         ax.set_ylabel("Sample Mean")
-        ax.set_ylim(data_grouped_by_operator_and_part_stats["Mean"].min() - 1,
-                    data_grouped_by_operator_and_part_stats["Mean"].max() + 1)
-        ax.legend()
+        ax.legend(fontsize='small', loc='upper right')
+        ax.grid(color="lightgrey")
 
-    def _plot_r_chart_by_operator(self, label, operator, data_grouped_by_operator_and_part_stats, ax):
-        ax.scatter(
-            x=data_grouped_by_operator_and_part_stats[data_grouped_by_operator_and_part_stats["Operator"] == operator][
-                "Part"],
-            y=data_grouped_by_operator_and_part_stats[data_grouped_by_operator_and_part_stats["Operator"] == operator][
-                "Range"])
-        ax.plot(
-            data_grouped_by_operator_and_part_stats[data_grouped_by_operator_and_part_stats["Operator"] == operator][
-                "Part"],
-            data_grouped_by_operator_and_part_stats[data_grouped_by_operator_and_part_stats["Operator"] == operator][
-                "Range"])
-        ax.axhline(data_grouped_by_operator_and_part_stats["Range"].mean(), color="green", label="R-bar", linewidth=0.7)
-        ax.axhline(2.574 * data_grouped_by_operator_and_part_stats["Range"].mean(), color="red", label="UCL",
-                   linewidth=0.7)
-        ax.axhline(0 * data_grouped_by_operator_and_part_stats["Range"].mean(), color="red", label="LCL", linewidth=0.7)
-        ax.set_title(f"R Chart by {label} - {operator}")
+        # Set x-ticks and labels
+        ax.set_xticks(range(cumulative_parts))
+        ax.set_xticklabels(data['Part'])
+
+        # Add vertical lines and operator labels to separate operators
+        cumulative_parts = 0
+        for i, operator in enumerate(operators):
+            operator_data = data[data['Operator'] == operator]
+            n_parts = len(operator_data)
+            if i > 0:
+                ax.axvline(cumulative_parts - 0.5, color='blue', linestyle='--', alpha=0.5)
+            ax.text(cumulative_parts + n_parts/2, ax.get_ylim()[0], operator,
+                    horizontalalignment='center', verticalalignment='bottom')
+            cumulative_parts += n_parts
+
+    def _plot_r_chart_all_operators(self, data, label, ax):
+        operators = data['Operator'].unique()
+        overall_range_mean = data['Range'].mean()
+
+        colors = plt.cm.tab10(np.linspace(0, 1, len(operators)))
+        cumulative_parts = 0
+
+        for i, operator in enumerate(operators):
+            operator_data = data[data['Operator'] == operator]
+            n_parts = len(operator_data)
+            x = np.arange(cumulative_parts, cumulative_parts + n_parts)
+            ax.plot(x, operator_data['Range'], marker='o', color=colors[i])
+            cumulative_parts += n_parts
+
+        ax.axhline(overall_range_mean, color="green", label="Overall R-bar", linewidth=0.9)
+        ax.axhline(2.574 * overall_range_mean, color="red", label="UCL", linewidth=0.9)
+        ax.axhline(0, color="red", label="LCL", linewidth=0.9)
+
+        x_max = ax.get_xlim()[1]
+        x_min = ax.get_xlim()[0]
+        space = x_max + (x_max - x_min) * 0.01
+        ax.text(space, overall_range_mean, f'{overall_range_mean:.3f}', color="green", va='center')
+        ax.text(space, 2.574 * overall_range_mean, f'{(2.574 * overall_range_mean):.3f}', color="red", va='center')
+        ax.text(space, 0, '0.000', color="red", va='center')
+
+        ax.set_title(f"R Chart by {label}")
         ax.set_xlabel("Part")
         ax.set_ylabel("Sample Range")
-        ax.set_ylim(max(0, data_grouped_by_operator_and_part_stats["Range"].min() - 1),
-                    data_grouped_by_operator_and_part_stats["Range"].max() + 1)
-        ax.legend()
+        ax.legend(fontsize='small', loc='upper right')
+        ax.grid(color="lightgrey")
+
+        # Set x-ticks and labels
+        ax.set_xticks(range(cumulative_parts))
+        ax.set_xticklabels(data['Part'])
+
+        # Add vertical lines and operator labels to separate operators
+        cumulative_parts = 0
+        for i, operator in enumerate(operators):
+            operator_data = data[data['Operator'] == operator]
+            n_parts = len(operator_data)
+            if i > 0:
+                ax.axvline(cumulative_parts - 0.5, color='blue', linestyle='--', alpha=0.5)
+            ax.text(cumulative_parts + n_parts/2, ax.get_ylim()[0], operator,
+                    horizontalalignment='center', verticalalignment='bottom')
+            cumulative_parts += n_parts

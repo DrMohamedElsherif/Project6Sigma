@@ -27,7 +27,7 @@ class Capabilitystudy(BaseChart):
 
         # Continuous data
         if data.dtypes.iloc[0] == "float64":
-
+            subgroup_size = 1
             # Normality tests
             _, p_value_shapiro = shapiro(data.iloc[:, 0])
             _, p_value_normaltest = normaltest(data.iloc[:, 0])

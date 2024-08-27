@@ -53,7 +53,7 @@ class Msa1chart(BaseChart):
         total_tol_minus_ref = (percentage_of_tolerance * tolerance - (abs(np.mean(data) - reference)))
 
         cg = (percentage_of_tolerance * tolerance) / (3 * np.std(data, ddof=1))
-        cgk = total_tol_minus_ref / (6 * np.std(data, ddof=1)/2)
+        cgk = total_tol_minus_ref / (6 * np.std(data, ddof=1) / 2)
 
         K = 20  # Constant used in the formula
         bias = np.mean(data) - reference
@@ -61,15 +61,13 @@ class Msa1chart(BaseChart):
         t_statistic = abs(bias) / (repeatability_std_dev / np.sqrt(len(data)))
         p_value = scipy.stats.t.sf(np.abs(t_statistic), len(data) - 1) * 2
 
-        var_repeatability = K/cg
-        var_repeatability_and_bias = K/cgk
+        var_repeatability = K / cg
+        var_repeatability_and_bias = K / cgk
 
         capability_df = pd.DataFrame({
             "Metric": ["Cg", "Cgk", "%Var(Repeatability)", "%Var(Rep. and Bias)"],
             "Value": [cg, cgk, var_repeatability, var_repeatability_and_bias]
         })
-
-
 
         bias_df = pd.DataFrame({
             "Metric": ["Bias", "T", "PValue"],
@@ -111,14 +109,13 @@ class Msa1chart(BaseChart):
         ax_tables[1].set_title('Bias Analysis', fontsize=12, weight='bold')
         ax_tables[2].set_title('Capability', fontsize=12, weight='bold')
 
-
         # Determine the maximum number of rows across all tables
         max_rows = max(len(basic_statistics_df), len(capability_df), len(bias_df))
 
         # Function to add empty rows to DataFrames to match max_rows
         def add_empty_rows_and_format(df, max_rows):
             # Format cell values to a maximum of 5 decimal places
-            df = df.map(lambda x: f"{x:.8f}" if isinstance(x, (int, float)) else x)
+            df = df.map(lambda x: f"{x:.4f}" if isinstance(x, (int, float)) else x)
 
             # Add empty rows to match max_rows
             additional_rows = max_rows - len(df)
@@ -137,7 +134,6 @@ class Msa1chart(BaseChart):
                                      cellLoc="left", loc="left", edges="closed", bbox=[0, 0, 1, 1])
         table_3 = ax_tables[2].table(cellText=capability_df_table.values, colLabels=None,
                                      cellLoc="left", loc="left", edges="closed", bbox=[0, 0, 1, 1])
-
 
         # Adjust font size for tables
         for table in [table_1, table_2, table_3]:

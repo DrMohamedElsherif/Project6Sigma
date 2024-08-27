@@ -114,30 +114,17 @@ class Msa2n3crossedchart(BaseChart):
             pdf.savefig(fig)  # Save the current page
             plt.close(fig)
 
-            # NEW PDF PAGE - X-bar and R Charts by Operator
-            operators = data_grouped_by_operator_and_part_stats["Operator"].unique()
-            for i in range(0, len(operators), 2):
-                fig = plt.figure(figsize=(8.27, 11.69))  # A4 size in inches
-                gs = fig.add_gridspec(4, 1, hspace=0.6)  # Adjust hspace for vertical spacing
+            # NEW PDF PAGE - X-bar and R Charts for all Operators side by side
+            # NEW PDF PAGE - X-bar and R Charts for all Operators in single charts
+            fig, (ax_xbar, ax_r) = plt.subplots(2, 1, figsize=(11.69, 8.27))
+            fig.subplots_adjust(hspace=0.35, top=0.85)
+            fig.suptitle(f"{title}\nX-bar and R Charts by {label}", fontsize=16, weight='bold', y=0.95)
 
-                for j in range(2):
-                    if i + j < len(operators):
-                        operator = operators[i + j]
-                        operator_data = data_grouped_by_operator_and_part_stats[
-                            data_grouped_by_operator_and_part_stats["Operator"] == operator]
-                        ax_xbar = fig.add_subplot(gs[j * 2])
-                        ax_r = fig.add_subplot(gs[j * 2 + 1])
-                        self._plot_xbar_chart_by_operator(operator_data, label, ax_xbar)
-                        self._plot_r_chart_by_operator(operator_data, label, ax_r)
-                    else:
-                        # Hide unused subplots
-                        ax_xbar = fig.add_subplot(gs[j * 2])
-                        ax_r = fig.add_subplot(gs[j * 2 + 1])
-                        ax_xbar.axis('off')
-                        ax_r.axis('off')
+            self._plot_r_chart_all_operators(data_grouped_by_operator_and_part_stats, label, ax_xbar)
+            self._plot_xbar_chart_all_operators(data_grouped_by_operator_and_part_stats, label, ax_r)
 
-                pdf.savefig(fig)  # Save the current page
-                plt.close(fig)
+            pdf.savefig(fig)
+            plt.close(fig)
 
             # NEW PDF PAGE - Tables
             fig, axes = plt.subplots(4, 1, figsize=(8.27, 11.69))  # A4 size in inches
@@ -274,37 +261,95 @@ class Msa2n3crossedchart(BaseChart):
         ax.legend()
         ax.grid(color="lightgrey")
 
-    @staticmethod
-    def _plot_xbar_chart_by_operator(operator_data, label, ax):
-        ax.scatter(x=operator_data["Part"], y=operator_data["Mean"])
-        ax.plot(operator_data["Part"], operator_data["Mean"])
-        ax.axhline(operator_data["Mean"].mean(), color="green", label="X-bar", linewidth=0.7)
-        ax.axhline(operator_data["Mean"].mean() + (1.023 * operator_data["Range"].mean()), color="red", label="UCL",
-                   linewidth=0.7)
-        ax.axhline(operator_data["Mean"].mean() - (1.023 * operator_data["Range"].mean()), color="red", label="LCL",
-                   linewidth=0.7)
-        ax.set_xticks(list(operator_data["Part"]))
-        ax.set_title(f"Xbar Chart by {label} - {operator_data['Operator'].iloc[0]}")
+    def _plot_xbar_chart_all_operators(self, data, label, ax):
+        operators = data['Operator'].unique()
+        n_operators = len(operators)
+        n_parts = data['Part'].nunique()
+
+        overall_mean = data['Mean'].mean()
+        overall_range_mean = data['Range'].mean()
+
+        for i, operator in enumerate(operators):
+            operator_data = data[data['Operator'] == operator]
+            x = np.array(operator_data['Part']) + i * (n_parts + 1)  # Offset each operator's data
+            ax.plot(x, operator_data['Mean'], marker='o')
+
+        # Lines with Values
+        ax.axhline(overall_mean, color="green", label="Overall X-bar", linewidth=0.9)
+        ax.axhline(overall_mean + (1.023 * overall_range_mean), color="red", label="UCL", linewidth=0.9)
+        ax.axhline(overall_mean - (1.023 * overall_range_mean), color="red", label="LCL", linewidth=0.9)
+
+        x_max = ax.get_xlim()[1]
+        x_min = ax.get_xlim()[0]
+        space = x_max + (x_max - x_min) * 0.01
+        ax.text(space, overall_mean, f'{overall_mean:.2f}', color="green", va='center')
+        ax.text(space, overall_mean + (1.023 * overall_range_mean), f'{(overall_mean + 1.023 * overall_range_mean):.2f}', color="red", va='center')
+        ax.text(space, overall_mean - (1.023 * overall_range_mean), f'{(overall_mean - 1.023 * overall_range_mean):.2f}', color="red", va='center')
+
+        ax.set_title(f"X-bar Chart by {label}")
         ax.set_xlabel("Part")
         ax.set_ylabel("Sample Mean")
-        ax.set_ylim(operator_data["Mean"].min() - 1, operator_data["Mean"].max() + 1)
-        ax.legend(fontsize='small')
+        ax.legend()
+        ax.grid(color="lightgrey")
 
-    @staticmethod
-    def _plot_r_chart_by_operator(operator_data, label, ax):
-        ax.scatter(x=operator_data["Part"], y=operator_data["Range"])
-        ax.plot(operator_data["Part"], operator_data["Range"])
-        ax.axhline(operator_data["Range"].mean(), color="green", label="R-bar", linewidth=0.7)
-        ax.axhline(operator_data["Range"].mean() + (1.023 * operator_data["Range"].std()), color="red", label="UCL",
-                   linewidth=0.7)
-        ax.axhline(operator_data["Range"].mean() - (1.023 * operator_data["Range"].std()), color="red", label="LCL",
-                   linewidth=0.7)
-        ax.set_xticks(list(operator_data["Part"]))
-        ax.set_title(f"R Chart by {label} - {operator_data['Operator'].iloc[0]}")
+        # Set x-ticks and labels
+        all_x = np.array([np.array(range(1, n_parts + 1)) + i * (n_parts + 1) for i in range(n_operators)]).flatten()
+        ax.set_xticks(all_x)
+        ax.set_xticklabels(list(range(1, n_parts + 1)) * n_operators)
+
+        # Add vertical lines to separate operators
+        for i in range(1, n_operators):
+            ax.axvline(i * (n_parts + 1) - 0.5, color='blue', linestyle='--', alpha=0.5)
+
+        # Add operator labels
+        for i, operator in enumerate(operators):
+            ax.text((i + 0.5) * (n_parts + 1), ax.get_ylim()[0], operator,
+                    horizontalalignment='center', verticalalignment='bottom')
+
+    def _plot_r_chart_all_operators(self, data, label, ax):
+        operators = data['Operator'].unique()
+        n_operators = len(operators)
+        n_parts = data['Part'].nunique()
+
+        overall_range_mean = data['Range'].mean()
+        overall_range_std = data['Range'].std()
+
+        for i, operator in enumerate(operators):
+            operator_data = data[data['Operator'] == operator]
+            x = np.array(operator_data['Part']) + i * (n_parts + 1)  # Offset each operator's data
+            ax.plot(x, operator_data['Range'], marker='o')
+
+        ax.axhline(overall_range_mean, color="green", label="Overall R-bar", linewidth=0.9)
+        ax.axhline(overall_range_mean + (1.023 * overall_range_std), color="red", label="UCL", linewidth=0.9)
+        ax.axhline(max(0, overall_range_mean - (1.023 * overall_range_std)), color="red", label="LCL", linewidth=0.9)
+
+        x_max = ax.get_xlim()[1]
+        x_min = ax.get_xlim()[0]
+        space = x_max + (x_max - x_min) * 0.01
+        ax.text(space, overall_range_mean, f'{overall_range_mean:.2f}', color="green", va='center')
+        ax.text(space, overall_range_mean + (1.023 * overall_range_std), f'{(overall_range_mean + 1.023 * overall_range_std):.2f}', color="red", va='center')
+        ax.text(space, overall_range_mean - (1.023 * overall_range_std), f'{(overall_range_mean - 1.023 * overall_range_std):.2f}', color="red", va='center')
+
+        ax.set_title(f"R Chart by {label}")
         ax.set_xlabel("Part")
-        ax.set_ylabel("Range")
-        ax.set_ylim(operator_data["Range"].min() - 1, operator_data["Range"].max() + 1)
-        ax.legend(fontsize='small')
+        ax.set_ylabel("Sample Range")
+        # Hide the legend
+        ax.legend()
+        ax.grid(color="lightgrey")
+
+        # Set x-ticks and labels
+        all_x = np.array([np.array(range(1, n_parts + 1)) + i * (n_parts + 1) for i in range(n_operators)]).flatten()
+        ax.set_xticks(all_x)
+        ax.set_xticklabels(list(range(1, n_parts + 1)) * n_operators)
+
+        # Add vertical lines to separate operators
+        for i in range(1, n_operators):
+            ax.axvline(i * (n_parts + 1) - 0.5, color='blue', linestyle='--', alpha=0.5)
+
+        # Add operator labels
+        for i, operator in enumerate(operators):
+            ax.text((i + 0.5) * (n_parts + 1), ax.get_ylim()[0], operator,
+                    horizontalalignment='center', verticalalignment='bottom')
 
     @staticmethod
     def _perform_two_way_anova(data, operators_count, parts_count,

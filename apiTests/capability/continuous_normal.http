@@ -9,7 +9,7 @@ Content-Type: application/json
     "title": "Normal",
     "target": 100,
     "subgroup_size": 1,
-    "lower_bound": 96.0,
+    "lower_bound": 95.0,
     "upper_bound": 110.0
   },
   "project": "1f1f90e9-9820-4008-b850-571fd0d5740e",

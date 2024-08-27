@@ -185,8 +185,8 @@ def I_MR_chart(data, title, target=0, subgroup_size=1, LSL=0, USL=0):
             process_capability_df = pd.DataFrame({
                 "Pp": [Pp],
                 "Ppk": Ppk,
-                "% Out of spec (observed)": len(data[data["value"] < LSL]["value"]),
-                "PPM (DPMO) (observed)": (len(data[data["value"] < LSL]["value"])) * 10000
+                "% Out of spec (observed)": len(data[data["value"]>USL]["value"]) + len(data[data["value"]<LSL]["value"]),
+                "PPM (DPMO) (observed)": (len(data[data["value"]>USL]["value"]) + len(data[data["value"]<LSL]["value"]))*10000
             }).T
 
             process_capability_df.rename(columns={0:"Value"}, inplace=True)

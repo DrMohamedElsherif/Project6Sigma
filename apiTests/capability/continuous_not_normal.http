@@ -9,8 +9,8 @@ Content-Type: application/json
     "title": "Not Normal",
     "target": 10,
     "subgroup_size": 1,
-    "lower_bound": 0,
-    "upper_bound": 25
+    "lower_bound": 5,
+    "upper_bound": 10
   },
   "project": "1f1f90e9-9820-4008-b850-571fd0d5740e",
   "step": "measure",
