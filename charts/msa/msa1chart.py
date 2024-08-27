@@ -48,12 +48,8 @@ class Msa1chart(BaseChart):
             "Value": [reference, np.mean(data), np.std(data, ddof=1), 6 * np.std(data, ddof=1), tolerance]
         })
 
-        # Calculate Repeatability and Capability Metrics
-
-        total_tol_minus_ref = (percentage_of_tolerance * tolerance - (abs(np.mean(data) - reference)))
-
-        cg = (percentage_of_tolerance * tolerance) / (3 * np.std(data, ddof=1))
-        cgk = total_tol_minus_ref / (6 * np.std(data, ddof=1) / 2)
+        cg = (percentage_of_tolerance*tolerance)/(3*np.std(data, ddof=1))
+        cgk = (percentage_of_tolerance*tolerance-(abs(np.mean(data)-reference)))/(3*np.std(data, ddof=1))
 
         K = 20  # Constant used in the formula
         bias = np.mean(data) - reference
@@ -115,7 +111,7 @@ class Msa1chart(BaseChart):
         # Function to add empty rows to DataFrames to match max_rows
         def add_empty_rows_and_format(df, max_rows):
             # Format cell values to a maximum of 5 decimal places
-            df = df.map(lambda x: f"{x:.4f}" if isinstance(x, (int, float)) else x)
+            df = df.map(lambda x: f"{x:.8f}" if isinstance(x, (int, float)) else x)
 
             # Add empty rows to match max_rows
             additional_rows = max_rows - len(df)
@@ -143,13 +139,6 @@ class Msa1chart(BaseChart):
 
         plt.subplots_adjust(hspace=1.5, top=0.85, bottom=0.15, left=0.15, right=0.85)
         plt.tight_layout(pad=4.0)
-
-        # Save results to files
-        output_dir = "Results"
-        os.makedirs(output_dir, exist_ok=True)
-        capability_df.to_csv(os.path.join(output_dir, "capability_df.csv"), index=False)
-        bias_df.to_csv(os.path.join(output_dir, "bias_df.csv"), index=False)
-        plt.savefig(os.path.join(output_dir, "Run_Chart.png"))
         plt.close()
 
         # Return the generated plot

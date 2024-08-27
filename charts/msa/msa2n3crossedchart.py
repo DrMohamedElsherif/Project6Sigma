@@ -92,16 +92,14 @@ class Msa2n3crossedchart(BaseChart):
 
         # Perform two-way ANOVA and get results
         (model_2way_interaction_results, model_2way_no_interaction_results, gage_rr_var_comp_no_interaction_df,
-         gage_evaluation_df) = self._perform_two_way_anova(data, operators_count, parts_count, replicates_per_part)
+         gage_evaluation_df) = self._perform_two_way_anova(data, label, operators_count, parts_count, replicates_per_part)
 
 
         with PdfPages(pdf_io) as pdf:
             # NEW PDF PAGE - Value by Part, Value by Operator, Part * Operator Interaction
             fig, axes = plt.subplots(3, 1, figsize=(8.27, 11.69))  # A4 size in inches
             fig.subplots_adjust(hspace=0.4)  # Increase hspace to add more space between charts
-            fig.suptitle(title, fontsize=16, weight='bold', y=0.95)
-            fig.text(0.5, s="MSA - 2 Crossed Analysis", ha="center", va="center", fontsize=11, y=0.92,
-                     weight="semibold")
+            fig.suptitle(title, fontsize=16, weight='bold', y=0.94)
 
             # Plot Value by Part Scatter Plot
             self._plot_value_by_part(data, data_grouped_by_part, axes[0])
@@ -207,7 +205,7 @@ class Msa2n3crossedchart(BaseChart):
             fig.subplots_adjust(bottom=0.20, top=0.85)  # Increase bottom space and headspace
 
             # Perform two-way ANOVA with and without interaction and plot the results
-            self._perform_two_way_anova(data, operators_count, parts_count,
+            self._perform_two_way_anova(data, label, operators_count, parts_count,
                                         replicates_per_part, ax, pdf)
 
             pdf.savefig(fig)
@@ -353,14 +351,14 @@ class Msa2n3crossedchart(BaseChart):
                     horizontalalignment='center', verticalalignment='bottom')
 
     @staticmethod
-    def _perform_two_way_anova(data, operators_count, parts_count, replicates_per_part, ax=None, pdf=None):
+    def _perform_two_way_anova(data, label, operators_count, parts_count, replicates_per_part, ax=None, pdf=None):
         # Perform two-way ANOVA with interaction
         model_2way_interaction = ols('Value ~ C(Part) + C(Operator) + C(Part):C(Operator)', data=data).fit()
         model_2way_interaction_results = sm.stats.anova_lm(model_2way_interaction, type=2)
         model_2way_interaction_results.rename(columns={"df": "DF", "sum_sq": "SS", "mean_sq": "MS", "PR(>F)": "P"},
                                               inplace=True)
         model_2way_interaction_results.reset_index(inplace=True, drop=True)
-        model_2way_interaction_results["Source"] = ["Part", "Operator", "Part * Operator", "Repeatability"]
+        model_2way_interaction_results["Source"] = ["Part", f"{label}", f"Part * {label}", "Repeatability"]
         model_2way_interaction_results = model_2way_interaction_results[["Source", "DF", "SS", "MS", "F", "P"]]
         model_2way_interaction_results = model_2way_interaction_results.set_index("Source")
 
@@ -370,38 +368,38 @@ class Msa2n3crossedchart(BaseChart):
         model_2way_no_interaction_results.rename(columns={"df": "DF", "sum_sq": "SS", "mean_sq": "MS", "PR(>F)": "P"},
                                                  inplace=True)
         model_2way_no_interaction_results.reset_index(inplace=True, drop=True)
-        model_2way_no_interaction_results["Source"] = ["Part", "Operator", "Repeatability"]
+        model_2way_no_interaction_results["Source"] = ["Part", f"{label}", "Repeatability"]
         model_2way_no_interaction_results = model_2way_no_interaction_results[["Source", "DF", "SS", "MS", "F", "P"]]
         model_2way_no_interaction_results = model_2way_no_interaction_results.set_index("Source")
 
         # Correct F-value calculations
         repeatability_ms = model_2way_interaction_results.loc["Repeatability", "MS"]
         model_2way_interaction_results.loc["Part", "F"] = model_2way_interaction_results.loc["Part", "MS"] / repeatability_ms
-        model_2way_interaction_results.loc["Operator", "F"] = model_2way_interaction_results.loc["Operator", "MS"] / repeatability_ms
-        model_2way_interaction_results.loc["Part * Operator", "F"] = model_2way_interaction_results.loc["Part * Operator", "MS"] / repeatability_ms
+        model_2way_interaction_results.loc[f"{label}", "F"] = model_2way_interaction_results.loc[f"{label}", "MS"] / repeatability_ms
+        model_2way_interaction_results.loc[f"Part * {label}", "F"] = model_2way_interaction_results.loc[f"Part * {label}", "MS"] / repeatability_ms
 
         # Recalculate p-values based on the new F-values
         from scipy import stats
         model_2way_interaction_results.loc["Part", "P"] = 1 - stats.f.cdf(model_2way_interaction_results.loc["Part", "F"],
                                                                           model_2way_interaction_results.loc["Part", "DF"],
                                                                           model_2way_interaction_results.loc["Repeatability", "DF"])
-        model_2way_interaction_results.loc["Operator", "P"] = 1 - stats.f.cdf(model_2way_interaction_results.loc["Operator", "F"],
-                                                                              model_2way_interaction_results.loc["Operator", "DF"],
+        model_2way_interaction_results.loc[f"{label}", "P"] = 1 - stats.f.cdf(model_2way_interaction_results.loc[f"{label}", "F"],
+                                                                              model_2way_interaction_results.loc[f"{label}", "DF"],
                                                                               model_2way_interaction_results.loc["Repeatability", "DF"])
-        model_2way_interaction_results.loc["Part * Operator", "P"] = 1 - stats.f.cdf(model_2way_interaction_results.loc["Part * Operator", "F"],
-                                                                                     model_2way_interaction_results.loc["Part * Operator", "DF"],
+        model_2way_interaction_results.loc[f"Part * {label}", "P"] = 1 - stats.f.cdf(model_2way_interaction_results.loc[f"Part * {label}", "F"],
+                                                                                     model_2way_interaction_results.loc[f"Part * {label}", "DF"],
                                                                                      model_2way_interaction_results.loc["Repeatability", "DF"])
 
         # Calculate components of variation
         var_comp_repeatability = repeatability_ms
-        var_comp_operator = (model_2way_interaction_results.loc["Operator", "MS"] - repeatability_ms) / (parts_count * replicates_per_part)
+        var_comp_operator = (model_2way_interaction_results.loc[f"{label}", "MS"] - repeatability_ms) / (parts_count * replicates_per_part)
         var_comp_part_part = (model_2way_interaction_results.loc["Part", "MS"] - repeatability_ms) / (operators_count * replicates_per_part)
         var_comp_reproducibility = var_comp_operator
         var_comp_total_gage_rr = var_comp_repeatability + var_comp_reproducibility
         var_comp_total_variation = var_comp_total_gage_rr + var_comp_part_part
 
         gage_rr_var_comp_no_interaction_df = pd.DataFrame({
-            "Source": ["Total Gage R&R", "Repeatability", "Reproducibility", "Operator", "Part-To-Part", "Total Variation"],
+            "Source": ["Total Gage R&R", "Repeatability", "Reproducibility", f"{label}", "Part-To-Part", "Total Variation"],
             "VarComp": [var_comp_total_gage_rr, var_comp_repeatability, var_comp_reproducibility, var_comp_operator,
                         var_comp_part_part, var_comp_total_variation]
         })

@@ -75,9 +75,7 @@ class Msa2n3nestedchart(BaseChart):
         with PdfPages(pdf_io) as pdf:
             fig, axes = plt.subplots(2, 1, figsize=(8.27, 11.69))  # A4 size in inches
             fig.subplots_adjust(hspace=0.4)  # Increase hspace to add more space between charts
-            fig.suptitle(title, fontsize=16, weight='bold', y=0.95)
-            fig.text(0.5, s="MSA - 2 Crossed Analysis", ha="center", va="center", fontsize=11, y=0.92,
-                     weight="semibold")
+            fig.suptitle(title, fontsize=16, weight='bold', y=0.94)
 
             # Plot Value by Part Scatter Plot
             self._plot_value_by_part(data, data_grouped_by_part, axes[0])
