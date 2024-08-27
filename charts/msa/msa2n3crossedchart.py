@@ -50,15 +50,15 @@ class Msa2n3crossedchart(BaseChart):
         parts_count = data["Part"].nunique()
 
         # Get replicates by part
-        replicates_per_part = len(data.loc[(data["Part"] == parts[0])]["Part"]) / data.loc[(data["Part"] == parts[0])][
+        replicates_per_part = len(data.loc[(data["Part"] == 1)]["Part"]) / data.loc[(data["Part"] == 1)][
             "Operator"].nunique()
 
         # Calculate "Replicate" column
-        data["Replicate"] = list(np.arange(1, replicates_per_part + 1)) * (int(len(data["Part"]) / replicates_per_part))
+        data["Replicate"] = list(np.arange(1, replicates_per_part+1))*(int(len(data["Part"])/replicates_per_part))
 
         # Calculate "Part Measurement" column
-        data["Part Measurement"] = list(np.arange(1, data["Part"].value_counts().iloc[0] + 1)) * (
-            int(len(data["Part"]) / data["Part"].value_counts().iloc[0]))
+        data["Part Measurement"] = list(np.arange(1, data["Part"].value_counts()[1]+1))*(int(len(data["Part"])/data["Part"].value_counts()[1]))
+
 
         # Group data frame by Part, obtain mean and reset index
         data_grouped_by_part = data[["Part", "Value"]].groupby(["Part"]).mean().reset_index()
@@ -93,6 +93,7 @@ class Msa2n3crossedchart(BaseChart):
         # Perform two-way ANOVA and get results
         (model_2way_interaction_results, model_2way_no_interaction_results, gage_rr_var_comp_no_interaction_df,
          gage_evaluation_df) = self._perform_two_way_anova(data, operators_count, parts_count, replicates_per_part)
+
 
         with PdfPages(pdf_io) as pdf:
             # NEW PDF PAGE - Value by Part, Value by Operator, Part * Operator Interaction
@@ -352,8 +353,7 @@ class Msa2n3crossedchart(BaseChart):
                     horizontalalignment='center', verticalalignment='bottom')
 
     @staticmethod
-    def _perform_two_way_anova(data, operators_count, parts_count,
-                               replicates_per_part, ax=None, pdf=None):
+    def _perform_two_way_anova(data, operators_count, parts_count, replicates_per_part, ax=None, pdf=None):
         # Perform two-way ANOVA with interaction
         model_2way_interaction = ols('Value ~ C(Part) + C(Operator) + C(Part):C(Operator)', data=data).fit()
         model_2way_interaction_results = sm.stats.anova_lm(model_2way_interaction, type=2)
@@ -374,48 +374,51 @@ class Msa2n3crossedchart(BaseChart):
         model_2way_no_interaction_results = model_2way_no_interaction_results[["Source", "DF", "SS", "MS", "F", "P"]]
         model_2way_no_interaction_results = model_2way_no_interaction_results.set_index("Source")
 
-        # Plot bar chart with components of variation
-        var_comp_repeatability = model_2way_interaction_results.loc["Repeatability"]["MS"]
-        var_comp_operator = (model_2way_interaction_results.loc["Operator"]["MS"] -
-                             model_2way_interaction_results.loc["Repeatability"]["MS"]) / (
-                                    parts_count * replicates_per_part)
-        var_comp_part_part = (model_2way_interaction_results.loc["Part"]["MS"] -
-                              model_2way_interaction_results.loc["Repeatability"]["MS"]) / (
-                                     operators_count * replicates_per_part)
+        # Correct F-value calculations
+        repeatability_ms = model_2way_interaction_results.loc["Repeatability", "MS"]
+        model_2way_interaction_results.loc["Part", "F"] = model_2way_interaction_results.loc["Part", "MS"] / repeatability_ms
+        model_2way_interaction_results.loc["Operator", "F"] = model_2way_interaction_results.loc["Operator", "MS"] / repeatability_ms
+        model_2way_interaction_results.loc["Part * Operator", "F"] = model_2way_interaction_results.loc["Part * Operator", "MS"] / repeatability_ms
+
+        # Recalculate p-values based on the new F-values
+        from scipy import stats
+        model_2way_interaction_results.loc["Part", "P"] = 1 - stats.f.cdf(model_2way_interaction_results.loc["Part", "F"],
+                                                                          model_2way_interaction_results.loc["Part", "DF"],
+                                                                          model_2way_interaction_results.loc["Repeatability", "DF"])
+        model_2way_interaction_results.loc["Operator", "P"] = 1 - stats.f.cdf(model_2way_interaction_results.loc["Operator", "F"],
+                                                                              model_2way_interaction_results.loc["Operator", "DF"],
+                                                                              model_2way_interaction_results.loc["Repeatability", "DF"])
+        model_2way_interaction_results.loc["Part * Operator", "P"] = 1 - stats.f.cdf(model_2way_interaction_results.loc["Part * Operator", "F"],
+                                                                                     model_2way_interaction_results.loc["Part * Operator", "DF"],
+                                                                                     model_2way_interaction_results.loc["Repeatability", "DF"])
+
+        # Calculate components of variation
+        var_comp_repeatability = repeatability_ms
+        var_comp_operator = (model_2way_interaction_results.loc["Operator", "MS"] - repeatability_ms) / (parts_count * replicates_per_part)
+        var_comp_part_part = (model_2way_interaction_results.loc["Part", "MS"] - repeatability_ms) / (operators_count * replicates_per_part)
         var_comp_reproducibility = var_comp_operator
         var_comp_total_gage_rr = var_comp_repeatability + var_comp_reproducibility
         var_comp_total_variation = var_comp_total_gage_rr + var_comp_part_part
 
         gage_rr_var_comp_no_interaction_df = pd.DataFrame({
-            "Source": ["Total Gage R&R", "Repeatability", "Reproducibility", "Operator", "Part-To-Part",
-                       "Total Variation"],
+            "Source": ["Total Gage R&R", "Repeatability", "Reproducibility", "Operator", "Part-To-Part", "Total Variation"],
             "VarComp": [var_comp_total_gage_rr, var_comp_repeatability, var_comp_reproducibility, var_comp_operator,
                         var_comp_part_part, var_comp_total_variation]
         })
 
-        gage_rr_var_comp_no_interaction_df["%Contribution (of VarComp)"] = gage_rr_var_comp_no_interaction_df[
-                                                                               "VarComp"] / \
-                                                                           gage_rr_var_comp_no_interaction_df[
-                                                                               gage_rr_var_comp_no_interaction_df[
-                                                                                   "Source"] == "Total Variation"][
-                                                                               "VarComp"].iloc[0] * 100
+        gage_rr_var_comp_no_interaction_df["%Contribution (of VarComp)"] = gage_rr_var_comp_no_interaction_df["VarComp"] / var_comp_total_variation * 100
         gage_rr_var_comp_no_interaction_df = gage_rr_var_comp_no_interaction_df.set_index("Source")
 
-        # Calculate and get Gage Evaluation data frame with results
-        gage_evaluation_df = np.sqrt(gage_rr_var_comp_no_interaction_df[["VarComp"]])
-        gage_evaluation_df = gage_evaluation_df.rename(columns={"VarComp": "StdDev (SD)"})
+        # Calculate Gage Evaluation
+        gage_evaluation_df = pd.DataFrame({"StdDev (SD)": np.sqrt(gage_rr_var_comp_no_interaction_df["VarComp"])})
         gage_evaluation_df["Study Var (6 x SD)"] = gage_evaluation_df["StdDev (SD)"] * 6
-        gage_evaluation_df["%Study Var (%SV)"] = gage_evaluation_df["Study Var (6 x SD)"] / \
-                                                 gage_evaluation_df.loc["Total Variation"]["Study Var (6 x SD)"] * 100
+        gage_evaluation_df["%Study Var (%SV)"] = gage_evaluation_df["Study Var (6 x SD)"] / gage_evaluation_df.loc["Total Variation", "Study Var (6 x SD)"] * 100
         gage_evaluation_df["%Tol. (SV/Toler)"] = gage_evaluation_df["Study Var (6 x SD)"] / 8 * 100
-        gage_evaluation_df["%Contrib. (VarComp)"] = gage_rr_var_comp_no_interaction_df[
-            "%Contribution (of VarComp)"]
+        gage_evaluation_df["%Contrib. (VarComp)"] = gage_rr_var_comp_no_interaction_df["%Contribution (of VarComp)"]
 
-        gage_evaluation_df.loc[["Total Gage R&R", "Repeatability", "Reproducibility", "Part-To-Part"]][
-            ["%Contrib. (VarComp)", "%Study Var (%SV)", "%Tol. (SV/Toler)"]].plot(kind="bar",
-                                                                                  figsize=(10, 6), ax=ax)
-
-        if pdf:
+        if ax and pdf:
+            gage_evaluation_df.loc[["Total Gage R&R", "Repeatability", "Reproducibility", "Part-To-Part"]][
+                ["%Contrib. (VarComp)", "%Study Var (%SV)", "%Tol. (SV/Toler)"]].plot(kind="bar", figsize=(10, 6), ax=ax)
             ax.set_title("Components of Variation")
             ax.set_ylabel("Percent")
             ax.set_xlabel("")

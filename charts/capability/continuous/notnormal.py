@@ -144,9 +144,12 @@ def I_MR_chart_transformed(data, title, target=0, subgroup_size=1, LSL=0, USL=0)
             axs["Normal"].set_ylabel("")
             axs["Normal"].grid(color="lightgray", linestyle="--", linewidth=0.5)
 
-            # Box-Cox transformed LSL and USL
-            LSL_transformed = stats.boxcox([LSL, USL])[0][0]
-            USL_transformed = stats.boxcox([LSL, USL])[0][1]
+
+            if LSL > 0 and USL > 0:
+                LSL_transformed = stats.boxcox([LSL, USL])[0][0]
+                USL_transformed = stats.boxcox([LSL, USL])[0][1]
+            else:
+                raise ValueError("LSL and USL must be positive (>0) for Box-Cox transformation.")
 
             # Plot for Transformed Data
             sns.histplot(data["value_transformed"], kde=True, ax=axs["Transformed"], bins=15, color="#7DA7D9",
