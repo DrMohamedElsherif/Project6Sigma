@@ -1,3 +1,5 @@
+import io
+
 from fastapi import FastAPI, File, Form, UploadFile
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
@@ -8,13 +10,17 @@ import uuid
 import sys
 from functools import reduce
 
+from seaborn import FacetGrid
+
 from charts import constants
 from models.chart import Chart
 from models.chartresult import ChartResult
 
 # import all charts
 from charts.controlcard import *
+from charts.msa import *
 from charts.evaluation import *
+from charts.capability import *
 
 import shutil
 
@@ -65,7 +71,6 @@ async def create_file(project: str = Form(...), step: str = Form(...), file: Upl
     else:
         url = staticUrl + "/" + project + "/" + step + "/" + filename
 
-
     with open(save_path, "wb+") as file_object:
         shutil.copyfileobj(file.file, file_object)
 
@@ -80,8 +85,9 @@ async def generate(chart: Chart):
     if not os.path.exists(project_path):
         os.makedirs(project_path)
 
-    filename = str(uuid.uuid4()) + "." + constants.CHART_EXTENSION
-    save_path = project_path + "/" + filename
+    raw_filename = str(uuid.uuid4())
+    file_extension = "png"
+    save_path = project_path + "/"
     result = ChartResult(
         status=None,
         message=None,
@@ -101,13 +107,25 @@ async def generate(chart: Chart):
         return result
 
     fig = generator.process()
-    fig.savefig(save_path)
-    # clear the current figure
-    fig.clf()
-    if useFullPath == "1":
-        result.url = filePath + "/" + chart.project + "/" + chart.step + "/" + filename
+
+    if type(fig) == io.BytesIO:
+        # set file extension from png to pdf
+        file_extension = "pdf"
+        with open(save_path + raw_filename + ".pdf", 'wb') as f:
+            f.write(fig.read())
+    elif type(fig) == FacetGrid:
+        fig.savefig(save_path + raw_filename + "." + file_extension)
     else:
-        result.url = staticUrl + "/" + chart.project + "/" + chart.step + "/" + filename
+        fig.savefig(save_path + raw_filename + "." + file_extension)
+        # clear the current figure
+        fig.clf()
+
+    if useFullPath == "1":
+        result.url = filePath + "/" + chart.project + "/" + \
+            chart.step + "/" + raw_filename + "." + file_extension
+    else:
+        result.url = staticUrl + "/" + chart.project + "/" + \
+            chart.step + "/" + raw_filename + "." + file_extension
     result.message = generator.getProcessMessage()
     result.status = 200
 
