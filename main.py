@@ -86,7 +86,7 @@ async def generate(chart: Chart):
         os.makedirs(project_path)
 
     raw_filename = str(uuid.uuid4())
-    filename = raw_filename + "." + constants.CHART_EXTENSION
+    file_extension = "png"
     save_path = project_path + "/"
     result = ChartResult(
         status=None,
@@ -109,21 +109,23 @@ async def generate(chart: Chart):
     fig = generator.process()
 
     if type(fig) == io.BytesIO:
+        # set file extension from png to pdf
+        file_extension = "pdf"
         with open(save_path + raw_filename + ".pdf", 'wb') as f:
             f.write(fig.read())
     elif type(fig) == FacetGrid:
-        fig.savefig(save_path + filename)
+        fig.savefig(save_path + raw_filename + "." + file_extension)
     else:
-        fig.savefig(save_path + filename)
+        fig.savefig(save_path + raw_filename + "." + file_extension)
         # clear the current figure
         fig.clf()
 
-
-
     if useFullPath == "1":
-        result.url = filePath + "/" + chart.project + "/" + chart.step + "/" + filename
+        result.url = filePath + "/" + chart.project + "/" + \
+            chart.step + "/" + raw_filename + "." + file_extension
     else:
-        result.url = staticUrl + "/" + chart.project + "/" + chart.step + "/" + filename
+        result.url = staticUrl + "/" + chart.project + "/" + \
+            chart.step + "/" + raw_filename + "." + file_extension
     result.message = generator.getProcessMessage()
     result.status = 200
 
