@@ -57,8 +57,8 @@ class Msa1chart(BaseChart):
         t_statistic = abs(bias) / (repeatability_std_dev / np.sqrt(len(data)))
         p_value = scipy.stats.t.sf(np.abs(t_statistic), len(data) - 1) * 2
 
-        var_repeatability = K / cg
-        var_repeatability_and_bias = K / cgk
+        var_repeatability = round(K / cg, 2)
+        var_repeatability_and_bias = round(K / cgk, 2)
 
         capability_df = pd.DataFrame({
             "Metric": ["Cg", "Cgk", "%Var(Repeatability)", "%Var(Rep. and Bias)"],
@@ -110,8 +110,15 @@ class Msa1chart(BaseChart):
 
         # Function to add empty rows to DataFrames to match max_rows
         def add_empty_rows_and_format(df, max_rows):
-            # Format cell values to a maximum of 5 decimal places
-            df = df.map(lambda x: f"{x:.8f}" if isinstance(x, (int, float)) else x)
+            def format_value(metric, value):
+                if metric in ["%Var(Repeatability)", "%Var(Rep. and Bias)"]:
+                    return f"{value:.2f}"
+                elif isinstance(value, (int, float)):
+                    return f"{value:.8f}"
+                else:
+                    return value
+
+            df['Value'] = df.apply(lambda row: format_value(row['Metric'], row['Value']), axis=1)
 
             # Add empty rows to match max_rows
             additional_rows = max_rows - len(df)

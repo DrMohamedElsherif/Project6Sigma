@@ -8,28 +8,49 @@ from scipy import stats
 from scipy.stats import normaltest, probplot
 from statsmodels.graphics.gofplots import qqplot
 
+def I_MR_chart_transformed(data, title, target=0, subgroup_size=1, LSL=None, USL=None):
+    """
+    data: 'pandas DataFrame'
+    title: str
+    target: 'int | float' = 0
+    subgroup_size: 'int' = 1
+    LSL: 'int | float | None' = None
+    USL: 'int | float | None' = None
 
-def I_MR_chart_transformed(data, title, target=0, subgroup_size=1, LSL=0, USL=0):
-    # (Die Validierungen bleiben unverändert)
+    Parameters
+    ----------
+    data : pandas DataFrame object
+        DataFrame containing continuous values in a single column.
+        All values must be non-negative.
+    title : str
+        Title for the chart.
+    target : int or float
+        Target value. Value must be greater or equal to zero.
+    subgroup_size : int
+        Amount of units per sampled group.
+    LSL : int, float, or None
+        Lower Specification Limit. If provided, must be non-negative.
+    USL : int, float, or None
+        Upper Specification Limit. If provided, must be non-negative.
+    """
+    # Validierungen
     if target < 0:
         return print("Error. A non-negative target value must be specified.")
     if subgroup_size <= 0:
         return print("Error. The subgroup size must be a positive value greater than zero.")
-    if LSL < 0:
-        return print("Error. A non-negative Lower Specification Limit (LSL) must be specified.")
-    if USL < 0:
-        return print("Error. A non-negative Upper Specification Limit (USL) must be specified.")
-    if LSL >= 0 and target > 0:
+    if LSL is not None:
+        if LSL < 0:
+            return print("Error. Lower Specification Limit (LSL) must be non-negative or None.")
         if target < LSL:
             return print(f"Error. Target value ({target}) is lower than Lower Specification Limit ({LSL}).")
-    if USL >= 0 and target > 0:
+    if USL is not None:
+        if USL < 0:
+            return print("Error. Upper Specification Limit (USL) must be non-negative or None.")
         if target > USL:
             return print(f"Error. Target value ({target}) is greater than Upper Specification Limit ({USL}).")
-    if LSL > 0 and USL > 0:
-        if USL < LSL:
-            return print(f"Error. Upper Specification Limit ({USL}) is lower than Lower Specification Limit ({LSL}).")
-        if USL == LSL:
-            return print(f"Error. Upper Specification Limit ({USL}) is equal to Lower Specification Limit ({LSL}).")
+    if LSL is not None and USL is not None:
+        if USL <= LSL:
+            return print(f"Error. Upper Specification Limit ({USL}) must be greater than Lower Specification Limit ({LSL}).")
 
     # Update dataframe
     data.rename(columns={0: "value"}, inplace=True)
@@ -128,15 +149,19 @@ def I_MR_chart_transformed(data, title, target=0, subgroup_size=1, LSL=0, USL=0)
 
             # Add vertical lines for target, LSL, and USL
             axs["Normal"].axvline(target, linestyle="--", color="green")
-            axs["Normal"].axvline(LSL, linestyle="--", color="#A50021")
-            axs["Normal"].axvline(USL, linestyle="--", color="#A50021")
+            if LSL is not None:
+                axs["Normal"].axvline(LSL, linestyle="--", color="#A50021")
+            if USL is not None:
+                axs["Normal"].axvline(USL, linestyle="--", color="#A50021")
 
-            label_xpad = (USL - LSL) * 0.03
+            label_xpad = (max(data["value"]) - min(data["value"])) * 0.03
             label_ypad = (axs["Normal"].get_ylim()[1]) * 0.01
             # Add annotations for Target, LSL, and USL
             axs["Normal"].annotate("Target", xy=(target + label_xpad, 0 + label_ypad), color="green")
-            axs["Normal"].annotate("LSL", xy=(LSL + label_xpad, 0 + label_ypad), color="#A50021")
-            axs["Normal"].annotate("USL", xy=(USL - (label_xpad * 7), 0 + label_ypad), color="#A50021")
+            if LSL is not None:
+                axs["Normal"].annotate("LSL", xy=(LSL + label_xpad, 0 + label_ypad), color="#A50021")
+            if USL is not None:
+                axs["Normal"].annotate("USL", xy=(USL - (label_xpad * 7), 0 + label_ypad), color="#A50021")
 
             # Set the title and labels for the "Normal" plot
             axs["Normal"].set_title("Capability Histogram", pad=20)
@@ -144,22 +169,27 @@ def I_MR_chart_transformed(data, title, target=0, subgroup_size=1, LSL=0, USL=0)
             axs["Normal"].set_ylabel("")
             axs["Normal"].grid(color="lightgray", linestyle="--", linewidth=0.5)
 
-
-            if LSL > 0 and USL > 0:
-                LSL_transformed = stats.boxcox([LSL, USL])[0][0]
-                USL_transformed = stats.boxcox([LSL, USL])[0][1]
-            else:
-                raise ValueError("LSL and USL must be positive (>0) for Box-Cox transformation.")
+            # Transform LSL and USL
+            LSL_transformed = None
+            USL_transformed = None
+            if LSL is not None:
+                LSL_transformed = (LSL ** lambda_value - 1) / lambda_value if lambda_value != 0 else np.log(LSL)
+            if USL is not None:
+                USL_transformed = (USL ** lambda_value - 1) / lambda_value if lambda_value != 0 else np.log(USL)
 
             # Plot for Transformed Data
             sns.histplot(data["value_transformed"], kde=True, ax=axs["Transformed"], bins=15, color="#7DA7D9",
                          edgecolor="black", stat="density")
-            axs["Transformed"].axvline(LSL_transformed, linestyle="--", color="#A50021")
-            axs["Transformed"].axvline(USL_transformed, linestyle="--", color="#A50021")
+            if LSL_transformed is not None:
+                axs["Transformed"].axvline(LSL_transformed, linestyle="--", color="#A50021")
+            if USL_transformed is not None:
+                axs["Transformed"].axvline(USL_transformed, linestyle="--", color="#A50021")
 
             # Add annotations for transformed LSL and USL
-            axs["Transformed"].annotate("USL", xy=(USL_transformed - 0.5, 0), color="#A50021")
-            axs["Transformed"].annotate("LSL", xy=(LSL_transformed - 0.5, 0), color="#A50021")
+            if LSL_transformed is not None:
+                axs["Transformed"].annotate("LSL", xy=(LSL_transformed - 0.5, 0), color="#A50021")
+            if USL_transformed is not None:
+                axs["Transformed"].annotate("USL", xy=(USL_transformed - 0.5, 0), color="#A50021")
 
             # Set the title and labels for the "Transformed" plot
             axs["Transformed"].set_title("Transformed Data", pad=20)
@@ -168,29 +198,44 @@ def I_MR_chart_transformed(data, title, target=0, subgroup_size=1, LSL=0, USL=0)
             axs["Transformed"].grid(color="lightgray", linestyle="--", linewidth=0.5)
 
             # Calculate process capability indices Pp and Ppk
-            Pp = round((USL_transformed - LSL_transformed) / (6 * np.std(data["value_transformed"], ddof=1)), 2)
-            Ppk = round(min((USL_transformed - np.mean(data["value_transformed"])) / (
-                        3 * np.std(data["value_transformed"], ddof=1)),
-                            (np.mean(data["value_transformed"]) - LSL_transformed) / (
-                                        3 * np.std(data["value_transformed"], ddof=1))), 2)
+            std_dev = np.std(data["value_transformed"], ddof=1)
+            if LSL_transformed is not None and USL_transformed is not None:
+                Pp = round((USL_transformed - LSL_transformed) / (6 * std_dev), 2)
+                Ppk = round(min((USL_transformed - np.mean(data["value_transformed"])) / (3 * std_dev),
+                                (np.mean(data["value_transformed"]) - LSL_transformed) / (3 * std_dev)), 2)
+            elif USL_transformed is not None:
+                Pp = "N/A"
+                Ppk = round((USL_transformed - np.mean(data["value_transformed"])) / (3 * std_dev), 2)
+            elif LSL_transformed is not None:
+                Pp = "N/A"
+                Ppk = round((np.mean(data["value_transformed"]) - LSL_transformed) / (3 * std_dev), 2)
+            else:
+                Pp = "N/A"
+                Ppk = "N/A"
 
             process_characterization_df = pd.DataFrame({
                 "Total N": [len(data["value"])],
                 "Subgroup size": subgroup_size,
                 "Mean": round(CL_bar, 2),
-                "Standard deviation (overall)": round(np.std(data["value_transformed"], ddof=1), 5)
+                "Standard deviation (overall)": round(std_dev, 5)
             }).T
 
             process_characterization_df.rename(columns={0: "Value"}, inplace=True)
 
+            # Calculate out of spec and PPM
+            out_of_spec = 0
+            if LSL is not None:
+                out_of_spec += len(data[data["value"] < LSL])
+            if USL is not None:
+                out_of_spec += len(data[data["value"] > USL])
+            ppm = out_of_spec * 1000000 / len(data)
+
             # Generate Process Capability dataframe
             process_capability_df = pd.DataFrame({
                 "Pp": [Pp],
-                "Ppk": Ppk,
-                "% Out of spec (observed)": len(data[data["value"] > USL]["value"]) + len(
-                    data[data["value"] < LSL]["value"]),
-                "PPM (DPMO) (observed)": (len(data[data["value"] > USL]["value"]) + len(
-                    data[data["value"] < LSL]["value"])) * 10000
+                "Ppk": [Ppk],
+                "% Out of spec (observed)": [out_of_spec],
+                "PPM (DPMO) (observed)": [ppm]
             }).T
 
             process_capability_df.rename(columns={0: "Value"}, inplace=True)
@@ -229,4 +274,3 @@ def I_MR_chart_transformed(data, title, target=0, subgroup_size=1, LSL=0, USL=0)
         return pdf_io
     else:
         pass
-        # TODO: calculate everything when subgroups are not of equal size

@@ -7,31 +7,31 @@ from matplotlib.backends.backend_pdf import PdfPages
 from scipy.stats import normaltest, probplot
 from statsmodels.graphics.gofplots import qqplot
 
-
-def I_MR_chart(data, title, target=0, subgroup_size=1, LSL=0, USL=0):
+def I_MR_chart(data, title, target=0, subgroup_size=1, LSL=None, USL=None):
     """
     data: 'pandas DataFrame'
     target: 'int | float' = 0
     subgroup_size: 'int' = 1
-    LSL: 'int | float' = 0
-    USL: 'int | float' = 0
+    LSL: 'int | float | None' = None
+    USL: 'int | float | None' = None
 
     Parameters
     ----------
-    data : pandas DataFrame  object
-        DataFrame containing continious values in a single column.
+    data : pandas DataFrame object
+        DataFrame containing continuous values in a single column.
         All values must be non-negative.
     target : int or float
         Target value. Value must be greater or equal to zero.
     subgroup_size : int
         Amount of units per sampled group.
-    LSL : int or float
+    LSL : int, float, or None
         Lower Specification Limit.
-        Value must be different than zero and lower than target
-        and lower than Upper Specification Limit (USL).
-    USL : int or float
+        If provided, value must be non-negative and lower than target
+        and lower than Upper Specification Limit (USL) if USL is also provided.
+    USL : int, float, or None
         Upper Specification Limit.
-        Value must be different than zero and greater than target.
+        If provided, value must be non-negative and greater than target
+        and greater than Lower Specification Limit (LSL) if LSL is also provided.
     """
 
     ### Validations ###
@@ -39,21 +39,22 @@ def I_MR_chart(data, title, target=0, subgroup_size=1, LSL=0, USL=0):
         return print("Error. A non-negative target value must be specified.")
     if subgroup_size <= 0:
         return print("Error. The subgroup size must be a positive value greater than zero.")
-    if LSL < 0:
-        return print("Error. A non-negative Lower Specification Limit (LSL) must be specified.")
-    if USL < 0:
-        return print("Error. A non-negative Upper Specification Limit (USL) must be specified.")
-    if LSL >= 0 and target > 0:
+
+    if LSL is not None:
+        if LSL < 0:
+            return print("Error. Lower Specification Limit (LSL) must be non-negative.")
         if target < LSL:
             return print(f"Error. Target value ({target}) is lower than Lower Specification Limit ({LSL}).")
-    if USL >= 0 and target > 0:
+
+    if USL is not None:
+        if USL < 0:
+            return print("Error. Upper Specification Limit (USL) must be non-negative.")
         if target > USL:
             return print(f"Error. Target value ({target}) is greater than Upper Specification Limit ({USL}).")
-    if LSL > 0 and USL > 0:
-        if USL < LSL:
-            return print(f"Error. Upper Specification Limit ({USL}) is lower than Lower Specification Limit ({LSL}).")
-        if USL == LSL:
-            return print(f"Error. Upper Specification Limit ({USL}) is equal to Lower Specification Limit ({LSL}).")
+
+    if LSL is not None and USL is not None:
+        if USL <= LSL:
+            return print(f"Error. Upper Specification Limit ({USL}) must be greater than Lower Specification Limit ({LSL}).")
 
     # Update dataframe
     data.rename(columns={0: "value"}, inplace=True)
@@ -90,7 +91,6 @@ def I_MR_chart(data, title, target=0, subgroup_size=1, LSL=0, USL=0):
             plt.tight_layout()
             plt.subplots_adjust(left=0.1, right=0.9, top=0.9, bottom=0.1, hspace=0.8, wspace=0.5)
             plt.suptitle(f"{title}", fontsize=16, y=0.96)
-
 
             # Plot I chart
             axs["I"].plot(data["value"], linestyle="-", marker="o", color="black")
@@ -147,17 +147,21 @@ def I_MR_chart(data, title, target=0, subgroup_size=1, LSL=0, USL=0):
             # Plot Normality Plot (Q-Q plot) in the "Normal" section of the mosaic
             sns.histplot(data["value"], kde=True, ax=axs["Normal"], color="#7DA7D9", edgecolor="black", stat="density")
 
-            # Add vertical lines for target and LSL
+            # Add vertical lines for target and LSL/USL if provided
             axs["Normal"].axvline(target, linestyle="--", color="green")
-            axs["Normal"].axvline(LSL, linestyle="--", color="#A50021")
-            axs["Normal"].axvline(USL, linestyle="--", color="#A50021", label="USL")
+            if LSL is not None:
+                axs["Normal"].axvline(LSL, linestyle="--", color="#A50021")
+            if USL is not None:
+                axs["Normal"].axvline(USL, linestyle="--", color="#A50021")
 
-            label_xpad = (USL - LSL) * 0.03
+            label_xpad = (max(data["value"]) - min(data["value"])) * 0.03
             label_ypad = (axs["Normal"].get_ylim()[1]) * 0.01
-            # Add annotations for Target and LSL
+            # Add annotations for Target and LSL/USL if provided
             axs["Normal"].annotate("Target", xy=(target + label_xpad, 0 + label_ypad), color="green")
-            axs["Normal"].annotate("LSL", xy=(LSL + label_xpad, 0 + label_ypad), color="#A50021")
-            axs["Normal"].annotate("USL", xy=(USL - (label_xpad * 3), 0 + label_ypad), color="#A50021")
+            if LSL is not None:
+                axs["Normal"].annotate("LSL", xy=(LSL + label_xpad, 0 + label_ypad), color="#A50021")
+            if USL is not None:
+                axs["Normal"].annotate("USL", xy=(USL - (label_xpad * 3), 0 + label_ypad), color="#A50021")
 
             # Set the title and labels for the "Normal" plot
             axs["Normal"].set_title("Capability Histogram", pad=20)
@@ -174,22 +178,38 @@ def I_MR_chart(data, title, target=0, subgroup_size=1, LSL=0, USL=0):
 
             process_characterization_df.rename(columns={0: "Value"}, inplace=True)
 
-            if USL == 0:
-                Pp = "*"
-                Ppk = round((np.mean(data["value"])-LSL)/(3*np.std(data["value"], ddof=1)), 2)
+            # Adjust process capability calculations
+            if LSL is None and USL is None:
+                Pp = "N/A"
+                Ppk = "N/A"
+                out_of_spec = 0
+                ppm = 0
+            elif LSL is None:
+                Pp = "N/A"
+                Ppk = round((USL - np.mean(data["value"])) / (3 * np.std(data["value"], ddof=1)), 2)
+                out_of_spec = len(data[data["value"] > USL])
+                ppm = out_of_spec * 1000000 / len(data)
+            elif USL is None:
+                Pp = "N/A"
+                Ppk = round((np.mean(data["value"]) - LSL) / (3 * np.std(data["value"], ddof=1)), 2)
+                out_of_spec = len(data[data["value"] < LSL])
+                ppm = out_of_spec * 1000000 / len(data)
             else:
-                Pp = round((USL-LSL)/(6*np.std(data["value"], ddof=1)), 2)
-                Ppk = round(min((USL-np.mean(data["value"]))/(3*np.std(data["value"], ddof=1)), (np.mean(data["value"])-LSL)/(3*np.std(data["value"], ddof=1))), 2)
+                Pp = round((USL - LSL) / (6 * np.std(data["value"], ddof=1)), 2)
+                Ppk = round(min((USL - np.mean(data["value"])) / (3 * np.std(data["value"], ddof=1)),
+                                (np.mean(data["value"]) - LSL) / (3 * np.std(data["value"], ddof=1))), 2)
+                out_of_spec = len(data[data["value"] > USL]) + len(data[data["value"] < LSL])
+                ppm = out_of_spec * 1000000 / len(data)
 
             # Generate Process Capability dataframe
             process_capability_df = pd.DataFrame({
                 "Pp": [Pp],
-                "Ppk": Ppk,
-                "% Out of spec (observed)": len(data[data["value"]>USL]["value"]) + len(data[data["value"]<LSL]["value"]),
-                "PPM (DPMO) (observed)": (len(data[data["value"]>USL]["value"]) + len(data[data["value"]<LSL]["value"]))*10000
+                "Ppk": [Ppk],
+                "% Out of spec (observed)": [out_of_spec],
+                "PPM (DPMO) (observed)": [ppm]
             }).T
 
-            process_capability_df.rename(columns={0:"Value"}, inplace=True)
+            process_capability_df.rename(columns={0: "Value"}, inplace=True)
 
             # Convert process_characterization_df to a table and add it to the "Process Table" subplot
             process_characterization_table = axs["Process Table"].table(

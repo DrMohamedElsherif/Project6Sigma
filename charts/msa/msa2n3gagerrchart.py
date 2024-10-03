@@ -56,7 +56,10 @@ class Msa2n3gagerrchart(BaseChart):
                 style="Operator",
                 col="Part",
                 col_wrap=5,
-                aspect=0.7
+                aspect=0.7,
+                kind='line',  # Change to line plot
+                markers=True,  # Add markers at each data point
+                dashes=False  # Use solid lines
             )
             g.fig.suptitle(title, fontsize=16)
             g.map(plt.axhline, y=data["Value"].mean(), color=".7", dashes=(2, 1), zorder=0)

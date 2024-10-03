@@ -140,10 +140,10 @@ class Msa2n3crossedchart(BaseChart):
             gage_evaluation_df.reset_index(inplace=True)
 
             # Runden der Werte auf 6 Nachkommastellen
-            model_2way_interaction_results = model_2way_interaction_results.round(6)
-            model_2way_no_interaction_results = model_2way_no_interaction_results.round(6)
-            gage_rr_var_comp_no_interaction_df = gage_rr_var_comp_no_interaction_df.round(6)
-            gage_evaluation_df = gage_evaluation_df.round(6)
+            model_2way_interaction_results = model_2way_interaction_results.round({col: 6 for col in model_2way_interaction_results.columns if col != 'Source'})
+            model_2way_no_interaction_results = model_2way_no_interaction_results.round({col: 6 for col in model_2way_no_interaction_results.columns if col != 'Source'})
+            gage_rr_var_comp_no_interaction_df = gage_rr_var_comp_no_interaction_df.round({'VarComp': 6, '%Contribution (of VarComp)': 2})
+            gage_evaluation_df = gage_evaluation_df.round({'StdDev (SD)': 6, 'Study Var (6 x SD)': 6, '%Study Var (%SV)': 2, '%Tol. (SV/Toler)': 2, '%Contrib. (VarComp)': 2})
 
             # Add tables to subplots
             axes[0].axis('off')
@@ -404,15 +404,15 @@ class Msa2n3crossedchart(BaseChart):
                         var_comp_part_part, var_comp_total_variation]
         })
 
-        gage_rr_var_comp_no_interaction_df["%Contribution (of VarComp)"] = gage_rr_var_comp_no_interaction_df["VarComp"] / var_comp_total_variation * 100
+        gage_rr_var_comp_no_interaction_df["%Contribution (of VarComp)"] = (gage_rr_var_comp_no_interaction_df["VarComp"] / var_comp_total_variation * 100).round(2)
         gage_rr_var_comp_no_interaction_df = gage_rr_var_comp_no_interaction_df.set_index("Source")
 
         # Calculate Gage Evaluation
         gage_evaluation_df = pd.DataFrame({"StdDev (SD)": np.sqrt(gage_rr_var_comp_no_interaction_df["VarComp"])})
         gage_evaluation_df["Study Var (6 x SD)"] = gage_evaluation_df["StdDev (SD)"] * 6
-        gage_evaluation_df["%Study Var (%SV)"] = gage_evaluation_df["Study Var (6 x SD)"] / gage_evaluation_df.loc["Total Variation", "Study Var (6 x SD)"] * 100
-        gage_evaluation_df["%Tol. (SV/Toler)"] = gage_evaluation_df["Study Var (6 x SD)"] / 8 * 100
-        gage_evaluation_df["%Contrib. (VarComp)"] = gage_rr_var_comp_no_interaction_df["%Contribution (of VarComp)"]
+        gage_evaluation_df["%Study Var (%SV)"] = (gage_evaluation_df["Study Var (6 x SD)"] / gage_evaluation_df.loc["Total Variation", "Study Var (6 x SD)"] * 100).round(2)
+        gage_evaluation_df["%Tol. (SV/Toler)"] = (gage_evaluation_df["Study Var (6 x SD)"] / 8 * 100).round(2)
+        gage_evaluation_df["%Contrib. (VarComp)"] = gage_rr_var_comp_no_interaction_df["%Contribution (of VarComp)"].round(2)
 
         if ax and pdf:
             gage_evaluation_df.loc[["Total Gage R&R", "Repeatability", "Reproducibility", "Part-To-Part"]][
