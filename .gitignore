@@ -1,7 +1,7 @@
 ## project
 static/*
 env/
-.env
+.env*
 
 ## OS X
 .DS_Store
