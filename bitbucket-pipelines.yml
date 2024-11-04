@@ -1,0 +1,16 @@
+image: atlassian/default-image:4
+
+pipelines:
+  custom:
+    deploy-to-preview:
+      - step:
+          name: "Deploy to Preview"
+          deployment: preview
+          script:
+            - pipe: atlassian/ssh-run:0.8.1
+              variables:
+                SSH_USER: "web-user"
+                SERVER: "109.71.73.55"
+                SSH_KEY: $MC_SSH_KEY
+                COMMAND: "cd /var/www/share/sixapi-dev/ && git pull"
+
