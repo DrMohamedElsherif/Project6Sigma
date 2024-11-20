@@ -5,10 +5,10 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 import os
 
-from charts.basechart import BaseChart
-from charts.constants import FIGURE_SIZE_DEFAULT
+from api.charts.basechart import BaseChart
+from api.charts.constants import FIGURE_SIZE_DEFAULT
 
-class Msa2n3gagerrchart(BaseChart):
+class Msa2n3GagerrChart(BaseChart):
     def process(self):
         # Read Excel file
         try:

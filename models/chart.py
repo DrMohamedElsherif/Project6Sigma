@@ -1,14 +1,9 @@
 from pydantic import BaseModel
-from typing import Optional, Any
-from .config import Config
+from typing import Optional, Any, Dict
 
 
-class Chart(BaseModel):
+class BaseChart(BaseModel):
     project: str
     step: str
-    type: str
-    description: Optional[str] = None
-    config: Config
-    data: Optional[Any] = None
-    additional_data: Optional[Any] = None
-    group_size: Optional[int] = None
+    config: Dict[str, Any]
+    data: Optional[Dict[str, Any]] = None

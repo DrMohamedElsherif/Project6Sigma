@@ -10,10 +10,10 @@ import statsmodels.api as sm
 from matplotlib.backends.backend_pdf import PdfPages
 from statsmodels.formula.api import ols
 
-from charts.basechart import BaseChart
+from api.charts.basechart import BaseChart
 
 
-class Msa2n3crossedchart(BaseChart):
+class Msa2n3CrossedChart(BaseChart):
     def process(self):
         # Extracting data directly from the API response
         title = self.chart.config.title

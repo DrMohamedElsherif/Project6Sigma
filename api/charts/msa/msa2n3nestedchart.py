@@ -7,10 +7,10 @@ import seaborn as sns
 from matplotlib.backends.backend_pdf import PdfPages
 from scipy.stats import f
 
-from charts.basechart import BaseChart
+from api.charts.basechart import BaseChart
 
 
-class Msa2n3nestedchart(BaseChart):
+class Msa2n3NestedChart(BaseChart):
     def process(self):
         try:
             # Extracting data directly from the API response

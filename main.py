@@ -1,40 +1,21 @@
-import io
-
-from fastapi import FastAPI, File, Form, UploadFile
-from fastapi.staticfiles import StaticFiles
+# main.py
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import JSONResponse
+from config import get_settings
+from api.router import api_router
+from api.schemas import BusinessLogicException, ErrorResponse
 
-from dotenv import load_dotenv
-import os
-import uuid
-import sys
-from functools import reduce
-
-from seaborn import FacetGrid
-
-from charts import constants
-from models.chart import Chart
-from models.chartresult import ChartResult
-
-# import all charts
-from charts.controlcard import *
-from charts.msa import *
-from charts.evaluation import *
-from charts.capability import *
-
-import shutil
-
-origins = [
-    "*",
-    "*:*"
-]
-
+# App Konfiguration
 app = FastAPI(
     title="six sigma charts",
     description="",
     version="0.0.1"
 )
 
+# CORS
+origins = ["*", "*:*"]
 app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,
@@ -44,94 +25,34 @@ app.add_middleware(
 )
 
 
-def str_to_class(string):
-    return reduce(getattr, string.split("."), sys.modules[__name__])
-
-
-load_dotenv()
-filePath = os.environ.get("staticFilePath")
-staticUrl = os.environ.get("staticUrl")
-useFullPath = os.environ.get("useFullPath")
-
-app.mount("/static", StaticFiles(directory=filePath), name="static")
-
-
-@app.post("/upload")
-async def create_file(project: str = Form(...), step: str = Form(...), file: UploadFile = File(...)):
-    project_path = filePath + "/" + project + "/" + step
-    # check if dir exists
-    if not os.path.exists(project_path):
-        os.makedirs(project_path)
-
-    tmp, file_extension = os.path.splitext(file.filename)
-    filename = str(uuid.uuid4()) + file_extension
-    save_path = project_path + "/" + filename
-    if useFullPath == "1":
-        url = save_path
-    else:
-        url = staticUrl + "/" + project + "/" + step + "/" + filename
-
-    with open(save_path, "wb+") as file_object:
-        shutil.copyfileobj(file.file, file_object)
-
-    return {"filename": filename,
-            "url": url}
-
-
-@app.post("/chart", response_model=ChartResult)
-async def generate(chart: Chart):
-    project_path = filePath + "/" + chart.project + "/" + chart.step
-    # check if dir exists
-    if not os.path.exists(project_path):
-        os.makedirs(project_path)
-
-    raw_filename = str(uuid.uuid4())
-    file_extension = "png"
-    save_path = project_path + "/"
-    result = ChartResult(
-        status=None,
-        message=None,
-        url=None
+# Exception Handlers
+@app.exception_handler(BusinessLogicException)
+async def business_logic_exception_handler(request: Request, exc: BusinessLogicException):
+    return JSONResponse(
+        status_code=exc.status_code,
+        content=ErrorResponse(
+            error_code=exc.error_code,
+            field=exc.field,
+            details=exc.details
+        ).dict()
     )
 
-    try:
-        chart_class = str_to_class(chart.type + "." + chart.type.capitalize())
-    except AttributeError:
-        chart_class = None
 
-    if chart_class:
-        generator = chart_class(chart)
-    else:
-        result.message = "not supported"
-        result.status = 422
-        return result
-
-    fig = generator.process()
-
-    if type(fig) == io.BytesIO:
-        # set file extension from png to pdf
-        file_extension = "pdf"
-        with open(save_path + raw_filename + ".pdf", 'wb') as f:
-            f.write(fig.read())
-    elif type(fig) == FacetGrid:
-        fig.savefig(save_path + raw_filename + "." + file_extension)
-    else:
-        fig.savefig(save_path + raw_filename + "." + file_extension)
-        # clear the current figure
-        fig.clf()
-
-    if useFullPath == "1":
-        result.url = filePath + "/" + chart.project + "/" + \
-            chart.step + "/" + raw_filename + "." + file_extension
-    else:
-        result.url = staticUrl + "/" + chart.project + "/" + \
-            chart.step + "/" + raw_filename + "." + file_extension
-    result.message = generator.getProcessMessage()
-    result.status = 200
-
-    return result
+@app.exception_handler(Exception)
+async def general_exception_handler(request: Request, exc: Exception):
+    return JSONResponse(
+        status_code=500,
+        content=ErrorResponse(
+            error_code="internal_server_error",
+            details={"error": str(exc)}
+        ).dict()
+    )
 
 
-@app.get("/status")
-async def ping():
-    return {"status": "ok"}
+# Statische Dateien
+settings = get_settings()
+# Updated to use staticFilePath instead of filePath
+app.mount("/static", StaticFiles(directory=settings.staticFilePath), name="static")
+
+# Router einbinden
+app.include_router(api_router)

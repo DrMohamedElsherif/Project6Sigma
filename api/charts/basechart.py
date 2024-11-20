@@ -1,7 +1,8 @@
-from models.chart import Chart
+from models.chart import BaseChart
 
-class BaseChart:
-    def __init__(self, chart: Chart):
+
+class ChartProcessor:
+    def __init__(self, chart: BaseChart):
         self.chart = chart
         self.message = ""
         self.figure = ''
@@ -14,4 +15,3 @@ class BaseChart:
 
     def getFigure(self):
         return self.figure
-

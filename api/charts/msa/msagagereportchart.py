@@ -5,10 +5,10 @@ import probscale
 from scipy.optimize import curve_fit, OptimizeWarning, minimize_scalar
 import io
 
-from charts.basechart import BaseChart
+from api.charts.basechart import BaseChart
 
 
-class Msagagereportchart(BaseChart):
+class MsaGageReportChart(BaseChart):
     def process(self):
         # Define data and parameters
         title = self.chart.config.title
