@@ -4,20 +4,64 @@ import pandas as pd
 import probscale
 from scipy.optimize import curve_fit, OptimizeWarning, minimize_scalar
 import io
+from pydantic import BaseModel, Field
+from typing import List, Optional
+from api.schemas import BusinessLogicException
 
-from api.charts.basechart import BaseChart
+
+class MSAGageReportConfig(BaseModel):
+    title: str
+    trials: int = Field(..., gt=0)
+    ucl: Optional[float] = None
+    lcl: Optional[float] = None
 
 
-class MsaGageReportChart(BaseChart):
+class MSAGageReportData(BaseModel):
+    parts: List[int] = Field(..., min_length=1)
+    values: List[float] = Field(..., min_length=1)
+    ok: List[int] = Field(..., min_length=1)
+
+
+class MSAGageReportRequest(BaseModel):
+    project: str
+    step: str
+    config: MSAGageReportConfig
+    data: MSAGageReportData
+
+
+class MsaGageReportChart:
+    def __init__(self, data: dict):
+        try:
+            if not isinstance(data, dict):
+                raise ValueError("Request must be a JSON object")
+            for field in ['project', 'step', 'config', 'data']:
+                if field not in data:
+                    raise ValueError(field)
+
+            validated_data = MSAGageReportRequest(**data)
+            self.project = validated_data.project
+            self.step = validated_data.step
+            self.config = validated_data.config
+            self.data = validated_data.data
+            self.message = ""
+            self.figure = None
+
+        except ValueError as e:
+            raise BusinessLogicException(
+                error_code="validation_error",
+                field=str(e),
+                details={"message": f"Invalid or missing field: {str(e)}"}
+            )
+
     def process(self):
         # Define data and parameters
-        title = self.chart.config.title
-        parts = self.chart.data["parts"]
-        values = self.chart.data["values"]
-        ok = self.chart.data["ok"]
-        num_trials = self.chart.config.trials
-        lcl = self.chart.config.lcl
-        ucl = self.chart.config.ucl
+        title = self.config.title
+        parts = self.data.parts
+        values = self.data.values
+        ok = self.data.ok
+        num_trials = self.config.trials
+        lcl = self.config.lcl
+        ucl = self.config.ucl
 
         if lcl is not None:
             control_limit = lcl

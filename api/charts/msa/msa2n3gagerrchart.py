@@ -1,37 +1,75 @@
-import warnings
 import numpy as np
 import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
-import os
+from pydantic import BaseModel, Field
+from typing import List, Optional
+from api.schemas import BusinessLogicException
+from ..constants import FIGURE_SIZE_DEFAULT
 
-from api.charts.basechart import BaseChart
-from api.charts.constants import FIGURE_SIZE_DEFAULT
 
-class Msa2n3GagerrChart(BaseChart):
-    def process(self):
-        # Read Excel file
+class MSA2GagerrConfig(BaseModel):
+    title: str
+    labelx: str = Field(..., description="Label for x-axis (Operator or Device)")
+
+
+class MSA2GagerrData(BaseModel):
+    parts: List[int] = Field(..., min_length=1)
+    operators: Optional[List[str]] = None
+    devices: Optional[List[str]] = None
+    values: List[float] = Field(..., min_length=1)
+
+
+class MSA2GagerrRequest(BaseModel):
+    project: str
+    step: str
+    config: MSA2GagerrConfig
+    data: MSA2GagerrData
+
+
+class MSA2n3GagerrChart:
+    def __init__(self, data: dict):
         try:
-            # Extracting data directly from the API response
-            title = self.chart.config.title
-            values = self.chart.data["values"]  # Values (measurements)
-            parts = self.chart.data["parts"]  # Part IDs
+            if not isinstance(data, dict):
+                raise ValueError("Request must be a JSON object")
+            for field in ['project', 'step', 'config', 'data']:
+                if field not in data:
+                    raise ValueError(field)
 
-            # Check if the chart has operators else use devices else throw an error
-            if "operators" in self.chart.data:
-                operators = self.chart.data["operators"]
-            elif "devices" in self.chart.data:
-                operators = self.chart.data["devices"]
-            else:
-                raise ValueError("The chart data must have either 'operators' or 'devices'")
+            validated_data = MSA2GagerrRequest(**data)
+            self.project = validated_data.project
+            self.step = validated_data.step
+            self.config = validated_data.config
+            self.data = validated_data.data
+            self.message = ""
+            self.figure = None
 
-            label = self.chart.config.labelx  # Label (Operator or Device)
-            print(f"Title: {label}")
-        except Exception as e:
-            print(f"Error reading the Excel file: {e}")
-            return None
+        except ValueError as e:
+            raise BusinessLogicException(
+                error_code="validation_error",
+                field=str(e),
+                details={"message": f"Invalid or missing field: {str(e)}"}
+            )
 
-        # Create a DataFrame
+    def process(self):
+        title = self.config.title
+        values = self.data.values
+        parts = self.data.parts
+
+        if self.data.operators:
+            operators = self.data.operators
+        elif self.data.devices:
+            operators = self.data.devices
+        else:
+            raise BusinessLogicException(
+                error_code="validation_error",
+                field="operators_devices",
+                details={"message": "Either operators or devices must be provided"}
+            )
+
+        label = self.config.labelx
+
+        # Create DataFrame
         data = pd.DataFrame({
             "Part": parts,
             "Operator": operators,
@@ -47,34 +85,34 @@ class Msa2n3GagerrChart(BaseChart):
         data["Measurement"] = list(np.arange(1, num_measurements + 1)) * (len(data) // num_measurements)
 
         # Plot Gage Run Chart
-        try:
-            g = sns.relplot(
-                data=data,
-                x="Measurement",
-                y="Value",
-                hue="Operator",
-                style="Operator",
-                col="Part",
-                col_wrap=5,
-                aspect=0.7,
-                kind='line',  # Change to line plot
-                markers=True,  # Add markers at each data point
-                dashes=False  # Use solid lines
-            )
-            g.fig.suptitle(title, fontsize=16)
-            g.map(plt.axhline, y=data["Value"].mean(), color=".7", dashes=(2, 1), zorder=0)
-            g.set_axis_labels("Measurement", "Value")
+        g = sns.relplot(
+            data=data,
+            x="Measurement",
+            y="Value",
+            hue="Operator",
+            style="Operator",
+            col="Part",
+            col_wrap=5,
+            aspect=0.7,
+            kind='line',
+            markers=True,
+            dashes=False
+        )
+        g.fig.suptitle(title, fontsize=16)
+        g.map(plt.axhline, y=data["Value"].mean(), color=".7", dashes=(2, 1), zorder=0)
+        g.set_axis_labels("Measurement", "Value")
 
-            g.legend.set_title(f"{label}")
-            legend = g._legend
-            plt.setp(legend.get_texts(), fontsize=12)  # Set the font size for legend texts
-            plt.setp(legend.get_title(), fontsize=14)  # Set the font size for the legend title
+        g.legend.set_title(f"{label}")
+        legend = g._legend
+        plt.setp(legend.get_texts(), fontsize=12)
+        plt.setp(legend.get_title(), fontsize=14)
 
-            # Attach the seaborn figure to the matplotlib figure
-            plt.tight_layout()
+        plt.tight_layout()
 
-        except Exception as e:
-            print(f"Error generating the Gage Run Chart: {e}")
-            return None
+        plt.tight_layout()
+        self.figure = g.figure  # Save the matplotlib figure instead of the FacetGrid
+        plt.close()
+        return self.figure
 
-        return g
+    def getProcessMessage(self):
+        return self.message or "MSA2 Gage R&R chart generated successfully"

@@ -1,5 +1,5 @@
 ### Send a POST request to create a chart
-POST http://127.0.0.1:8000/chart
+POST http://127.0.0.1:8000/api/v1/charts/msa/msa2n3gagerrchart
 Content-Type: application/json
 
 {

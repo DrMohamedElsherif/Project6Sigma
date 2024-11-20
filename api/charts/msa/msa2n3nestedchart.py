@@ -1,32 +1,77 @@
-import io
-
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import seaborn as sns
+import io
 from matplotlib.backends.backend_pdf import PdfPages
 from scipy.stats import f
+from pydantic import BaseModel, Field
+from typing import List, Optional, Union
+from api.schemas import BusinessLogicException
+from ..constants import FIGURE_SIZE_DEFAULT
 
-from api.charts.basechart import BaseChart
+
+class MSA2NestedConfig(BaseModel):
+    title: str
+    labelx: str = Field(..., description="Label for x-axis (Operator or Device)")
 
 
-class Msa2n3NestedChart(BaseChart):
+class MSA2NestedData(BaseModel):
+    parts: List[int] = Field(..., min_length=1)
+    operators: Optional[List[Union[str, int]]] = None
+    devices: Optional[List[Union[str, int]]] = None
+    values: List[float] = Field(..., min_length=1)
+
+
+class MSA2NestedRequest(BaseModel):
+    project: str
+    step: str
+    config: MSA2NestedConfig
+    data: MSA2NestedData
+
+
+class MSA2n3NestedChart:
+    def __init__(self, data: dict):
+        try:
+            if not isinstance(data, dict):
+                raise ValueError("Request must be a JSON object")
+            for field in ['project', 'step', 'config', 'data']:
+                if field not in data:
+                    raise ValueError(field)
+
+            validated_data = MSA2NestedRequest(**data)
+            self.project = validated_data.project
+            self.step = validated_data.step
+            self.config = validated_data.config
+            self.data = validated_data.data
+            self.message = ""
+            self.figure = None
+
+        except ValueError as e:
+            raise BusinessLogicException(
+                error_code="validation_error",
+                field=str(e),
+                details={"message": f"Invalid or missing field: {str(e)}"}
+            )
+
     def process(self):
         try:
-            # Extracting data directly from the API response
-            title = self.chart.config.title
-            values = self.chart.data["values"]  # Values (measurements)
-            parts = self.chart.data["parts"]  # Part IDs
+            title = self.config.title
+            values = self.data.values
+            parts = self.data.parts
 
-            # Check if the chart has operators else use devices else throw an error
-            if "operators" in self.chart.data:
-                operators = self.chart.data["operators"]
-            elif "devices" in self.chart.data:
-                operators = self.chart.data["devices"]
+            if self.data.operators:
+                operators = self.data.operators
+            elif self.data.devices:
+                operators = self.data.devices
             else:
-                raise ValueError("The chart data must have either 'operators' or 'devices'")
+                raise BusinessLogicException(
+                    error_code="validation_error",
+                    field="operators_devices",
+                    details={"message": "Either operators or devices must be provided"}
+                )
 
-            label = self.chart.config.labelx  # Label (Operator or Device)
+            label = self.config.labelx
         except Exception as e:
             print(f"Error reading the Excel file: {e}")
             return None
@@ -372,8 +417,10 @@ class Msa2n3NestedChart(BaseChart):
         x_min = ax.get_xlim()[0]
         space = x_max + (x_max - x_min) * 0.01
         ax.text(space, overall_mean, f'{overall_mean:.2f}', color="green", va='center')
-        ax.text(space, overall_mean + (1.023 * overall_range_mean), f'{(overall_mean + 1.023 * overall_range_mean):.2f}', color="red", va='center')
-        ax.text(space, overall_mean - (1.023 * overall_range_mean), f'{(overall_mean - 1.023 * overall_range_mean):.2f}', color="red", va='center')
+        ax.text(space, overall_mean + (1.023 * overall_range_mean),
+                f'{(overall_mean + 1.023 * overall_range_mean):.2f}', color="red", va='center')
+        ax.text(space, overall_mean - (1.023 * overall_range_mean),
+                f'{(overall_mean - 1.023 * overall_range_mean):.2f}', color="red", va='center')
 
         ax.set_title(f"X-bar Chart by {label}")
         ax.set_xlabel("Part")
@@ -392,7 +439,7 @@ class Msa2n3NestedChart(BaseChart):
             n_parts = len(operator_data)
             if i > 0:
                 ax.axvline(cumulative_parts - 0.5, color='blue', linestyle='--', alpha=0.5)
-            ax.text(cumulative_parts + n_parts/2, ax.get_ylim()[0], operator,
+            ax.text(cumulative_parts + n_parts / 2, ax.get_ylim()[0], operator,
                     horizontalalignment='center', verticalalignment='bottom')
             cumulative_parts += n_parts
 
@@ -438,6 +485,6 @@ class Msa2n3NestedChart(BaseChart):
             n_parts = len(operator_data)
             if i > 0:
                 ax.axvline(cumulative_parts - 0.5, color='blue', linestyle='--', alpha=0.5)
-            ax.text(cumulative_parts + n_parts/2, ax.get_ylim()[0], operator,
+            ax.text(cumulative_parts + n_parts / 2, ax.get_ylim()[0], operator,
                     horizontalalignment='center', verticalalignment='bottom')
             cumulative_parts += n_parts

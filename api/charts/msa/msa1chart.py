@@ -16,7 +16,7 @@ class MSA1Config(BaseModel):
 
 
 class MSA1Data(BaseModel):
-    values: List[float] = Field(min_items=2)
+    values: List[float] = Field(min_length=2)
 
 
 class MSA1Request(BaseModel):
@@ -24,6 +24,7 @@ class MSA1Request(BaseModel):
     step: str
     config: MSA1Config
     data: MSA1Data
+
 
 class MSA1Chart:
     def __init__(self, data: dict):
@@ -62,7 +63,6 @@ class MSA1Chart:
                 field=str(e),
                 details={"message": f"Invalid or missing field: {str(e)}"}
             )
-
 
     def process(self):
         title = self.config.title
@@ -182,6 +182,3 @@ class MSA1Chart:
         plt.close()
 
         return self.figure
-
-    def getProcessMessage(self):
-        return self.message or "MSA1 chart generated successfully"

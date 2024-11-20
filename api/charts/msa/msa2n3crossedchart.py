@@ -1,34 +1,80 @@
-# Import required libraries
-import io
-import os
-
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import seaborn as sns
 import statsmodels.api as sm
+import io
 from matplotlib.backends.backend_pdf import PdfPages
 from statsmodels.formula.api import ols
+from pydantic import BaseModel, Field
+from typing import List, Optional, Dict, Any
+from api.schemas import BusinessLogicException
+from ..constants import FIGURE_SIZE_DEFAULT
 
-from api.charts.basechart import BaseChart
+
+class MSA2Config(BaseModel):
+    title: str
+    labelx: str = Field(..., description="Label for x-axis (Operator or Device)")
 
 
-class Msa2n3CrossedChart(BaseChart):
+class MSA2Data(BaseModel):
+    parts: List[int] = Field(..., min_length=1)
+    operators: Optional[List[str]] = None
+    devices: Optional[List[str]] = None
+    values: List[float] = Field(..., min_length=1)
+
+
+class MSA2Request(BaseModel):
+    project: str
+    step: str
+    config: MSA2Config
+    data: MSA2Data
+
+
+class MSA2n3CrossedChart:
+    def __init__(self, data: dict):
+        try:
+            # First validate core request structure
+            if not isinstance(data, dict):
+                raise ValueError("Request must be a JSON object")
+            for field in ['project', 'step', 'config', 'data']:
+                if field not in data:
+                    raise ValueError(field)
+
+            # Validate data requirements
+            if not any(key in data['data'] for key in ['operators', 'devices']):
+                raise ValueError("Either operators or devices must be provided")
+
+            validated_data = MSA2Request(**data)
+            self.project = validated_data.project
+            self.step = validated_data.step
+            self.config = validated_data.config
+            self.data = validated_data.data
+            self.message = ""
+            self.figure = None
+
+        except ValueError as e:
+            raise BusinessLogicException(
+                error_code="validation_error",
+                field=str(e),
+                details={"message": f"Invalid or missing field: {str(e)}"}
+            )
+
     def process(self):
         # Extracting data directly from the API response
-        title = self.chart.config.title
-        values = self.chart.data["values"]  # Values (measurements)
-        parts = self.chart.data["parts"]  # Part IDs
+        title = self.config.title
+        values = self.data.values
+        parts = self.data.parts
 
-        # Check if the chart has operators else use devices else throw an error
-        if "operators" in self.chart.data:
-            operators = self.chart.data["operators"]
-        elif "devices" in self.chart.data:
-            operators = self.chart.data["devices"]
+        # Check if operators or devices are present
+        if self.data.operators:
+            operators = self.data.operators
+        elif self.data.devices:
+            operators = self.data.devices
         else:
-            raise ValueError("The chart data must have either 'operators' or 'devices'")
+            raise ValueError("operators_or_devices_missing")
 
-        label = self.chart.config.labelx  # Label (Operator or Device)
+        label = self.config.labelx
 
         # Create DataFrame from the API data
         data = pd.DataFrame({
@@ -54,11 +100,11 @@ class Msa2n3CrossedChart(BaseChart):
             "Operator"].nunique()
 
         # Calculate "Replicate" column
-        data["Replicate"] = list(np.arange(1, replicates_per_part+1))*(int(len(data["Part"])/replicates_per_part))
+        data["Replicate"] = list(np.arange(1, replicates_per_part + 1)) * (int(len(data["Part"]) / replicates_per_part))
 
         # Calculate "Part Measurement" column
-        data["Part Measurement"] = list(np.arange(1, data["Part"].value_counts()[1]+1))*(int(len(data["Part"])/data["Part"].value_counts()[1]))
-
+        data["Part Measurement"] = list(np.arange(1, data["Part"].value_counts()[1] + 1)) * (
+            int(len(data["Part"]) / data["Part"].value_counts()[1]))
 
         # Group data frame by Part, obtain mean and reset index
         data_grouped_by_part = data[["Part", "Value"]].groupby(["Part"]).mean().reset_index()
@@ -92,8 +138,8 @@ class Msa2n3CrossedChart(BaseChart):
 
         # Perform two-way ANOVA and get results
         (model_2way_interaction_results, model_2way_no_interaction_results, gage_rr_var_comp_no_interaction_df,
-         gage_evaluation_df) = self._perform_two_way_anova(data, label, operators_count, parts_count, replicates_per_part)
-
+         gage_evaluation_df) = self._perform_two_way_anova(data, label, operators_count, parts_count,
+                                                           replicates_per_part)
 
         with PdfPages(pdf_io) as pdf:
             # NEW PDF PAGE - Value by Part, Value by Operator, Part * Operator Interaction
@@ -140,10 +186,15 @@ class Msa2n3CrossedChart(BaseChart):
             gage_evaluation_df.reset_index(inplace=True)
 
             # Runden der Werte auf 6 Nachkommastellen
-            model_2way_interaction_results = model_2way_interaction_results.round({col: 6 for col in model_2way_interaction_results.columns if col != 'Source'})
-            model_2way_no_interaction_results = model_2way_no_interaction_results.round({col: 6 for col in model_2way_no_interaction_results.columns if col != 'Source'})
-            gage_rr_var_comp_no_interaction_df = gage_rr_var_comp_no_interaction_df.round({'VarComp': 6, '%Contribution (of VarComp)': 2})
-            gage_evaluation_df = gage_evaluation_df.round({'StdDev (SD)': 6, 'Study Var (6 x SD)': 6, '%Study Var (%SV)': 2, '%Tol. (SV/Toler)': 2, '%Contrib. (VarComp)': 2})
+            model_2way_interaction_results = model_2way_interaction_results.round(
+                {col: 6 for col in model_2way_interaction_results.columns if col != 'Source'})
+            model_2way_no_interaction_results = model_2way_no_interaction_results.round(
+                {col: 6 for col in model_2way_no_interaction_results.columns if col != 'Source'})
+            gage_rr_var_comp_no_interaction_df = gage_rr_var_comp_no_interaction_df.round(
+                {'VarComp': 6, '%Contribution (of VarComp)': 2})
+            gage_evaluation_df = gage_evaluation_df.round(
+                {'StdDev (SD)': 6, 'Study Var (6 x SD)': 6, '%Study Var (%SV)': 2, '%Tol. (SV/Toler)': 2,
+                 '%Contrib. (VarComp)': 2})
 
             # Add tables to subplots
             axes[0].axis('off')
@@ -282,8 +333,10 @@ class Msa2n3CrossedChart(BaseChart):
         x_min = ax.get_xlim()[0]
         space = x_max + (x_max - x_min) * 0.01
         ax.text(space, overall_mean, f'{overall_mean:.2f}', color="green", va='center')
-        ax.text(space, overall_mean + (1.023 * overall_range_mean), f'{(overall_mean + 1.023 * overall_range_mean):.2f}', color="red", va='center')
-        ax.text(space, overall_mean - (1.023 * overall_range_mean), f'{(overall_mean - 1.023 * overall_range_mean):.2f}', color="red", va='center')
+        ax.text(space, overall_mean + (1.023 * overall_range_mean),
+                f'{(overall_mean + 1.023 * overall_range_mean):.2f}', color="red", va='center')
+        ax.text(space, overall_mean - (1.023 * overall_range_mean),
+                f'{(overall_mean - 1.023 * overall_range_mean):.2f}', color="red", va='center')
 
         ax.set_title(f"X-bar Chart by {label}")
         ax.set_xlabel("Part")
@@ -326,8 +379,10 @@ class Msa2n3CrossedChart(BaseChart):
         x_min = ax.get_xlim()[0]
         space = x_max + (x_max - x_min) * 0.01
         ax.text(space, overall_range_mean, f'{overall_range_mean:.2f}', color="green", va='center')
-        ax.text(space, overall_range_mean + (1.023 * overall_range_std), f'{(overall_range_mean + 1.023 * overall_range_std):.2f}', color="red", va='center')
-        ax.text(space, overall_range_mean - (1.023 * overall_range_std), f'{(overall_range_mean - 1.023 * overall_range_std):.2f}', color="red", va='center')
+        ax.text(space, overall_range_mean + (1.023 * overall_range_std),
+                f'{(overall_range_mean + 1.023 * overall_range_std):.2f}', color="red", va='center')
+        ax.text(space, overall_range_mean - (1.023 * overall_range_std),
+                f'{(overall_range_mean - 1.023 * overall_range_std):.2f}', color="red", va='center')
 
         ax.set_title(f"R Chart by {label}")
         ax.set_xlabel("Part")
@@ -374,49 +429,62 @@ class Msa2n3CrossedChart(BaseChart):
 
         # Correct F-value calculations
         repeatability_ms = model_2way_interaction_results.loc["Repeatability", "MS"]
-        model_2way_interaction_results.loc["Part", "F"] = model_2way_interaction_results.loc["Part", "MS"] / repeatability_ms
-        model_2way_interaction_results.loc[f"{label}", "F"] = model_2way_interaction_results.loc[f"{label}", "MS"] / repeatability_ms
-        model_2way_interaction_results.loc[f"Part * {label}", "F"] = model_2way_interaction_results.loc[f"Part * {label}", "MS"] / repeatability_ms
+        model_2way_interaction_results.loc["Part", "F"] = model_2way_interaction_results.loc[
+                                                              "Part", "MS"] / repeatability_ms
+        model_2way_interaction_results.loc[f"{label}", "F"] = model_2way_interaction_results.loc[
+                                                                  f"{label}", "MS"] / repeatability_ms
+        model_2way_interaction_results.loc[f"Part * {label}", "F"] = model_2way_interaction_results.loc[
+                                                                         f"Part * {label}", "MS"] / repeatability_ms
 
         # Recalculate p-values based on the new F-values
         from scipy import stats
-        model_2way_interaction_results.loc["Part", "P"] = 1 - stats.f.cdf(model_2way_interaction_results.loc["Part", "F"],
-                                                                          model_2way_interaction_results.loc["Part", "DF"],
-                                                                          model_2way_interaction_results.loc["Repeatability", "DF"])
-        model_2way_interaction_results.loc[f"{label}", "P"] = 1 - stats.f.cdf(model_2way_interaction_results.loc[f"{label}", "F"],
-                                                                              model_2way_interaction_results.loc[f"{label}", "DF"],
-                                                                              model_2way_interaction_results.loc["Repeatability", "DF"])
-        model_2way_interaction_results.loc[f"Part * {label}", "P"] = 1 - stats.f.cdf(model_2way_interaction_results.loc[f"Part * {label}", "F"],
-                                                                                     model_2way_interaction_results.loc[f"Part * {label}", "DF"],
-                                                                                     model_2way_interaction_results.loc["Repeatability", "DF"])
+        model_2way_interaction_results.loc["Part", "P"] = 1 - stats.f.cdf(
+            model_2way_interaction_results.loc["Part", "F"],
+            model_2way_interaction_results.loc["Part", "DF"],
+            model_2way_interaction_results.loc["Repeatability", "DF"])
+        model_2way_interaction_results.loc[f"{label}", "P"] = 1 - stats.f.cdf(
+            model_2way_interaction_results.loc[f"{label}", "F"],
+            model_2way_interaction_results.loc[f"{label}", "DF"],
+            model_2way_interaction_results.loc["Repeatability", "DF"])
+        model_2way_interaction_results.loc[f"Part * {label}", "P"] = 1 - stats.f.cdf(
+            model_2way_interaction_results.loc[f"Part * {label}", "F"],
+            model_2way_interaction_results.loc[f"Part * {label}", "DF"],
+            model_2way_interaction_results.loc["Repeatability", "DF"])
 
         # Calculate components of variation
         var_comp_repeatability = repeatability_ms
-        var_comp_operator = (model_2way_interaction_results.loc[f"{label}", "MS"] - repeatability_ms) / (parts_count * replicates_per_part)
-        var_comp_part_part = (model_2way_interaction_results.loc["Part", "MS"] - repeatability_ms) / (operators_count * replicates_per_part)
+        var_comp_operator = (model_2way_interaction_results.loc[f"{label}", "MS"] - repeatability_ms) / (
+                    parts_count * replicates_per_part)
+        var_comp_part_part = (model_2way_interaction_results.loc["Part", "MS"] - repeatability_ms) / (
+                    operators_count * replicates_per_part)
         var_comp_reproducibility = var_comp_operator
         var_comp_total_gage_rr = var_comp_repeatability + var_comp_reproducibility
         var_comp_total_variation = var_comp_total_gage_rr + var_comp_part_part
 
         gage_rr_var_comp_no_interaction_df = pd.DataFrame({
-            "Source": ["Total Gage R&R", "Repeatability", "Reproducibility", f"{label}", "Part-To-Part", "Total Variation"],
+            "Source": ["Total Gage R&R", "Repeatability", "Reproducibility", f"{label}", "Part-To-Part",
+                       "Total Variation"],
             "VarComp": [var_comp_total_gage_rr, var_comp_repeatability, var_comp_reproducibility, var_comp_operator,
                         var_comp_part_part, var_comp_total_variation]
         })
 
-        gage_rr_var_comp_no_interaction_df["%Contribution (of VarComp)"] = (gage_rr_var_comp_no_interaction_df["VarComp"] / var_comp_total_variation * 100).round(2)
+        gage_rr_var_comp_no_interaction_df["%Contribution (of VarComp)"] = (
+                    gage_rr_var_comp_no_interaction_df["VarComp"] / var_comp_total_variation * 100).round(2)
         gage_rr_var_comp_no_interaction_df = gage_rr_var_comp_no_interaction_df.set_index("Source")
 
         # Calculate Gage Evaluation
         gage_evaluation_df = pd.DataFrame({"StdDev (SD)": np.sqrt(gage_rr_var_comp_no_interaction_df["VarComp"])})
         gage_evaluation_df["Study Var (6 x SD)"] = gage_evaluation_df["StdDev (SD)"] * 6
-        gage_evaluation_df["%Study Var (%SV)"] = (gage_evaluation_df["Study Var (6 x SD)"] / gage_evaluation_df.loc["Total Variation", "Study Var (6 x SD)"] * 100).round(2)
+        gage_evaluation_df["%Study Var (%SV)"] = (gage_evaluation_df["Study Var (6 x SD)"] / gage_evaluation_df.loc[
+            "Total Variation", "Study Var (6 x SD)"] * 100).round(2)
         gage_evaluation_df["%Tol. (SV/Toler)"] = (gage_evaluation_df["Study Var (6 x SD)"] / 8 * 100).round(2)
-        gage_evaluation_df["%Contrib. (VarComp)"] = gage_rr_var_comp_no_interaction_df["%Contribution (of VarComp)"].round(2)
+        gage_evaluation_df["%Contrib. (VarComp)"] = gage_rr_var_comp_no_interaction_df[
+            "%Contribution (of VarComp)"].round(2)
 
         if ax and pdf:
             gage_evaluation_df.loc[["Total Gage R&R", "Repeatability", "Reproducibility", "Part-To-Part"]][
-                ["%Contrib. (VarComp)", "%Study Var (%SV)", "%Tol. (SV/Toler)"]].plot(kind="bar", figsize=(10, 6), ax=ax)
+                ["%Contrib. (VarComp)", "%Study Var (%SV)", "%Tol. (SV/Toler)"]].plot(kind="bar", figsize=(10, 6),
+                                                                                      ax=ax)
             ax.set_title("Components of Variation")
             ax.set_ylabel("Percent")
             ax.set_xlabel("")
