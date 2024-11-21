@@ -1,71 +1,87 @@
-# Import required libraries
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 import statistics
-from charts.basechart import BaseChart
-from charts.constants import FIGURE_SIZE_DEFAULT
+from pydantic import BaseModel, Field
+from typing import List, Optional
+from api.schemas import BusinessLogicException
+from api.charts.constants import FIGURE_SIZE_DEFAULT
 
 
-class Npchart(BaseChart):
+class NPchartConfig(BaseModel):
+    title: str
+    group_size: Optional[int] = Field(None, gt=0)
+
+
+class NPchartData(BaseModel):
+    defects: List[int] = Field(..., min_length=1)
+    sample_sizes: Optional[List[int]] = None
+
+
+class NPchartRequest(BaseModel):
+    project: str
+    step: str
+    config: NPchartConfig
+    data: NPchartData
+
+
+class Npchart:
+    def __init__(self, data: dict):
+        try:
+            validated_data = NPchartRequest(**data)
+            self.project = validated_data.project
+            self.step = validated_data.step
+            self.config = validated_data.config
+            self.data = validated_data.data
+            self.message = ""
+            self.figure = None
+
+        except ValueError as e:
+            raise BusinessLogicException(
+                error_code="validation_error",
+                field=str(e),
+                details={"message": f"Invalid or missing field: {str(e)}"}
+            )
+
     def process(self):
-        # Define data and parameters
-        title = self.chart.config.title
-        data1 = self.chart.data[0]
-        data2 = []
-        group_size = self.chart.group_size if bool(
-            self.chart.group_size) else False
-        data_length = len(data1)
+        defects = self.data.defects
+        group_size = self.config.group_size
+        sample_sizes = self.data.sample_sizes
 
-        # Check if `group_size` is provided
-        if group_size is not False:
-            for x in range(data_length):
-                data2.append(group_size)
+        if group_size:
+            sample_sizes = [group_size] * len(defects)
+        elif not sample_sizes:
+            raise BusinessLogicException(
+                error_code="validation_error",
+                details={"message": "Either group_size or sample_sizes must be provided"}
+            )
 
-        else:
-            data2 = self.chart.data[1]
+        data = pd.DataFrame({
+            'defects': defects,
+            'group_size': sample_sizes,
+            'np': [d / n for d, n in zip(defects, sample_sizes)]
+        })
 
-        data = {
-            'defects': list(np.array(data1)),
-            'group_size': list(np.array(data2))
-        }
+        np_mean = statistics.mean(data['np'])
+        std_dev = np.sqrt((np_mean * (1 - np_mean)) / statistics.mean(data['group_size']))
+        oeg = np_mean + 3 * std_dev
+        ueg = np_mean - 3 * std_dev
 
-        # Convert data to data frame
-        data = pd.DataFrame(data)
-
-        # Add 'np' column to data frame
-        data['np'] = data['defects']/data['group_size']
-
-        # Plot np-chart
         self.figure = plt.figure(figsize=FIGURE_SIZE_DEFAULT)
-
         plt.plot(data['np'], linestyle='-', marker='o', color='blue')
-        # Define variables for use in line and label
-        NP = statistics.mean(data['np'])
-        OEG = statistics.mean(data['np'])+3*(np.sqrt((statistics.mean(data['np'])*(
-            1-statistics.mean(data['np'])))/statistics.mean(data['group_size'])))
-        UEG = statistics.mean(data['np'])-3*(np.sqrt((statistics.mean(data['np'])*(
-            1-statistics.mean(data['np'])))/statistics.mean(data['group_size'])))
+        plt.axhline(oeg, color='red', linestyle='dashed', label=f'OEG={round(oeg, 2)}')
+        plt.axhline(np_mean, color='green', label=f'np={round(np_mean, 2)}')
+        plt.axhline(ueg, color='red', linestyle='dashed', label=f'UEG={round(ueg, 2)}')
 
-        plt.axhline(OEG, color='red', linestyle='dashed',
-                    label='OEG=' + str(round(OEG, 2)))
-        plt.axhline(NP, color='green', label='np=' + str(round(NP, 1)))
-        plt.axhline(UEG, color='red', linestyle='dashed',
-                    label='UEG=' + str(round(UEG, 2)))
-        plt.title(title, fontsize=28, pad=20)
+        plt.title(self.config.title, fontsize=28, pad=20)
         plt.xlabel('Sample')
         plt.ylabel('Sample Count')
         plt.legend(loc='upper right', framealpha=1)
 
-        # Validate points out of control limits
-        i = 0
-        control = True
-        for group in data['np']:
-            if group > (statistics.mean(data['np'])+3*(np.sqrt((statistics.mean(data['np'])*(1-statistics.mean(data['np'])))/statistics.mean(data['group_size'])))) or group < (statistics.mean(data['np'])-3*(np.sqrt((statistics.mean(data['np'])*(1-statistics.mean(data['np'])))/statistics.mean(data['group_size'])))):
-                self.message = 'Group', i, 'out of fraction defective cotrol limits!'
-                control = False
-            i += 1
-        if control == True:
+        violations = data['np'][(data['np'] > oeg) | (data['np'] < ueg)].index
+        if len(violations) > 0:
+            self.message = f'Groups {list(violations)} out of fraction defective control limits!'
+        else:
             self.message = 'All points within control limits.'
 
         return self.figure

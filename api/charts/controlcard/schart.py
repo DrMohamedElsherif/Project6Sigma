@@ -1,102 +1,113 @@
-# Import required libraries
-import numpy as np
-import pandas as pd
-import matplotlib.pyplot as plt
 import statistics
-from charts.basechart import BaseChart
-from charts.constants import FIGURE_SIZE_DEFAULT
+from typing import List, Optional
+
+import matplotlib.pyplot as plt
+import numpy as np
+from pydantic import BaseModel, Field
+
+from api.charts.constants import FIGURE_SIZE_DEFAULT
+from api.schemas import BusinessLogicException
 
 
-class Schart(BaseChart):
+class SchartConfig(BaseModel):
+    title: str
+    group_size: Optional[int] = Field(None, gt=0)
+
+
+class SchartData(BaseModel):
+    values: List[float] = Field(..., min_length=2)
+    subgroups: Optional[List[List[float]]] = None
+
+
+class SchartRequest(BaseModel):
+    project: str
+    step: str
+    config: SchartConfig
+    data: SchartData
+
+
+class Schart:
+    def __init__(self, data: dict):
+        try:
+            validated_data = SchartRequest(**data)
+            self.project = validated_data.project
+            self.step = validated_data.step
+            self.config = validated_data.config
+            self.data = validated_data.data
+            self.message = ""
+            self.figure = None
+
+        except ValueError as e:
+            raise BusinessLogicException(
+                error_code="validation_error",
+                field=str(e),
+                details={"message": f"Invalid or missing field: {str(e)}"}
+            )
+
+    def _create_subgroups(self, data, group_size):
+        n = len(data)
+        return [data[i:i + group_size] for i in range(0, n, group_size)]
+
     def process(self):
-        # Define data and parameters
-        title = self.chart.config.title
-        data1 = self.chart.data[0]
-        group_size = self.chart.group_size if bool(
-            self.chart.group_size) else False
+        values = self.data.values
+        group_size = self.config.group_size
+        subgroups = self.data.subgroups
 
-        # Check if `group_size` is provided
-        if group_size is not False:
-            # use group_size to split data into pieces with a possible leftover when its not divisible
-            splits = np.split(data1, np.arange(
-                group_size, len(data1), group_size))
-            x_temp = []
+        if group_size:
+            subgroups = self._create_subgroups(values, group_size)
+        elif not subgroups:
+            raise BusinessLogicException(
+                error_code="validation_error",
+                details={"message": "Either group_size or subgroups must be provided"}
+            )
 
-            for item in splits:
-                x_temp.append(item)
-            x = np.array(x_temp, dtype=object)
+        # Constants for control limits
+        A3 = 0.927  # Factor for Xbar chart
+        B4 = 1.649  # Upper factor for S chart
+        B3 = 0.321  # Lower factor for S chart
 
+        # Calculate statistics
+        x_bars = [np.mean(group) for group in subgroups if len(group) > 1]
+        stdevs = [np.std(group, ddof=1) for group in subgroups if len(group) > 1]
+
+        x_mean = statistics.mean(x_bars)
+        s_mean = statistics.mean(stdevs)
+
+        # Control limits
+        x_ucl = x_mean + A3 * s_mean
+        x_lcl = x_mean - A3 * s_mean
+        s_ucl = B4 * s_mean
+        s_lcl = B3 * s_mean
+
+        # Create plots
+        self.figure, (ax1, ax2) = plt.subplots(2, figsize=FIGURE_SIZE_DEFAULT)
+
+        # X-bar chart
+        ax1.plot(x_bars, linestyle='-', marker='o', color='blue')
+        ax1.axhline(x_ucl, color='red', linestyle='dashed', label=f'UCL={round(x_ucl, 3)}')
+        ax1.axhline(x_mean, color='green', label=f'X={round(x_mean, 3)}')
+        ax1.axhline(x_lcl, color='red', linestyle='dashed', label=f'LCL={round(x_lcl, 3)}')
+        ax1.set_title(self.config.title, fontsize=28, pad=20)
+        ax1.set(ylabel='Sample Mean')
+        ax1.legend(loc='upper right', framealpha=1)
+
+        # S chart
+        ax2.plot(stdevs, linestyle='-', marker='o', color='blue')
+        ax2.axhline(s_ucl, color='red', linestyle='dashed', label=f'UCL={round(s_ucl, 3)}')
+        ax2.axhline(s_mean, color='green', label=f'S={round(s_mean, 3)}')
+        ax2.axhline(s_lcl, color='red', linestyle='dashed', label=f'LCL={round(s_lcl, 3)}')
+        ax2.set(xlabel='Sample', ylabel='Standard Deviation')
+        ax2.legend(loc='upper right', framealpha=1)
+
+        # Check control limits
+        x_violations = [i for i, x in enumerate(x_bars) if x > x_ucl or x < x_lcl]
+        s_violations = [i for i, s in enumerate(stdevs) if s > s_ucl or s < s_lcl]
+
+        if x_violations:
+            self.message = f'Groups {x_violations} out of mean control limits!'
+        elif s_violations:
+            self.message = f'Groups {s_violations} out of standard deviation control limits!'
         else:
-            x = np.asarray(data1, dtype=object)
-
-        # Define list variable for groups means
-        x_bar = []
-
-        # Define list variable for groups standard deviation
-        s = []
-
-        # Get and append groups means and standard deviations
-        for group in x:
-            if len(group) > 1:
-                x_bar.append(group.mean(dtype=np.float64))
-                s.append(np.std(group))
-            else:
-                x_bar.append(np.std(group[0]))
-
-        # Plot x-bar and s charts
-        self.figure, axs = plt.subplots(2, figsize=FIGURE_SIZE_DEFAULT)
-
-        # x-bar chart
-        axs[0].plot(x_bar, linestyle='-', marker='o', color='blue')
-        # Define variables for use in line and label
-        X = (statistics.mean(x_bar))
-        OEG = (statistics.mean(x_bar)+0.927*statistics.mean(s))
-        UEG = (statistics.mean(x_bar)-0.927*statistics.mean(s))
-
-        axs[0].axhline(OEG, color='red', linestyle='dashed',
-                       label='OEG=' + str(round(OEG, 3)))
-        axs[0].axhline(X, color='green', label='X=' + str(round(X, 1)))
-        axs[0].axhline(UEG, color='red', linestyle='dashed',
-                       label='UEG=' + str(round(UEG, 3)))
-        axs[0].set_title(title, fontsize=28, pad=20)
-        axs[0].set(xlabel='Sample', ylabel='Mean')
-        axs[0].legend(loc='upper right', framealpha=1)
-
-        axs[1].plot(s, linestyle='-', marker='o', color='blue')
-        # Define variables for use in line and label
-        S = (statistics.mean(s))
-        OEG2 = (1.649*statistics.mean(s))
-        UEG2 = (0.321*statistics.mean(s))
-
-        axs[1].axhline(OEG2, color='red', linestyle='dashed',
-                       label='OEG2=' + str(round(OEG2, 3)))
-        axs[1].axhline((statistics.mean(s)), color='green',
-                       label='S=' + str(round(S, 1)))
-        axs[1].axhline(UEG2, color='red', linestyle='dashed',
-                       label='UEG2=' + str(round(UEG2, 3)))
-        axs[1].set(xlabel='Sample', ylabel='Range')
-        axs[1].legend(loc='upper right', framealpha=1)
-
-        # Validate points out of control limits for x-bar chart
-        i = 0
-        control = True
-        for group in x_bar:
-            if group > statistics.mean(x_bar)+0.927*statistics.mean(s) or group < statistics.mean(x_bar)-0.927*statistics.mean(s):
-                self.message = 'Group', i, 'out of mean control limits!'
-                control = False
-            i += 1
-        if control == True:
-            self.message = 'All points within control limits.'
-
-        # Validate points out of control limits for s chart
-        i = 0
-        control = True
-        for group in s:
-            if group > 1.649*statistics.mean(s) or group < 0.321*statistics.mean(s):
-                self.message = 'Group', i, 'out of standard deviation cotrol limits!'
-                control = False
-            i += 1
-        if control == True:
             self.message = 'All points within control limits.'
 
         return self.figure

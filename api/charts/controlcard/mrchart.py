@@ -1,94 +1,98 @@
-# Import required libraries
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 import statistics
-from charts.basechart import BaseChart
-from charts.constants import FIGURE_SIZE_DEFAULT
+from pydantic import BaseModel, Field
+from typing import List
+
+from api.charts.constants import FIGURE_SIZE_DEFAULT
+from api.schemas import BusinessLogicException
 
 
-class Mrchart(BaseChart):
+class MRchartConfig(BaseModel):
+    title: str
+
+
+class MRchartData(BaseModel):
+    values: List[float] = Field(..., min_length=2)  # Need at least 2 points for moving range
+
+
+class MRchartRequest(BaseModel):
+    project: str
+    step: str
+    config: MRchartConfig
+    data: MRchartData
+
+
+class Mrchart:
+    def __init__(self, data: dict):
+        try:
+            validated_data = MRchartRequest(**data)
+            self.project = validated_data.project
+            self.step = validated_data.step
+            self.config = validated_data.config
+            self.data = validated_data.data
+            self.message = ""
+            self.figure = None
+
+        except ValueError as e:
+            raise BusinessLogicException(
+                error_code="validation_error",
+                field=str(e),
+                details={"message": f"Invalid or missing field: {str(e)}"}
+            )
+
     def process(self):
-        # Define data and parameters
-        title = self.chart.config.title
-        data = np.array(self.chart.data[0])
+        x = pd.Series(self.data.values)
+        mr = pd.Series([np.nan] + [abs(x[i] - x[i - 1]) for i in range(1, len(x))])
+        data = pd.DataFrame({'x': x, 'mR': mr})
 
-        # Create pandas series objects
-        x = pd.Series(data)
-        # MR = pd.Series(col2)
-        MR = [np.nan]
+        # Constants for control limits
+        D4 = 3.267  # UCL factor for n=2
+        D3 = 0  # LCL factor for n=2
+        d2 = 1.128  # Factor for individual measurements
 
-        # Get and append moving ranges
-        i = 1
-        for data in range(1, len(x)):
-            MR.append(abs(x[i] - x[i-1]))
-            i += 1
+        # Calculate statistics
+        x_mean = statistics.mean(data['x'])
+        mr_mean = statistics.mean(data['mR'].dropna())
 
-        # Convert list to pandas Series objects
-        MR = pd.Series(MR)
+        # Control limits for Individual chart
+        x_ucl = x_mean + 3 * mr_mean / d2
+        x_lcl = x_mean - 3 * mr_mean / d2
 
-        # Concatenate mR Series with and rename columns
-        data = pd.concat([x, MR], axis=1).rename(columns={0: "x", 1: "mR"})
+        # Control limits for MR chart
+        mr_ucl = D4 * mr_mean
+        mr_lcl = D3 * mr_mean
 
-        # Plot x and mR charts
-        self.figure, axs = plt.subplots(
-            2, figsize=FIGURE_SIZE_DEFAULT, sharex=True)
+        # Create subplots
+        self.figure, (ax1, ax2) = plt.subplots(2, figsize=FIGURE_SIZE_DEFAULT, sharex=True)
 
-        # x chart
-        axs[0].plot(data['x'], linestyle='-', marker='o', color='blue')
-        # Define variables for use in line and label
-        X = statistics.mean(data['x'])
-        UCL = statistics.mean(
-            data['x'])+3*statistics.mean(data['mR'][1:len(data['mR'])])/1.128
-        LCL = statistics.mean(
-            data['x'])-3*statistics.mean(data['mR'][1:len(data['mR'])])/1.128
+        # Individual Values chart
+        ax1.plot(data['x'], linestyle='-', marker='o', color='blue')
+        ax1.axhline(x_ucl, color='red', linestyle='dashed', label=f'UCL={round(x_ucl, 3)}')
+        ax1.axhline(x_mean, color='green', label=f'X={round(x_mean, 3)}')
+        ax1.axhline(x_lcl, color='red', linestyle='dashed', label=f'LCL={round(x_lcl, 3)}')
+        ax1.set_title(self.config.title, fontsize=28, pad=20)
+        ax1.set(ylabel='Individual Value')
+        ax1.legend(loc='upper right', framealpha=1)
 
-        axs[0].axhline(UCL, color='red', linestyle='dashed',
-                       label='UCL=' + str(round(UCL, 3)))
-        axs[0].axhline(X, color='green', label='X=' + str(round(X, 1)))
-        axs[0].axhline(LCL, color='red', linestyle='dashed',
-                       label='LCL=' + str(round(LCL, 3)))
-        axs[0].set_title(title, fontsize=28, pad=20)
-        axs[0].set(xlabel='Observation', ylabel='Individual Value')
-        axs[0].legend(loc='upper right', framealpha=1)
+        # Moving Range chart
+        ax2.plot(data['mR'], linestyle='-', marker='o', color='blue')
+        ax2.axhline(mr_ucl, color='red', linestyle='dashed', label=f'UCL={round(mr_ucl, 3)}')
+        ax2.axhline(mr_mean, color='green', label=f'MR={round(mr_mean, 3)}')
+        ax2.axhline(mr_lcl, color='red', linestyle='dashed', label=f'LCL={round(mr_lcl, 3)}')
+        ax2.set(xlabel='Observation', ylabel='Moving Range')
+        ax2.legend(loc='upper right', framealpha=1)
 
-        # mR chart
-        axs[1].plot(data['mR'], linestyle='-', marker='o', color='blue')
-        # Define variables for use in line and label
-        MR = statistics.mean(data['mR'][1:len(data['mR'])])
-        UCL2 = statistics.mean(data['mR'][1:len(
-            data['mR'])])+3*statistics.mean(data['mR'][1:len(data['mR'])])*0.8525
-        LCL2 = statistics.mean(data['mR'][1:len(
-            data['mR'])])-3*statistics.mean(data['mR'][1:len(data['mR'])])*0.8525
+        # Check control limits
+        x_violations = data['x'][(data['x'] > x_ucl) | (data['x'] < x_lcl)].index
+        mr_violations = data['mR'][(data['mR'] > mr_ucl) | (data['mR'] < mr_lcl)].dropna().index
 
-        axs[1].axhline(MR, color='green', label='MR=' + str(round(MR, 3)))
-        axs[1].axhline(UCL2, color='red', linestyle='dashed',
-                       label='UCL=' + str(round(UCL2, 3)))
-        axs[1].axhline(LCL2, color='red', linestyle='dashed',
-                       label='LCL=' + str(round(LCL2, 3)))
-        axs[1].set(xlabel='Observation', ylabel='Moving Range')
-        axs[1].legend(loc='upper right', framealpha=1)
-
-        # Validate points out of control limits for x chart
-        i = 0
-        control = True
-        for unit in data['x']:
-            if unit > statistics.mean(data['x'])+3*statistics.mean(data['mR'][1:len(data['mR'])])/1.128 or unit < statistics.mean(data['x'])-3*statistics.mean(data['mR'][1:len(data['mR'])])/1.128:
-                self.message = 'Unit', i, 'out of cotrol limits!'
-                control = False
-            i += 1
-        if control == True:
-            self.message = 'All points within control limits.'
-
-        # Validate points out of control limits for mR chart
-        i = 0
-        control = True
-        for unit in data['mR']:
-            if unit > statistics.mean(data['mR'][1:len(data['mR'])])+3*statistics.mean(data['mR'][1:len(data['mR'])])*0.8525 or unit < statistics.mean(data['mR'][1:len(data['mR'])])-3*statistics.mean(data['mR'][1:len(data['mR'])])*0.8525:
-                self.message = 'Unit', i, 'out of control limits!'
-                control = False
-            i += 1
-        if control == True:
+        if len(x_violations) > 0:
+            self.message = f'Individual values out of control at points: {list(x_violations)}'
+        elif len(mr_violations) > 0:
+            self.message = f'Moving ranges out of control at points: {list(mr_violations)}'
+        else:
             self.message = 'All points within control limits.'
 
         return self.figure

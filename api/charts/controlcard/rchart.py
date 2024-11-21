@@ -1,94 +1,113 @@
-# Import required libraries
-import numpy as np
-import pandas as pd
-import matplotlib.pyplot as plt
 import statistics
-from charts.basechart import BaseChart
+from typing import List, Optional
 
-class Rchart(BaseChart):
+import matplotlib.pyplot as plt
+import numpy as np
+from pydantic import BaseModel, Field
+
+from api.charts.constants import FIGURE_SIZE_DEFAULT
+from api.schemas import BusinessLogicException
+
+
+class RchartConfig(BaseModel):
+    title: str
+    group_size: Optional[int] = Field(None, gt=0)
+
+
+class RchartData(BaseModel):
+    values: List[float] = Field(..., min_length=2)
+    subgroups: Optional[List[List[float]]] = None
+
+
+class RchartRequest(BaseModel):
+    project: str
+    step: str
+    config: RchartConfig
+    data: RchartData
+
+
+class Rchart:
+    def __init__(self, data: dict):
+        try:
+            validated_data = RchartRequest(**data)
+            self.project = validated_data.project
+            self.step = validated_data.step
+            self.config = validated_data.config
+            self.data = validated_data.data
+            self.message = ""
+            self.figure = None
+
+        except ValueError as e:
+            raise BusinessLogicException(
+                error_code="validation_error",
+                field=str(e),
+                details={"message": f"Invalid or missing field: {str(e)}"}
+            )
+
+    def _create_subgroups(self, data, group_size):
+        n = len(data)
+        return [data[i:i + group_size] for i in range(0, n, group_size)]
+
     def process(self):
-        # Define data and parameters
-        title = self.chart.config.title
-        data1 = self.chart.data[0]
-        group_size = self.chart.group_size if bool(self.chart.group_size) else False
+        values = self.data.values
+        group_size = self.config.group_size
+        subgroups = self.data.subgroups
 
-        # Check if `group_size` is provided
-        if group_size is not False:
-            # use group_size to split data into pieces with a possible leftover when its not divisible
-            splits = np.split(data1, np.arange(group_size, len(data1), group_size))
-            x_temp = []
+        if group_size:
+            subgroups = self._create_subgroups(values, group_size)
+        elif not subgroups:
+            raise BusinessLogicException(
+                error_code="validation_error",
+                details={"message": "Either group_size or subgroups must be provided"}
+            )
 
-            for item in splits:
-                x_temp.append(item)
-            x = np.array(x_temp, dtype=object)
+        # Constants for control limits
+        A2 = 0.577  # Factor for Xbar chart
+        D4 = 2.574  # Factor for R chart
+        D3 = 0  # Factor for R chart
 
-        else:
-            x = np.asarray(data1, dtype=object)
+        # Calculate statistics
+        x_bars = [np.mean(group) for group in subgroups if len(group) > 1]
+        ranges = [max(group) - min(group) for group in subgroups if len(group) > 1]
 
-        # Define list variable for groups means
-        x_bar = []
+        x_mean = statistics.mean(x_bars)
+        r_mean = statistics.mean(ranges)
 
-        # Define list variable for groups ranges
-        r = []
+        # Control limits
+        x_ucl = x_mean + A2 * r_mean
+        x_lcl = x_mean - A2 * r_mean
+        r_ucl = D4 * r_mean
+        r_lcl = D3 * r_mean
 
-        # Get and append groups means and ranges
-        for group in x:
-            if len(group) > 1:
-                x_bar.append(group.mean(dtype=np.float64))
-                r.append(group.max() - group.min())
-            else:
-                x_bar.append(float(group[0]))
+        # Create plots
+        self.figure, (ax1, ax2) = plt.subplots(2, figsize=FIGURE_SIZE_DEFAULT)
 
-        # Plot x-bar and R charts
-        self.figure, axs = plt.subplots(2, figsize=(15, 7.5))
-
-        # x-bar chart
-        axs[0].plot(x_bar, linestyle='-', marker='o', color='blue')
-        # Define variables for use in line and label
-        X = (statistics.mean(x_bar))
-        OEG = (statistics.mean(x_bar)+0.577*statistics.mean(r))
-        UEG = (statistics.mean(x_bar)-0.577*statistics.mean(r))
-
-        axs[0].axhline(OEG, color='red', linestyle='dashed', label='OEG=' + str(round(OEG, 3)))
-        axs[0].axhline(X, color='green', label='X=' + str(round(X, 1)))
-        axs[0].axhline(UEG, color='red', linestyle='dashed', label='UEG=' + str(round(UEG, 3)))
-        axs[0].set_title(title, fontsize=28, pad=20)
-        axs[0].set(xlabel='Sample', ylabel='Sample Mean')
-        axs[0].legend(loc='upper right', framealpha=1)
+        # X-bar chart
+        ax1.plot(x_bars, linestyle='-', marker='o', color='blue')
+        ax1.axhline(x_ucl, color='red', linestyle='dashed', label=f'UCL={round(x_ucl, 3)}')
+        ax1.axhline(x_mean, color='green', label=f'X={round(x_mean, 3)}')
+        ax1.axhline(x_lcl, color='red', linestyle='dashed', label=f'LCL={round(x_lcl, 3)}')
+        ax1.set_title(self.config.title, fontsize=28, pad=20)
+        ax1.set(ylabel='Sample Mean')
+        ax1.legend(loc='upper right', framealpha=1)
 
         # R chart
-        axs[1].plot(r, linestyle='-', marker='o', color='blue')
-        # Define variables for use in line and label
-        R = (statistics.mean(r))
-        OEG2 = (2.574*statistics.mean(r))
-        UEG2 = (0*statistics.mean(r))
+        ax2.plot(ranges, linestyle='-', marker='o', color='blue')
+        ax2.axhline(r_ucl, color='red', linestyle='dashed', label=f'UCL={round(r_ucl, 3)}')
+        ax2.axhline(r_mean, color='green', label=f'R={round(r_mean, 3)}')
+        ax2.axhline(r_lcl, color='red', linestyle='dashed', label=f'LCL={round(r_lcl, 3)}')
+        ax2.set(xlabel='Sample', ylabel='Sample Range')
+        ax2.legend(loc='upper right', framealpha=1)
 
-        axs[1].axhline(OEG2, color='red', linestyle='dashed', label='OEG=' + str(round(OEG2, 3)))
-        axs[1].axhline(R, color='green', label='R=' + str(round(R, 1)))
-        axs[1].axhline(UEG2, color='red', linestyle='dashed', label='UEG=' + str(round(UEG2, 3)))
-        axs[1].set(xlabel='Sample', ylabel='Sample Range')
-        axs[1].legend(loc='upper right', framealpha=1)
+        # Check control limits
+        x_violations = [i for i, x in enumerate(x_bars) if x > x_ucl or x < x_lcl]
+        r_violations = [i for i, r in enumerate(ranges) if r > r_ucl or r < r_lcl]
 
-        # Validate points out of control limits for x-bar chart
-        i = 0
-        control = True
-        for group in x_bar:
-            if group > statistics.mean(x_bar)+0.577*statistics.mean(r) or group < statistics.mean(x_bar)-0.577*statistics.mean(r):
-                self.message = 'Group', i, 'out of mean control limits!'
-                control = False
-            i += 1
-        if control == True:
-            print('All points within control limits.')
-
-        # Validate points out of control limits for R chart
-        i = 0
-        control = True
-        for group in r:
-            if group > 2.574*statistics.mean(r):
-                self.message = 'Group', i, 'out of range cotrol limits!'
-                control = False
-            i += 1
-        if control == True:
+        if x_violations:
+            self.message = f'Groups {x_violations} out of mean control limits!'
+        elif r_violations:
+            self.message = f'Groups {r_violations} out of range control limits!'
+        else:
             self.message = 'All points within control limits.'
 
         return self.figure

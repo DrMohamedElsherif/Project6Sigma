@@ -49,10 +49,8 @@ async def general_exception_handler(request: Request, exc: Exception):
     )
 
 
-# Statische Dateien
 settings = get_settings()
+
 # Updated to use staticFilePath instead of filePath
 app.mount("/static", StaticFiles(directory=settings.staticFilePath), name="static")
-
-# Router einbinden
 app.include_router(api_router)
