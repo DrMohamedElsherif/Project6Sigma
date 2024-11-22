@@ -1,32 +1,65 @@
-# Import required libraries
 import pandas as pd
 import matplotlib.pyplot as plt
-from charts.basechart import BaseChart
-from charts.constants import FIGURE_SIZE_DEFAULT, TITLE_FONT_SIZE, COLORS, MARKERS, LINES
+from pydantic import BaseModel, Field
+from typing import List, Dict
+from api.schemas import BusinessLogicException
+from api.charts.constants import FIGURE_SIZE_DEFAULT, TITLE_FONT_SIZE, COLORS, MARKERS, LINES
 
 
-class Timeseriesplot2(BaseChart):
+class Timeseriesplot2Config(BaseModel):
+    title: str
+
+
+class Timeseriesplot2Data(BaseModel):
+    values: Dict[str, List[float]] = Field(..., min_length=1)
+
+
+class Timeseriesplot2Request(BaseModel):
+    project: str
+    step: str
+    config: Timeseriesplot2Config
+    data: Timeseriesplot2Data
+
+
+class Timeseriesplot2:
+    def __init__(self, data: dict):
+        try:
+            validated_data = Timeseriesplot2Request(**data)
+            self.project = validated_data.project
+            self.step = validated_data.step
+            self.config = validated_data.config
+            self.data = validated_data.data
+            self.figure = None
+
+        except ValueError as e:
+            raise BusinessLogicException(
+                error_code="validation_error",
+                field=str(e),
+                details={"message": f"Invalid or missing field: {str(e)}"}
+            )
+
     def process(self):
-        title = self.chart.config.title
-        # Define data and parameters
-        df = pd.DataFrame(self.chart.data)
+        title = self.config.title
+        df = pd.DataFrame(self.data.values)
 
-        plt.figure(figsize=FIGURE_SIZE_DEFAULT)
+        self.figure = plt.figure(figsize=FIGURE_SIZE_DEFAULT)
 
-        # Loop over pd an genrate plots
-        for (index, column) in enumerate(df):
+        for index, column in enumerate(df):
             y = df[column]
             x = range(1, df[column].count() + 1)
             count = df[column].count()
 
-            plt.plot((x + (index * count)), y,
-                     linestyle=LINES[index], marker=MARKERS[index], color=COLORS[index], label=df.columns[index])
+            plt.plot(
+                (x + (index * count)),
+                y,
+                linestyle=LINES[index],
+                marker=MARKERS[index],
+                color=COLORS[index],
+                label=df.columns[index]
+            )
 
         plt.legend(loc='best')
-
         plt.title(title, fontsize=TITLE_FONT_SIZE, pad=20)
-
-        # Grid lines
         plt.grid()
 
-        return plt
+        return self.figure

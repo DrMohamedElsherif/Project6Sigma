@@ -1,45 +1,66 @@
-# Import required libraries
 import pandas as pd
 import matplotlib.pyplot as plt
-from charts.basechart import BaseChart
-from charts.constants import FIGURE_SIZE_DEFAULT, TITLE_FONT_SIZE, COLORS, MARKERS
+from pydantic import BaseModel, Field
+from typing import List, Dict
+from api.schemas import BusinessLogicException
+from api.charts.constants import FIGURE_SIZE_DEFAULT, TITLE_FONT_SIZE, COLORS, MARKERS
 
 
-class Timeseriesplot5(BaseChart):
+class Timeseriesplot5Config(BaseModel):
+    title: str
+
+
+class Timeseriesplot5Data(BaseModel):
+    values: Dict[str, List[float]] = Field(..., min_length=1)
+
+
+class Timeseriesplot5Request(BaseModel):
+    project: str
+    step: str
+    config: Timeseriesplot5Config
+    data: Timeseriesplot5Data
+
+
+class Timeseriesplot5:
+    def __init__(self, data: dict):
+        try:
+            validated_data = Timeseriesplot5Request(**data)
+            self.project = validated_data.project
+            self.step = validated_data.step
+            self.config = validated_data.config
+            self.data = validated_data.data
+            self.figure = None
+
+        except ValueError as e:
+            raise BusinessLogicException(
+                error_code="validation_error",
+                field=str(e),
+                details={"message": f"Invalid or missing field: {str(e)}"}
+            )
+
     def process(self):
-        title = self.chart.config.title
-        # Define data and parameters
-        df = pd.DataFrame(self.chart.data)
+        title = self.config.title
+        df = pd.DataFrame(self.data.values)
 
-        plt.figure(figsize=FIGURE_SIZE_DEFAULT)
-
-        # Define the column count
         num_columns = 2
-
-        # Count the number of columns
         num_datasets = len(df.columns)
-
-        # Find the number of rows needed
         num_rows = num_datasets // 2 + num_datasets % 2
-
-        # Get the column names as a list to plot
         columns = df.columns.tolist()
-
-        # Generate a list of colors for each subplot
         colors = COLORS[:num_datasets]
 
-        # Generate plots
-        bp = df[columns].plot(
-            subplots=True,
-            layout=(num_rows, num_columns),
-            marker=MARKERS[0],
-            color=colors,
-            grid=True,
-            title=columns, figsize=FIGURE_SIZE_DEFAULT,
-            zorder=3,
-            legend=False
-        )
+        self.figure, axes = plt.subplots(num_rows, num_columns, figsize=FIGURE_SIZE_DEFAULT)
+        axes = axes.flatten()
 
-        plt.title(title, fontsize=TITLE_FONT_SIZE, pad=20)
+        for idx, column in enumerate(columns):
+            axes[idx].plot(df[column], marker=MARKERS[0], color=colors[idx])
+            axes[idx].set_title(column)
+            axes[idx].grid(True)
 
-        return plt
+        # Remove empty subplots
+        for idx in range(num_datasets, len(axes)):
+            self.figure.delaxes(axes[idx])
+
+        plt.suptitle(title, fontsize=TITLE_FONT_SIZE)
+        plt.tight_layout()
+
+        return self.figure
