@@ -1,15 +1,46 @@
-# Import required libraries
 import pandas as pd
 import matplotlib.pyplot as plt
-from charts.basechart import BaseChart
-from charts.constants import COLOR_BLACK, TITLE_FONT_SIZE, COLORS, FIGURE_SIZE_DEFAULT
+from pydantic import BaseModel, Field
+from typing import List, Dict
+from api.schemas import BusinessLogicException
+from api.charts.constants import COLOR_BLACK, TITLE_FONT_SIZE, COLORS, FIGURE_SIZE_DEFAULT
 
 
-class Histogram4(BaseChart):
+class Histogram4Config(BaseModel):
+    title: str
+
+
+class Histogram4Data(BaseModel):
+    values: Dict[str, List[float]] = Field(..., min_length=1)
+
+
+class Histogram4Request(BaseModel):
+    project: str
+    step: str
+    config: Histogram4Config
+    data: Histogram4Data
+
+
+class Histogram4:
+    def __init__(self, data: dict):
+        try:
+            validated_data = Histogram4Request(**data)
+            self.project = validated_data.project
+            self.step = validated_data.step
+            self.config = validated_data.config
+            self.data = validated_data.data
+            self.figure = None
+
+        except ValueError as e:
+            raise BusinessLogicException(
+                error_code="validation_error",
+                field=str(e),
+                details={"message": f"Invalid or missing field: {str(e)}"}
+            )
+
     def process(self):
-        title = self.chart.config.title
-        # Define data and parameters
-        df = pd.DataFrame(self.chart.data)
+        title = self.config.title
+        df = pd.DataFrame(self.data.values)
 
         # Count the number of columns
         num_datasets = len(df.columns)
@@ -20,8 +51,7 @@ class Histogram4(BaseChart):
         # Generate a list of colors for each subplot
         colors = COLORS[:num_datasets]
 
-        # Initialize layout
-        fig, ax = plt.subplots(figsize=FIGURE_SIZE_DEFAULT)
+        self.figure, ax = plt.subplots(figsize=FIGURE_SIZE_DEFAULT)
 
         # Enable grid lines
         plt.grid(True)
@@ -30,7 +60,7 @@ class Histogram4(BaseChart):
         plt.xlabel("Data")
         plt.ylabel("Frequency")
 
-        # Plot
+        # Plot histogram
         handles = ax.hist(
             data,
             edgecolor=COLOR_BLACK,
@@ -47,4 +77,4 @@ class Histogram4(BaseChart):
         # Add legend
         plt.legend(loc='best')
 
-        return plt
+        return self.figure

@@ -1,43 +1,77 @@
-# Import required libraries
 import pandas as pd
 import matplotlib.pyplot as plt
-from charts.basechart import BaseChart
-from charts.constants import FIGURE_SIZE_DEFAULT, TITLE_FONT_SIZE, COLOR_BLACK, COLOR_BLUE
+from pydantic import BaseModel, Field
+from typing import List, Dict, Optional
+from api.schemas import BusinessLogicException
+from api.charts.constants import FIGURE_SIZE_DEFAULT, TITLE_FONT_SIZE, COLOR_BLACK, COLOR_BLUE
 
 
-class Boxplot5(BaseChart):
+class Boxplot5Config(BaseModel):
+    title: str
+
+
+class Boxplot5Data(BaseModel):
+    values: Dict[str, List[float]] = Field(..., min_length=1)
+    categories: Optional[Dict[str, List[str]]] = None
+
+
+class Boxplot5Request(BaseModel):
+    project: str
+    step: str
+    config: Boxplot5Config
+    data: Boxplot5Data
+
+
+class Boxplot5:
+    def __init__(self, data: dict):
+        try:
+            validated_data = Boxplot5Request(**data)
+            self.project = validated_data.project
+            self.step = validated_data.step
+            self.config = validated_data.config
+            self.data = validated_data.data
+            self.figure = None
+
+        except ValueError as e:
+            raise BusinessLogicException(
+                error_code="validation_error",
+                field=str(e),
+                details={"message": f"Invalid or missing field: {str(e)}"}
+            )
+
     def process(self):
-        title = self.chart.config.title
-        df = pd.DataFrame(self.chart.data)
-        # Set additional data
-        ad = pd.DataFrame(self.chart.additional_data)
+        title = self.config.title
+        df = pd.DataFrame(self.data.values)
+        categories_data = self.data.categories
 
-        if ad is not None and not ad.empty:
-            # Count unique values
-            unique_values = ad.iloc[:, 0].unique()
-            count = len(unique_values)
+        if categories_data is not None:
+            categories_df = pd.DataFrame(categories_data)
+            unique_categories = categories_df.iloc[:, 0].unique()
+            count = len(unique_categories)
 
-            fig, axes = plt.subplots(
+            self.figure, axes = plt.subplots(
                 1, count, figsize=FIGURE_SIZE_DEFAULT, sharex=True, sharey=True)
 
-            for i, (category, data) in enumerate(df.join(ad).groupby(ad.columns[0])):
+            for i, (category, data) in enumerate(df.join(categories_df).groupby(categories_df.columns[0])):
                 ax = axes[i]
                 data.boxplot(rot=45, color=COLOR_BLACK, patch_artist=True,
                              boxprops=dict(facecolor=COLOR_BLUE), ax=ax)
-                ax.set_xlabel(unique_values[i])
+                ax.set_xlabel(unique_categories[i])
 
-            plt.suptitle(title, fontsize=TITLE_FONT_SIZE, y=0.99)
+            self.figure.suptitle(title, fontsize=TITLE_FONT_SIZE, y=0.99)
             plt.tight_layout()
 
         else:
-            # Generate plot
-            bp = df.boxplot(
+            self.figure = plt.figure(figsize=FIGURE_SIZE_DEFAULT)
+            ax = self.figure.add_subplot(111)
+
+            df.boxplot(
                 color=COLOR_BLACK,
                 patch_artist=True,
                 boxprops=dict(facecolor=COLOR_BLUE),
-                figsize=FIGURE_SIZE_DEFAULT
+                ax=ax
             )
 
-            bp.set_title(title, fontsize=TITLE_FONT_SIZE, pad=20)
+            ax.set_title(title, fontsize=TITLE_FONT_SIZE, pad=20)
 
-        return plt
+        return self.figure

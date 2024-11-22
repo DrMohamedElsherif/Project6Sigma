@@ -1,41 +1,79 @@
-import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
-from charts.basechart import BaseChart
-from charts.constants import FIGURE_SIZE_DEFAULT, TITLE_FONT_SIZE
+import numpy as np
+from pydantic import BaseModel, Field
+from typing import List, Dict
+from api.schemas import BusinessLogicException
+from api.charts.constants import FIGURE_SIZE_DEFAULT, TITLE_FONT_SIZE
 
 
-class Interval6(BaseChart):
+class Interval6Config(BaseModel):
+    title: str
+
+
+class Interval6Data(BaseModel):
+    values: Dict[str, List[float]] = Field(..., min_length=1)
+
+
+class Interval6Request(BaseModel):
+    project: str
+    step: str
+    config: Interval6Config
+    data: Interval6Data
+
+
+class Interval6:
+    def __init__(self, data: dict):
+        try:
+            validated_data = Interval6Request(**data)
+            self.project = validated_data.project
+            self.step = validated_data.step
+            self.config = validated_data.config
+            self.data = validated_data.data
+            self.figure = None
+        except ValueError as e:
+            raise BusinessLogicException(
+                error_code="validation_error",
+                field=str(e),
+                details={"message": f"Invalid or missing field: {str(e)}"}
+            )
+
     def process(self):
-        title = self.chart.config.title
-        df = pd.DataFrame(self.chart.data)
+        title = self.config.title
+        df = pd.DataFrame(self.data.values)
 
+        # Calculate subplot layout
         num_plots = len(df.columns)
         num_cols = 2
         num_rows = (num_plots + num_cols - 1) // num_cols
 
-        plt.figure(figsize=FIGURE_SIZE_DEFAULT)
+        # Create figure
+        self.figure = plt.figure(figsize=FIGURE_SIZE_DEFAULT)
         plt.suptitle(title, fontsize=TITLE_FONT_SIZE, y=0.95)
 
-        # Loop over columns in the data frame
-        for (index, column) in enumerate(df.columns):
-            # Calculate means and standard deviations of the data for each loop
+        # Create subplots for each column
+        for index, column in enumerate(df.columns):
+            # Calculate statistics
             mean = np.mean(df[column])
-            # Calculate the 95% confidence intervals for each loop
             stddev = np.std(df[column])
             confidence_interval = 1.96 * stddev / np.sqrt(len(df[column]))
 
-            # add a new subplot iteratively
+            # Create subplot
             ax = plt.subplot(num_rows, num_cols, index + 1)
 
-            # Plot the data for each loop with error bars
-            ax.errorbar(x=index, y=mean, yerr=confidence_interval,
-                        fmt='o', capsize=15)
+            # Plot data with error bars
+            ax.errorbar(
+                x=index,
+                y=mean,
+                yerr=confidence_interval,
+                fmt='o',
+                capsize=15
+            )
+
+            # Customize subplot
             ax.set_title(column)
-
-            # Hide x-axis labels
             ax.set_xticks([])
-            # Show grid lines for the current plot
-            ax.grid(b=True, which='both', axis='both')
+            ax.grid(True)
 
-        return plt
+        plt.tight_layout()
+        return self.figure

@@ -1,26 +1,68 @@
-# Import required libraries
 import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
-from charts.basechart import BaseChart
-from charts.constants import FIGURE_SIZE_DEFAULT, TITLE_FONT_SIZE
+from pydantic import BaseModel, Field
+from typing import List, Dict
+from api.schemas import BusinessLogicException
+from api.charts.constants import FIGURE_SIZE_DEFAULT, TITLE_FONT_SIZE
 
 
-class Individual1(BaseChart):
+class Individual1Config(BaseModel):
+    title: str
+
+
+class Individual1Data(BaseModel):
+    values: Dict[str, List[float]] = Field(..., min_length=1)
+
+
+class Individual1Request(BaseModel):
+    project: str
+    step: str
+    config: Individual1Config
+    data: Individual1Data
+
+
+class Individual1:
+    def __init__(self, data: dict):
+        try:
+            validated_data = Individual1Request(**data)
+            self.project = validated_data.project
+            self.step = validated_data.step
+            self.config = validated_data.config
+            self.data = validated_data.data
+            self.figure = None
+
+        except ValueError as e:
+            raise BusinessLogicException(
+                error_code="validation_error",
+                field=str(e),
+                details={"message": f"Invalid or missing field: {str(e)}"}
+            )
+
     def process(self):
-        title = self.chart.config.title
-        df = pd.DataFrame(self.chart.data)
+        title = self.config.title
+        df = pd.DataFrame(self.data.values)
 
-        # Define size of figure
-        sns.set(rc={'figure.figsize': FIGURE_SIZE_DEFAULT})
+        # Define size of figure and style
+        self.figure = plt.figure(figsize=FIGURE_SIZE_DEFAULT)
         sns.set(style="whitegrid")
 
-        plt.subplots_adjust(left=0.1, bottom=0.1, right=0.9, top=0.9)
-        key, value = list(self.chart.data.items())[0]
-        bp = sns.stripplot(y=df[key], marker='o', size=10, jitter=False)
+        # Create subplot
+        ax = self.figure.add_subplot(111)
 
-        # add grid lines with both horizontal and vertical lines
-        plt.grid(b=True, which='both')
-        bp.set_title(title, fontsize=TITLE_FONT_SIZE, pad=20)
+        # Get first column for plotting
+        key = list(df.columns)[0]
 
-        return plt
+        # Create stripplot
+        sns.stripplot(y=df[key], marker='o', size=10, jitter=False, ax=ax)
+
+        # Add grid lines
+        ax.grid(True, which='both')
+
+        # Set title
+        ax.set_title(title, fontsize=TITLE_FONT_SIZE, pad=20)
+
+        # Adjust layout
+        plt.tight_layout()
+
+        return self.figure

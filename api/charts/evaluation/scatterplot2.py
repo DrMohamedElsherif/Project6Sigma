@@ -1,39 +1,82 @@
-# Import required libraries
 import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
-from charts.basechart import BaseChart
-from charts.constants import FIGURE_SIZE_DEFAULT, COLORS, MARKERS
+from pydantic import BaseModel, Field
+from typing import List, Dict
+from api.schemas import BusinessLogicException
+from api.charts.constants import FIGURE_SIZE_DEFAULT, COLORS, MARKERS
 
 
-class Scatterplot2(BaseChart):
+class Scatterplot2Config(BaseModel):
+    title: str
+
+
+class Scatterplot2Data(BaseModel):
+    values: Dict[str, List[float | str]] = Field(..., min_length=1)
+
+
+class Scatterplot2AdditionalData(BaseModel):
+    xVar: str
+    yVar: str
+    group: str
+
+
+class Scatterplot2Request(BaseModel):
+    project: str
+    step: str
+    config: Scatterplot2Config
+    data: Scatterplot2Data
+    additional_data: Scatterplot2AdditionalData
+
+
+class Scatterplot2:
+    def __init__(self, data: dict):
+        try:
+            validated_data = Scatterplot2Request(**data)
+            self.project = validated_data.project
+            self.step = validated_data.step
+            self.config = validated_data.config
+            self.data = validated_data.data
+            self.additional_data = validated_data.additional_data
+            self.figure = None
+
+        except ValueError as e:
+            raise BusinessLogicException(
+                error_code="validation_error",
+                field=str(e),
+                details={"message": f"Invalid or missing field: {str(e)}"}
+            )
+
     def process(self):
-        title = self.chart.config.title
-        df = pd.DataFrame(self.chart.data)
-        # Set additional data
-        ad = self.chart.additional_data
+        title = self.config.title
+        df = pd.DataFrame(self.data.values)
 
-        plt.figure(figsize=FIGURE_SIZE_DEFAULT)
+        self.figure = plt.figure(figsize=FIGURE_SIZE_DEFAULT)
 
-        # Get the unique groups
-        groups = df[ad["group"]].unique()
-        # Assign colors and markers to groups
+        groups = df[self.additional_data.group].unique()
         colors = dict(zip(groups, COLORS[:len(groups)]))
         markers = dict(zip(groups, MARKERS[:len(groups)]))
 
         for group in groups:
-            group_data = df[df[ad["group"]] == group]
-            sns.scatterplot(x=ad["xVar"], y=ad["yVar"], data=group_data,
-                            color=colors[group], marker=markers[group], zorder=3, s=80)
+            group_data = df[df[self.additional_data.group] == group]
+            sns.scatterplot(
+                x=self.additional_data.xVar,
+                y=self.additional_data.yVar,
+                data=group_data,
+                color=colors[group],
+                marker=markers[group],
+                zorder=3,
+                s=80
+            )
 
-        # Create custom legend handles
-        legend_handles = [plt.Line2D([0], [0], marker=markers[group], color=colors[group], linestyle='',
-                                     label=group) for group in groups]
-        plt.legend(handles=legend_handles, title=ad["group"])
-        plt.xlabel(ad["xVar"])
-        plt.ylabel(ad["yVar"])
+        legend_handles = [
+            plt.Line2D([0], [0], marker=markers[group], color=colors[group],
+                       linestyle='', label=group) for group in groups
+        ]
+        plt.legend(handles=legend_handles, title=self.additional_data.group)
+        plt.xlabel(self.additional_data.xVar)
+        plt.ylabel(self.additional_data.yVar)
         plt.title(title)
-
         plt.grid(True, which='both', zorder=-1)
 
-        return plt
+        return self.figure

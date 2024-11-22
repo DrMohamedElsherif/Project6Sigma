@@ -1,15 +1,46 @@
-# Import required libraries
 import pandas as pd
 import matplotlib.pyplot as plt
-from charts.basechart import BaseChart
-from charts.constants import COLOR_BLACK, TITLE_FONT_SIZE, COLOR_BLUE
+from pydantic import BaseModel, Field
+from typing import List, Dict
+from api.schemas import BusinessLogicException
+from api.charts.constants import COLOR_BLACK, TITLE_FONT_SIZE, COLOR_BLUE
 
 
-class Histogram3(BaseChart):
+class Histogram3Config(BaseModel):
+    title: str
+
+
+class Histogram3Data(BaseModel):
+    values: Dict[str, List[float]] = Field(..., min_length=1)
+
+
+class Histogram3Request(BaseModel):
+    project: str
+    step: str
+    config: Histogram3Config
+    data: Histogram3Data
+
+
+class Histogram3:
+    def __init__(self, data: dict):
+        try:
+            validated_data = Histogram3Request(**data)
+            self.project = validated_data.project
+            self.step = validated_data.step
+            self.config = validated_data.config
+            self.data = validated_data.data
+            self.figure = None
+
+        except ValueError as e:
+            raise BusinessLogicException(
+                error_code="validation_error",
+                field=str(e),
+                details={"message": f"Invalid or missing field: {str(e)}"}
+            )
+
     def process(self):
-        title = self.chart.config.title
-        # Define data and parameters
-        df = pd.DataFrame(self.chart.data)
+        title = self.config.title
+        df = pd.DataFrame(self.data.values)
 
         # Count the number of columns
         num_columns = len(df.columns)
@@ -19,7 +50,7 @@ class Histogram3(BaseChart):
         num_cols = min(num_columns, 2)
 
         # Initialize the subplots
-        fig, axes = plt.subplots(num_rows, num_cols, figsize=(
+        self.figure, axes = plt.subplots(num_rows, num_cols, figsize=(
             15, num_rows * 5), sharey='row', squeeze=False)
 
         # Enable grid lines
@@ -50,12 +81,12 @@ class Histogram3(BaseChart):
 
         # Remove empty subplots
         if num_columns % 2 != 0:
-            fig.delaxes(axes[-1, -1])
+            self.figure.delaxes(axes[-1, -1])
 
         # Add overall figure title
-        fig.suptitle(title, fontsize=TITLE_FONT_SIZE, y=0.98)
+        self.figure.suptitle(title, fontsize=TITLE_FONT_SIZE, y=0.98)
 
         # Adjust the spacing between subplots
-        fig.subplots_adjust(hspace=0)
+        self.figure.subplots_adjust(hspace=0)
 
-        return plt
+        return self.figure

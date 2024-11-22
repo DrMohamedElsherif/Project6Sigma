@@ -1,19 +1,52 @@
-# Import required libraries
 import pandas as pd
 import matplotlib.pyplot as plt
-from charts.basechart import BaseChart
-from charts.constants import COLORS, FIGURE_SIZE_DEFAULT, COLOR_BLACK, TITLE_FONT_SIZE
+from pydantic import BaseModel, Field
+from typing import List, Dict
+from api.schemas import BusinessLogicException
+from api.charts.constants import COLORS, FIGURE_SIZE_DEFAULT, COLOR_BLACK, TITLE_FONT_SIZE
 
 
-class Boxplot1(BaseChart):
+class Boxplot1Config(BaseModel):
+    title: str
+
+
+class Boxplot1Data(BaseModel):
+    values: Dict[str, List[float]] = Field(..., min_length=1)
+
+
+class Boxplot1Request(BaseModel):
+    project: str
+    step: str
+    config: Boxplot1Config
+    data: Boxplot1Data
+
+
+class Boxplot1:
+    def __init__(self, data: dict):
+        try:
+            validated_data = Boxplot1Request(**data)
+            self.project = validated_data.project
+            self.step = validated_data.step
+            self.config = validated_data.config
+            self.data = validated_data.data
+            self.message = ""
+            self.figure = None
+
+        except ValueError as e:
+            raise BusinessLogicException(
+                error_code="validation_error",
+                field=str(e),
+                details={"message": f"Invalid or missing field: {str(e)}"}
+            )
+
     def process(self):
-        title = self.chart.config.title
-        df = pd.DataFrame(self.chart.data)
+        title = self.config.title
+        df = pd.DataFrame(self.data.values)
 
         self.figure = plt.figure(figsize=FIGURE_SIZE_DEFAULT)
 
-        key, value = list(self.chart.data.items())[0]
-        # Generate plot
+        key, _ = list(self.data.values.items())[0]
+
         bp = df.boxplot(
             column=[key],
             color=COLOR_BLACK,

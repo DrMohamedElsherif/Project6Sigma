@@ -1,6 +1,7 @@
 from fastapi import APIRouter
 
 from .capability.capability_router import router as capability_router
+from .evaluation.evaluation_router import router as evaluation_router
 from .msa.msa_router import router as msa_router
 from .controlcard.controlcard_router import router as controlcard_router
 
@@ -23,5 +24,11 @@ router.include_router(
     controlcard_router,
     prefix="/controlcard",
     tags=["charts-controlcard"]
+)
+
+router.include_router(
+    evaluation_router,
+    prefix="/evaluation",
+    tags=["charts-evaluation"]
 )
 

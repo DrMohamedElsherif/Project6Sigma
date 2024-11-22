@@ -1,33 +1,76 @@
-# Import required libraries
 import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
-from charts.basechart import BaseChart
-from charts.constants import TITLE_FONT_SIZE, MARKERS, COLORS
+from pydantic import BaseModel, Field
+from typing import List, Dict, Union
+from api.schemas import BusinessLogicException
+from api.charts.constants import TITLE_FONT_SIZE, MARKERS, COLORS
 
 
-class Matrixplot2(BaseChart):
+class Matrixplot2Config(BaseModel):
+    title: str
+
+
+class Matrixplot2Data(BaseModel):
+    values: Dict[str, List[float]] = Field(..., min_length=2)  # Numerical variables
+    groups: List[str] = Field(..., min_length=1)  # Group labels
+    group_variable: str  # Name of the grouping variable
+
+
+class Matrixplot2Request(BaseModel):
+    project: str
+    step: str
+    config: Matrixplot2Config
+    data: Matrixplot2Data
+
+
+class Matrixplot2:
+    def __init__(self, data: dict):
+        try:
+            validated_data = Matrixplot2Request(**data)
+            self.project = validated_data.project
+            self.step = validated_data.step
+            self.config = validated_data.config
+            self.data = validated_data.data
+            self.figure = None
+        except ValueError as e:
+            raise BusinessLogicException(
+                error_code="validation_error",
+                field=str(e),
+                details={"message": f"Invalid or missing field: {str(e)}"}
+            )
+
     def process(self):
-        title = self.chart.config.title
-        df = pd.DataFrame(self.chart.data)
-        # Set additional data
-        ad = self.chart.additional_data
+        title = self.config.title
 
+        # Create dataframe from numerical values
+        df = pd.DataFrame(self.data.values)
+
+        # Add group variable
+        df[self.data.group_variable] = self.data.groups
+
+        # Set style
         sns.set(style="whitegrid")
 
-        # Set categorical variable
-        cat_var = ad["groupVariable"]
+        # Get number of unique groups
+        num_unique = len(set(self.data.groups))
 
-        # Get the number of unique values in the column
-        num_unique = df[cat_var].nunique()
+        # Create scatterplot matrix with groups
+        pair_plot = sns.pairplot(
+            df,
+            hue=self.data.group_variable,
+            diag_kind="kde",
+            markers=MARKERS[0:num_unique],
+            palette=COLORS[0:num_unique],
+            height=1.8,
+            aspect=1.8
+        )
 
-        # Create scatterplot matrix with overlaid groups
-        pp = sns.pairplot(df, hue=cat_var, diag_kind="kde",
-                          markers=MARKERS[0:num_unique], palette=COLORS[0:num_unique], height=1.8, aspect=1.8)
+        # Add title
+        pair_plot.fig.suptitle(title, fontsize=TITLE_FONT_SIZE)
 
-        pp.fig.suptitle(title, fontsize=TITLE_FONT_SIZE)
-
-        # Adjust space between plot and title
+        # Adjust layout
         plt.subplots_adjust(top=0.9)
 
-        return plt
+        self.figure = pair_plot.fig
+        return self.figure

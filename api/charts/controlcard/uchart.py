@@ -1,12 +1,11 @@
-from typing import List, Optional
-
-import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+import matplotlib.pyplot as plt
+import statistics
 from pydantic import BaseModel, Field
-
-from api.charts.constants import FIGURE_SIZE_DEFAULT
+from typing import List, Optional
 from api.schemas import BusinessLogicException
+from api.charts.constants import FIGURE_SIZE_DEFAULT
 
 
 class UchartConfig(BaseModel):
@@ -60,7 +59,7 @@ class Uchart:
         data = pd.DataFrame({
             'defects': defects,
             'group_size': sample_sizes,
-            'u': [d / n for d, n in zip(defects, sample_sizes)]
+            'u': [d/n for d, n in zip(defects, sample_sizes)]
         })
 
         u_mean = data['u'].mean()

@@ -1,34 +1,61 @@
-# Import required libraries
 import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
-from charts.basechart import BaseChart
-from charts.constants import FIGURE_SIZE_DEFAULT, COLOR_BLACK, TITLE_FONT_SIZE
+from pydantic import BaseModel, Field
+from typing import List, Dict
+from api.schemas import BusinessLogicException
+from api.charts.constants import FIGURE_SIZE_DEFAULT, COLOR_BLACK, TITLE_FONT_SIZE
 
-class Boxplot3(BaseChart):
+
+class Boxplot3Config(BaseModel):
+    title: str
+
+
+class Boxplot3Data(BaseModel):
+    values: Dict[str, List[float]] = Field(..., min_length=1)
+
+
+class Boxplot3Request(BaseModel):
+    project: str
+    step: str
+    config: Boxplot3Config
+    data: Boxplot3Data
+
+
+class Boxplot3:
+    def __init__(self, data: dict):
+        try:
+            validated_data = Boxplot3Request(**data)
+            self.project = validated_data.project
+            self.step = validated_data.step
+            self.config = validated_data.config
+            self.data = validated_data.data
+            self.figure = None
+
+        except ValueError as e:
+            raise BusinessLogicException(
+                error_code="validation_error",
+                field=str(e),
+                details={"message": f"Invalid or missing field: {str(e)}"}
+            )
+
     def process(self):
-        title = self.chart.config.title
-        df = pd.DataFrame(self.chart.data)
-        self.figure = plt.figure(figsize=(FIGURE_SIZE_DEFAULT))
+        title = self.config.title
+        df = pd.DataFrame(self.data.values)
 
-        # Set the order of the categories in the 'group' column
-        unique_values = df[df.columns[1]].unique()
-        order = unique_values
+        self.figure = plt.figure(figsize=FIGURE_SIZE_DEFAULT)
 
-        # Add grid lines with both horizontal and vertical lines
+        # Set the style with grid
         sns.set_style("whitegrid")
 
-        # create facet grid with subplots for each group
-        sp = sns.FacetGrid(df, col=df.columns[2], col_wrap=2, aspect=1.5, height=5)
+        # Create subplot
+        ax = self.figure.add_subplot(111)
 
-        # Plot the stripplot using seaborn's stripplot function and specify the x-axis to be the 'Category' column
-        sp.map(sns.boxplot, df.columns[1], df.columns[0], hue=df.columns[2], data=df, order=order)
+        # Create boxplot using seaborn
+        sns.boxplot(data=df, ax=ax)
 
-        for ax in sp.axes.flat:
-            ax.grid(True, axis='both')
+        # Add title and adjust layout
+        ax.set_title(title, fontsize=TITLE_FONT_SIZE, color=COLOR_BLACK, pad=20)
+        plt.tight_layout()
 
-        # Add title
-        plt.suptitle(title, fontsize=TITLE_FONT_SIZE, color=COLOR_BLACK)
-        plt.subplots_adjust(top=0.9, bottom=0.1)
-
-        return plt
+        return self.figure

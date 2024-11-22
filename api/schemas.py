@@ -14,7 +14,6 @@ class ErrorResponse(BaseModel):
 class SuccessResponse(BaseModel):
     success: bool = True
     data: Dict[str, Any]
-    message: Optional[str] = None
 
 
 class BusinessLogicException(HTTPException):

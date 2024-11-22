@@ -1,27 +1,58 @@
-# Import required libraries
 import pandas as pd
 import matplotlib.pyplot as plt
-from charts.basechart import BaseChart
-from charts.constants import COLOR_BLUE, FIGURE_SIZE_DEFAULT, COLOR_BLACK, TITLE_FONT_SIZE
+from pydantic import BaseModel, Field
+from typing import List, Dict
+from api.schemas import BusinessLogicException
+from api.charts.constants import COLOR_BLUE, FIGURE_SIZE_DEFAULT, COLOR_BLACK, TITLE_FONT_SIZE
 
 
-class Boxplot2(BaseChart):
+class Boxplot2Config(BaseModel):
+    title: str
+
+
+class Boxplot2Data(BaseModel):
+    values: Dict[str, List[float]] = Field(..., min_length=1)
+
+
+class Boxplot2Request(BaseModel):
+    project: str
+    step: str
+    config: Boxplot2Config
+    data: Boxplot2Data
+
+
+class Boxplot2:
+    def __init__(self, data: dict):
+        try:
+            validated_data = Boxplot2Request(**data)
+            self.project = validated_data.project
+            self.step = validated_data.step
+            self.config = validated_data.config
+            self.data = validated_data.data
+            self.figure = None
+
+        except ValueError as e:
+            raise BusinessLogicException(
+                error_code="validation_error",
+                field=str(e),
+                details={"message": f"Invalid or missing field: {str(e)}"}
+            )
+
     def process(self):
-        title = self.chart.config.title
-        df = pd.DataFrame(self.chart.data)
+        title = self.config.title
+        df = pd.DataFrame(self.data.values)
 
-        # Get the column names as a list to plot
-        columns = df.columns.tolist()
+        self.figure = plt.figure(figsize=FIGURE_SIZE_DEFAULT)
+        ax = self.figure.add_subplot(111)
 
-        # Generate plot
-        bp = df[columns].plot.box(
+        df.boxplot(
+            column=df.columns.tolist(),
             color=COLOR_BLACK,
             patch_artist=True,
             grid=True,
             boxprops=dict(facecolor=COLOR_BLUE),
-            figsize=FIGURE_SIZE_DEFAULT
+            ax=ax
         )
-        bp.set_title(title, fontsize=TITLE_FONT_SIZE, pad=20)
-        self.figure = bp.get_figure()
+        ax.set_title(title, fontsize=TITLE_FONT_SIZE, pad=20)
 
-        return plt
+        return self.figure

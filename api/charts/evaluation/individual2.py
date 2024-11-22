@@ -1,29 +1,83 @@
-# Import required libraries
 import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
-from charts.basechart import BaseChart
-from charts.constants import FIGURE_SIZE_DEFAULT, TITLE_FONT_SIZE, COLORS, MARKERS
+from pydantic import BaseModel, Field
+from typing import List, Dict
+from api.schemas import BusinessLogicException
+from api.charts.constants import FIGURE_SIZE_DEFAULT, TITLE_FONT_SIZE, COLORS, MARKERS
 
 
-class Individual2(BaseChart):
+class Individual2Config(BaseModel):
+    title: str
+
+
+class Individual2Data(BaseModel):
+    values: Dict[str, List[float]] = Field(..., min_length=1)
+    categories: Dict[str, List[str]] = Field(..., min_length=1)
+
+
+class Individual2Request(BaseModel):
+    project: str
+    step: str
+    config: Individual2Config
+    data: Individual2Data
+
+
+class Individual2:
+    def __init__(self, data: dict):
+        try:
+            validated_data = Individual2Request(**data)
+            self.project = validated_data.project
+            self.step = validated_data.step
+            self.config = validated_data.config
+            self.data = validated_data.data
+            self.figure = None
+
+        except ValueError as e:
+            raise BusinessLogicException(
+                error_code="validation_error",
+                field=str(e),
+                details={"message": f"Invalid or missing field: {str(e)}"}
+            )
+
     def process(self):
-        title = self.chart.config.title
-        df = pd.DataFrame(self.chart.data)
-        # Set additional data
-        ad = self.chart.additional_data
+        title = self.config.title
 
-        # Define size of figure
-        sns.set(rc={'figure.figsize': FIGURE_SIZE_DEFAULT})
+        # Prepare data
+        values = list(self.data.values.values())[0]  # Get values list
+        categories = list(self.data.categories.values())[0]  # Get categories list
+
+        df = pd.DataFrame({
+            'value': values,
+            'category': categories
+        })
+
+        # Define size of figure and style
+        self.figure = plt.figure(figsize=FIGURE_SIZE_DEFAULT)
         sns.set(style="whitegrid")
 
-        # Plot the stripplot using seaborn's stripplot function and specify the x-axis to be the 'Category' column
-        sp = sns.stripplot(x=ad["catVar"], y=ad["var"], data=df, marker=MARKERS[0], size=10,
-                           jitter=False,
-                           palette=COLORS)  # the jitter parameter is set to True, which will add the random noise and align the circles horizontally.
+        # Create subplot
+        ax = self.figure.add_subplot(111)
 
-        # Add grid lines with both horizontal and vertical lines
-        plt.grid(b=True, which='both')
-        sp.set_title(title, fontsize=TITLE_FONT_SIZE, pad=20)
+        # Create stripplot
+        sns.stripplot(
+            x='category',
+            y='value',
+            data=df,
+            marker=MARKERS[0],
+            size=10,
+            jitter=False,
+            palette=COLORS,
+            ax=ax
+        )
 
-        return plt
+        # Add grid lines
+        ax.grid(True, which='both')
+
+        # Set title
+        ax.set_title(title, fontsize=TITLE_FONT_SIZE, pad=20)
+
+        # Adjust layout
+        plt.tight_layout()
+
+        return self.figure

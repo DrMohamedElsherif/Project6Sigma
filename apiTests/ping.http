@@ -1,7 +1,0 @@
-### Send a POST request to create a chart
-GET http://127.0.0.1:8000/api/v1/status/
-Content-Type: application/json
-
-{
-
-}

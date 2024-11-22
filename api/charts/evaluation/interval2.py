@@ -1,37 +1,82 @@
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
-from charts.basechart import BaseChart
-from charts.constants import FIGURE_SIZE_DEFAULT, TITLE_FONT_SIZE, TITLE_PADDING
+from pydantic import BaseModel, Field
+from typing import List, Dict
+from api.schemas import BusinessLogicException
+from api.charts.constants import FIGURE_SIZE_DEFAULT, TITLE_FONT_SIZE, TITLE_PADDING
 
 
-class Interval2(BaseChart):
+class Interval2Config(BaseModel):
+    title: str
+
+
+class Interval2Data(BaseModel):
+    values: Dict[str, List[float]] = Field(..., min_length=1)
+
+
+class Interval2Request(BaseModel):
+    project: str
+    step: str
+    config: Interval2Config
+    data: Interval2Data
+
+
+class Interval2:
+    def __init__(self, data: dict):
+        try:
+            validated_data = Interval2Request(**data)
+            self.project = validated_data.project
+            self.step = validated_data.step
+            self.config = validated_data.config
+            self.data = validated_data.data
+            self.figure = None
+
+        except ValueError as e:
+            raise BusinessLogicException(
+                error_code="validation_error",
+                field=str(e),
+                details={"message": f"Invalid or missing field: {str(e)}"}
+            )
+
     def process(self):
-        title = self.chart.config.title
-        df = pd.DataFrame(self.chart.data)
+        title = self.config.title
 
+        # Create DataFrame from the input data
+        df = pd.DataFrame(self.data.values)
+
+        # Create figure
         plt.figure(figsize=FIGURE_SIZE_DEFAULT)
 
-        # Loop over pd an genrate plots
-        for (index, column) in enumerate(df):
-            # Calculate means and standard deviations of the data for each loop
+        # Process each column
+        for index, column in enumerate(df):
+            # Calculate statistics
             mean = np.mean(df[column])
-            # Calculate the 95% confidence intervals for each loop
             stddev = np.std(df[column])
             confidence_interval = 1.96 * stddev / np.sqrt(len(df[column]))
 
-            # Plot the data for each loop with error bars
-            plt.errorbar(x=index, y=mean, yerr=confidence_interval,
-                         fmt='o', capsize=15, label=column)
+            # Plot error bar
+            plt.errorbar(
+                x=index,
+                y=mean,
+                yerr=confidence_interval,
+                fmt='o',
+                capsize=15,
+                label=column
+            )
 
-        # Add labels, title, and legend to the plot
+        # Set labels and title
         plt.ylabel('Values')
+        plt.title(title, fontsize=TITLE_FONT_SIZE, pad=TITLE_PADDING)
+
         # Hide x-axis labels
         plt.xticks([])
-        plt.title(title, fontsize=TITLE_FONT_SIZE, pad=TITLE_PADDING)
+
+        # Add legend
         plt.legend(loc='best')
 
-        # Enable grid lines
-        plt.grid(b=True, which='both')
+        # Enable grid
+        plt.grid(True, which='both')
 
-        return plt
+        self.figure = plt.gcf()
+        return self.figure

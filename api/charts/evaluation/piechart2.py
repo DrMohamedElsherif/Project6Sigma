@@ -1,50 +1,89 @@
-# Import required libraries
 import pandas as pd
 import matplotlib.pyplot as plt
-from collections import Counter
-from charts.basechart import BaseChart
-from charts.constants import FIGURE_SIZE_DEFAULT, TITLE_FONT_SIZE
+import numpy as np
+from pydantic import BaseModel, Field
+from typing import List, Dict
+from api.schemas import BusinessLogicException
+from api.charts.constants import FIGURE_SIZE_DEFAULT, TITLE_FONT_SIZE
 
 
-class Piechart2(BaseChart):
+class Piechart2Config(BaseModel):
+    title: str
+
+
+class Piechart2Data(BaseModel):
+    values: Dict[str, List[str]] = Field(..., min_length=1)  # Dictionary of categorical columns
+
+
+class Piechart2Request(BaseModel):
+    project: str
+    step: str
+    config: Piechart2Config
+    data: Piechart2Data
+
+
+class Piechart2:
+    def __init__(self, data: dict):
+        try:
+            validated_data = Piechart2Request(**data)
+            self.project = validated_data.project
+            self.step = validated_data.step
+            self.config = validated_data.config
+            self.data = validated_data.data
+            self.figure = None
+        except ValueError as e:
+            raise BusinessLogicException(
+                error_code="validation_error",
+                field=str(e),
+                details={"message": f"Invalid or missing field: {str(e)}"}
+            )
+
     def process(self):
-        title = self.chart.config.title
-        df = pd.DataFrame(self.chart.data)
+        title = self.config.title
 
-        # Define the column count
+        # Create dataframe
+        df = pd.DataFrame(self.data.values)
+
+        # Define grid layout
         num_columns = 2
-
-        # Count the number of columns
         num_datasets = len(df.columns)
+        num_rows = (num_datasets + num_columns - 1) // num_columns  # Ceiling division
 
-        # Find the number of rows needed
-        num_rows = num_datasets // 2 + num_datasets % 2
+        # Create figure and subplots
+        self.figure, axes = plt.subplots(num_rows, num_columns, figsize=FIGURE_SIZE_DEFAULT)
 
-        # Get the column names as a list to plot
-        columns = df.columns.tolist()
+        # Convert axes to 2D array if it's 1D or single subplot
+        if num_datasets == 1:
+            axes = np.array([[axes]])
+        elif num_rows == 1:
+            axes = axes.reshape(1, -1)
 
-        # Generate plots with normalized value counts
-        fig, axes = plt.subplots(
-            num_rows, num_columns, figsize=(FIGURE_SIZE_DEFAULT))
+        # Flatten axes for easier iteration
+        axes_flat = axes.flatten()
 
-        # Flatten the axes if there's only one row
-        axes = axes.flatten()
-
-        for col, ax in zip(columns, axes):
-            data_counts = df[col].value_counts(normalize=True)
+        # Create pie charts for each column
+        for idx, column_name in enumerate(df.columns):
+            # Calculate normalized value counts
+            data_counts = df[column_name].value_counts(normalize=True)
 
             if not data_counts.empty:
-                ax.pie(data_counts, labels=data_counts.index, autopct='%1.1f%%',
-                       startangle=90, colors=plt.cm.Paired.colors)
-                ax.set_title(col)
+                axes_flat[idx].pie(
+                    data_counts,
+                    labels=data_counts.index,
+                    autopct='%1.1f%%',
+                    startangle=90,
+                    colors=plt.cm.Paired.colors
+                )
+                axes_flat[idx].set_title(column_name)
 
         # Remove empty subplots
-        for i in range(len(columns), len(axes)):
-            fig.delaxes(axes[i])
+        for i in range(len(df.columns), len(axes_flat)):
+            self.figure.delaxes(axes_flat[i])
 
-        # Set main title for plot
+        # Set main title
         plt.suptitle(title, fontsize=TITLE_FONT_SIZE)
 
+        # Adjust layout
         plt.tight_layout(rect=[0, 0, 1, 0.95])
 
-        return plt
+        return self.figure
