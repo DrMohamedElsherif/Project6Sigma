@@ -38,6 +38,13 @@ class MsaGageReportChart:
                 if field not in data:
                     raise ValueError(field)
 
+            # Validate config fields
+            if 'config' in data and isinstance(data['config'], dict):
+                if 'trials' not in data['config']:
+                    raise ValueError("config.trials")
+                if not isinstance(data['config'].get('trials'), int):
+                    raise ValueError("config.trials")
+
             validated_data = MSAGageReportRequest(**data)
             self.project = validated_data.project
             self.step = validated_data.step
@@ -47,10 +54,31 @@ class MsaGageReportChart:
             self.figure = None
 
         except ValueError as e:
+            error_msg = str(e)
+
+            if "int_from_float" in error_msg:
+                error_code = "error_must_be_integer"
+            else:
+                error_code = "error_validation"
+
+            # Map error message to correct field
+            if "config.trials" in error_msg:
+                field = "trials"
+            elif "data.parts" in error_msg:
+                field = "parts"
+            elif "data.values" in error_msg:
+                field = "values"
+            elif "data.ok" in error_msg:
+                field = "ok"
+            elif "ucl" in error_msg or "lcl" in error_msg:
+                field = "bounds"
+            else:
+                field = error_msg.split("\n")[1].split(".")[0] if "\n" in error_msg else "data"
+
             raise BusinessLogicException(
-                error_code="error_validation",
-                field=str(e),
-                details={"message": f"Invalid or missing field: {str(e)}"}
+                error_code=error_code,
+                field=field,
+                details={"message": "Invalid or missing field."}
             )
 
     def process(self):

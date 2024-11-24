@@ -36,10 +36,26 @@ class Mrchart:
             self.figure = None
 
         except ValueError as e:
+            # Extract the field name from the error message
+            error_msg = str(e)
+
+            # Determine error code based on the error type
+            if "int_from_float" in error_msg:
+                error_code = "error_must_be_integer"
+            else:
+                error_code = "error_validation"
+
+            # Extract the field name from the error path
+            if "data.values" in error_msg:
+                field = "data"
+            else:
+                # Default to the first field mentioned in the error
+                field = error_msg.split("\n")[1].split(".")[0] if "\n" in error_msg else "data"
+
             raise BusinessLogicException(
-                error_code="error_validation",
-                field=str(e),
-                details={"message": f"Invalid or missing field: {str(e)}"}
+                error_code=error_code,
+                field=field,
+                details={"message": f"Invalid or missing field."}
             )
 
     def process(self):

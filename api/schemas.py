@@ -7,7 +7,6 @@ class ErrorResponse(BaseModel):
     success: bool = False
     error_code: str
     field: Optional[str] = None
-    message: Optional[str] = None
     details: Optional[Dict[str, Any]] = None
 
 

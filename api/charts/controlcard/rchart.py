@@ -38,10 +38,22 @@ class Rchart:
             self.figure = None
 
         except ValueError as e:
+            error_msg = str(e)
+
+            if "int_from_float" in error_msg:
+                error_code = "error_must_be_integer"
+            else:
+                error_code = "error_validation"
+
+            if "data.values" in error_msg:
+                field = "data"
+            else:
+                field = error_msg.split("\n")[1].split(".")[0] if "\n" in error_msg else "data"
+
             raise BusinessLogicException(
-                error_code="error_validation",
-                field=str(e),
-                details={"message": f"Invalid or missing field: {str(e)}"}
+                error_code=error_code,
+                field=field,
+                details={"message": "Invalid or missing field."}
             )
 
     def _create_subgroups(self, data, group_size):
@@ -61,28 +73,24 @@ class Rchart:
                 details={"message": "Either group_size or subgroups must be provided"}
             )
 
-        # Constants for control limits
+        # Rest of the implementation remains the same...
         A2 = 0.577  # Factor for Xbar chart
         D4 = 2.574  # Factor for R chart
         D3 = 0  # Factor for R chart
 
-        # Calculate statistics
         x_bars = [np.mean(group) for group in subgroups if len(group) > 1]
         ranges = [max(group) - min(group) for group in subgroups if len(group) > 1]
 
         x_mean = statistics.mean(x_bars)
         r_mean = statistics.mean(ranges)
 
-        # Control limits
         x_ucl = x_mean + A2 * r_mean
         x_lcl = x_mean - A2 * r_mean
         r_ucl = D4 * r_mean
         r_lcl = D3 * r_mean
 
-        # Create plots
         self.figure, (ax1, ax2) = plt.subplots(2, figsize=FIGURE_SIZE_DEFAULT)
 
-        # X-bar chart
         ax1.plot(x_bars, linestyle='-', marker='o', color='blue')
         ax1.axhline(x_ucl, color='red', linestyle='dashed', label=f'UCL={round(x_ucl, 3)}')
         ax1.axhline(x_mean, color='green', label=f'X={round(x_mean, 3)}')
@@ -91,7 +99,6 @@ class Rchart:
         ax1.set(ylabel='Sample Mean')
         ax1.legend(loc='upper right', framealpha=1)
 
-        # R chart
         ax2.plot(ranges, linestyle='-', marker='o', color='blue')
         ax2.axhline(r_ucl, color='red', linestyle='dashed', label=f'UCL={round(r_ucl, 3)}')
         ax2.axhline(r_mean, color='green', label=f'R={round(r_mean, 3)}')
@@ -99,7 +106,6 @@ class Rchart:
         ax2.set(xlabel='Sample', ylabel='Sample Range')
         ax2.legend(loc='upper right', framealpha=1)
 
-        # Check control limits
         x_violations = [i for i, x in enumerate(x_bars) if x > x_ucl or x < x_lcl]
         r_violations = [i for i, r in enumerate(ranges) if r > r_ucl or r < r_lcl]
 

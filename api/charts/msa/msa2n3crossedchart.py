@@ -42,9 +42,17 @@ class MSA2n3CrossedChart:
                 if field not in data:
                     raise ValueError(field)
 
+            # Validate config fields
+            if 'config' in data and isinstance(data['config'], dict):
+                if 'labelx' not in data['config']:
+                    raise ValueError("config.labelx")
+                if not data['config']['labelx']:
+                    raise ValueError("config.labelx")
+
             # Validate data requirements
-            if not any(key in data['data'] for key in ['operators', 'devices']):
-                raise ValueError("Either operators or devices must be provided")
+            if 'data' in data and isinstance(data['data'], dict):
+                if not any(key in data['data'] for key in ['operators', 'devices']):
+                    raise ValueError("data")
 
             validated_data = MSA2Request(**data)
             self.project = validated_data.project
@@ -55,10 +63,29 @@ class MSA2n3CrossedChart:
             self.figure = None
 
         except ValueError as e:
+            error_msg = str(e)
+
+            if "int_from_float" in error_msg:
+                error_code = "error_must_be_integer"
+            else:
+                error_code = "error_validation"
+
+            # Map error message to correct field
+            if "config.labelx" in error_msg:
+                field = "labelx"
+            elif "data.parts" in error_msg:
+                field = "parts"
+            elif "data.values" in error_msg:
+                field = "values"
+            elif "data.operators" in error_msg or "data.devices" in error_msg or error_msg == "data":
+                field = "operators" if "operators" in error_msg else "devices"
+            else:
+                field = error_msg.split("\n")[1].split(".")[0] if "\n" in error_msg else "data"
+
             raise BusinessLogicException(
-                error_code="error_validation",
-                field=str(e),
-                details={"message": f"Invalid or missing field: {str(e)}"}
+                error_code=error_code,
+                field=field,
+                details={"message": "Invalid or missing field."}
             )
 
     def process(self):
@@ -76,6 +103,13 @@ class MSA2n3CrossedChart:
             raise ValueError("operators_or_devices_missing")
 
         label = self.config.labelx
+
+        if not (len(parts) == len(operators) == len(values)):
+            raise BusinessLogicException(
+                error_code="error_data_length_mismatch",
+                field="values",
+                details={"message": "Data length mismatch"}
+            )
 
         # Create DataFrame from the API data
         data = pd.DataFrame({
@@ -109,7 +143,8 @@ class MSA2n3CrossedChart:
 
         # Get replicates by part
         try:
-            replicates_per_part = len(data.loc[(data["Part"] == data["Part"].iloc[0])]["Part"]) / data.loc[(data["Part"] == data["Part"].iloc[0])]["Operator"].nunique()
+            replicates_per_part = len(data.loc[(data["Part"] == data["Part"].iloc[0])]["Part"]) / \
+                                  data.loc[(data["Part"] == data["Part"].iloc[0])]["Operator"].nunique()
         except ZeroDivisionError:
             raise BusinessLogicException(
                 error_code="error_invalid_data_structure",
@@ -137,7 +172,8 @@ class MSA2n3CrossedChart:
             raise BusinessLogicException(
                 error_code="error_inconsistent_data",
                 field="values",
-                details={"message": f"Data length mismatch. Expected to have equal number of measurements for all parts and operators/devices."}
+                details={
+                    "message": f"Data length mismatch. Expected to have equal number of measurements for all parts and operators/devices."}
             )
 
         # Validate no missing values
@@ -146,7 +182,7 @@ class MSA2n3CrossedChart:
                 error_code="error_missing_values",
                 field="values",
                 details={"message": "Dataset contains missing values"}
-        )
+            )
 
         # Calculate "Replicate" column
         data["Replicate"] = list(np.arange(1, replicates_per_part + 1)) * (int(len(data["Part"]) / replicates_per_part))

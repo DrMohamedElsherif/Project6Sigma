@@ -38,10 +38,22 @@ class Schart:
             self.figure = None
 
         except ValueError as e:
+            error_msg = str(e)
+
+            if "int_from_float" in error_msg:
+                error_code = "error_must_be_integer"
+            else:
+                error_code = "error_validation"
+
+            if "data.values" in error_msg:
+                field = "data"
+            else:
+                field = error_msg.split("\n")[1].split(".")[0] if "\n" in error_msg else "data"
+
             raise BusinessLogicException(
-                error_code="error_validation",
-                field=str(e),
-                details={"message": f"Invalid or missing field: {str(e)}"}
+                error_code=error_code,
+                field=field,
+                details={"message": "Invalid or missing field."}
             )
 
     def _create_subgroups(self, data, group_size):
