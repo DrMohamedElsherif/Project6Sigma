@@ -15,7 +15,7 @@ async def create_file(
         step: str = Form(...),
         file: UploadFile = File(...)
 ):
-    project_path = settings.filePath + "/" + project + "/" + step
+    project_path = settings.staticFilePath + "/" + project + "/" + step
     if not os.path.exists(project_path):
         os.makedirs(project_path)
 
