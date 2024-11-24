@@ -86,7 +86,7 @@ class CapabilityStudy:
                         field = "values"
 
             raise BusinessLogicException(
-                error_code="validation_error",
+                error_code="error_validation",
                 field=field,
                 details={"message": f"Invalid or missing field: {field}"}
             )
@@ -98,13 +98,13 @@ class CapabilityStudy:
         if self.config.type == "continuous":
             if self.config.target is None:
                 raise BusinessLogicException(
-                    error_code="validation_error",
+                    error_code="error_validation",
                     field="target",
                     details={"message": "Target is required for continuous data"}
                 )
             if self.config.lower_bound is None or self.config.upper_bound is None:
                 raise BusinessLogicException(
-                    error_code="validation_error",
+                    error_code="error_validation",
                     field="bounds",
                     details={"message": "Lower and upper bounds are required for continuous data"}
                 )
@@ -124,7 +124,7 @@ class CapabilityStudy:
         elif self.config.type == "pchart":
             if self.config.acceptable_percent is None:
                 raise BusinessLogicException(
-                    error_code="validation_error",
+                    error_code="error_validation",
                     field="acceptable_percent",
                     details={"message": "Acceptable percent is required for p-chart"}
                 )
@@ -135,7 +135,7 @@ class CapabilityStudy:
         elif self.config.type == "uchart":
             if self.config.acceptable_DPU is None:
                 raise BusinessLogicException(
-                    error_code="validation_error",
+                    error_code="error_validation",
                     field="acceptable_DPU",
                     details={"message": "Acceptable DPU is required for u-chart"}
                 )

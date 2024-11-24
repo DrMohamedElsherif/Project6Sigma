@@ -34,7 +34,7 @@ class Interval2:
 
         except ValueError as e:
             raise BusinessLogicException(
-                error_code="validation_error",
+                error_code="error_validation",
                 field=str(e),
                 details={"message": f"Invalid or missing field: {str(e)}"}
             )

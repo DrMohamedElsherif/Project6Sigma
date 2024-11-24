@@ -38,7 +38,7 @@ class Uchart:
 
         except ValueError as e:
             raise BusinessLogicException(
-                error_code="validation_error",
+                error_code="error_validation",
                 field=str(e),
                 details={"message": f"Invalid or missing field: {str(e)}"}
             )
@@ -52,7 +52,7 @@ class Uchart:
             sample_sizes = [group_size] * len(defects)
         elif not sample_sizes:
             raise BusinessLogicException(
-                error_code="validation_error",
+                error_code="error_validation",
                 details={"message": "Either group_size or sample_sizes must be provided"}
             )
 

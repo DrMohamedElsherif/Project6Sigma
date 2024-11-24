@@ -39,7 +39,7 @@ class Schart:
 
         except ValueError as e:
             raise BusinessLogicException(
-                error_code="validation_error",
+                error_code="error_validation",
                 field=str(e),
                 details={"message": f"Invalid or missing field: {str(e)}"}
             )
@@ -57,7 +57,7 @@ class Schart:
             subgroups = self._create_subgroups(values, group_size)
         elif not subgroups:
             raise BusinessLogicException(
-                error_code="validation_error",
+                error_code="error_validation",
                 details={"message": "Either group_size or subgroups must be provided"}
             )
 

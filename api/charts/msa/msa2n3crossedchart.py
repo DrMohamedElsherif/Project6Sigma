@@ -56,7 +56,7 @@ class MSA2n3CrossedChart:
 
         except ValueError as e:
             raise BusinessLogicException(
-                error_code="validation_error",
+                error_code="error_validation",
                 field=str(e),
                 details={"message": f"Invalid or missing field: {str(e)}"}
             )
@@ -96,7 +96,7 @@ class MSA2n3CrossedChart:
         if operators_count < 2:
             raise BusinessLogicException(
                 error_code="error_insufficient_operators_devices",
-                field="operators",
+                field="operators" if self.data.operators else "devices",
                 details={"message": "At least 2 operators/devices are required for MSA"}
             )
 

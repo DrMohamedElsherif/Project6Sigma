@@ -50,7 +50,7 @@ class MSA2n3NestedChart:
 
         except ValueError as e:
             raise BusinessLogicException(
-                error_code="validation_error",
+                error_code="error_validation",
                 field=str(e),
                 details={"message": f"Invalid or missing field: {str(e)}"}
             )
@@ -67,8 +67,8 @@ class MSA2n3NestedChart:
                 operators = self.data.devices
             else:
                 raise BusinessLogicException(
-                    error_code="validation_error",
-                    field="operators_devices",
+                    error_code="error_no_operators_devices",
+                    field="operators" if self.data.operators else "devices",
                     details={"message": "Either operators or devices must be provided"}
                 )
 
