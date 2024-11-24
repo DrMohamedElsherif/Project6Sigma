@@ -51,10 +51,44 @@ class CapabilityStudy:
             self.figure = None
 
         except ValueError as e:
+            # Extract the field name from the Pydantic error
+            error_msg = str(e)
+            field = "unknown"
+
+            if "validation error for CapabilityRequest" in error_msg:
+                error_lines = error_msg.split('\n')
+                for line in error_lines:
+                    # Handle root level fields
+                    if line.strip() in ["project", "step", "config", "data"]:
+                        field = line.strip()
+                        break
+                    # Handle nested fields - extract only the last part
+                    elif "config." in line:
+                        field = line.strip().split("config.")[1].split()[0]
+                        break
+                    # Handle data.values validation
+                    elif "data.values" in line:
+                        field = "values"
+                        break
+
+                # Handle nested CapabilityConfig validation
+                if "validation error for CapabilityConfig" in error_msg:
+                    error_lines = error_msg.split('\n')
+                    for line in error_lines:
+                        if line.strip() in ["title", "type", "target", "acceptable_percent",
+                                            "acceptable_DPU", "subgroup_size", "lower_bound", "upper_bound"]:
+                            field = line.strip()
+                            break
+
+                # Handle nested CapabilityData validation
+                elif "validation error for CapabilityData" in error_msg:
+                    if "values" in error_msg:
+                        field = "values"
+
             raise BusinessLogicException(
                 error_code="validation_error",
-                field=str(e),
-                details={"message": f"Invalid or missing field: {str(e)}"}
+                field=field,
+                details={"message": f"Invalid or missing field: {field}"}
             )
 
     def process(self):

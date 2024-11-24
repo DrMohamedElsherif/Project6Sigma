@@ -1,11 +1,12 @@
+from typing import List, Optional
+
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import seaborn as sns
-import matplotlib.pyplot as plt
 from pydantic import BaseModel, Field
-from typing import List, Optional
+
 from api.schemas import BusinessLogicException
-from ..constants import FIGURE_SIZE_DEFAULT
 
 
 class MSA2GagerrConfig(BaseModel):
@@ -63,8 +64,8 @@ class MSA2n3GagerrChart:
         else:
             raise BusinessLogicException(
                 error_code="validation_error",
-                field="operators_devices",
-                details={"message": "Either operators or devices must be provided"}
+                field="error_no_operators_devices",
+                details={"message": "Either operators or devices must be provided."}
             )
 
         label = self.config.labelx
@@ -75,6 +76,58 @@ class MSA2n3GagerrChart:
             "Operator": operators,
             "Value": values
         })
+
+        # Basic data structure validations
+        operators_count = data["Operator"].nunique()
+        parts_count = data["Part"].nunique()
+
+        if operators_count < 2:
+            raise BusinessLogicException(
+                error_code="error_insufficient_operators_devices",
+                field="operators",
+                details={"message": "At least 2 operators/devices are required for Gage R&R"}
+            )
+
+        if parts_count < 2:
+            raise BusinessLogicException(
+                error_code="error_insufficient_parts_gage_rr",
+                field="parts",
+                details={"message": "At least 2 parts are required for Gage R&R"}
+            )
+
+        # Validate measurements per part/operator
+        measurements_per_part = data.groupby(['Part', 'Operator']).size()
+        if not measurements_per_part.nunique() == 1:
+            raise BusinessLogicException(
+                error_code="error_uneven_measurements",
+                field="values",
+                details={"message": "Each operator must measure each part the same number of times"}
+            )
+
+        num_measurements = measurements_per_part.iloc[0]
+        if num_measurements < 2:
+            raise BusinessLogicException(
+                error_code="error_insufficient_measurements",
+                field="values",
+                details={"message": "At least 2 measurements per part per operator are required"}
+            )
+
+        # # Validate data completeness
+        # expected_total = parts_count * operators_count * num_measurements
+        # if len(data) != expected_total:
+        #     raise BusinessLogicException(
+        #         error_code="error_data_length_mismatch",
+        #         field="values",
+        #         details={"message": "Data length does not match the expected number of measurements"}
+        #     )
+
+        # Check for missing or invalid values
+        if data['Value'].isna().any():
+            raise BusinessLogicException(
+                error_code="error_missing_values",
+                field="values",
+                details={"message": "Dataset contains missing values"}
+            )
 
         # Sort and reset index
         data = data.sort_values(["Part", "Operator"])

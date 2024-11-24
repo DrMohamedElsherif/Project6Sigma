@@ -34,34 +34,75 @@ def I_MR_chart(data, title, target=0, subgroup_size=1, LSL=None, USL=None):
         and greater than Lower Specification Limit (LSL) if LSL is also provided.
     """
 
-    ### Validations ###
-    if target < 0:
-        return print("Error. A non-negative target value must be specified.")
-    if subgroup_size <= 0:
-        return print("Error. The subgroup size must be a positive value greater than zero.")
+    from api.schemas import BusinessLogicException
 
+    # Validate target
+    if target < 0:
+        raise BusinessLogicException(
+            error_code="error_must_be_positive",
+            field="target",
+            details={"message": "A non-negative target value must be specified"}
+        )
+
+    # Validate subgroup_size
+    if subgroup_size <= 0:
+        raise BusinessLogicException(
+            error_code="error_must_be_positive",
+            field="subgroup_size",
+            details={"message": "The subgroup size must be a positive value greater than zero"}
+        )
+
+    # Validate LSL
     if LSL is not None:
         if LSL < 0:
-            return print("Error. Lower Specification Limit (LSL) must be non-negative.")
+            raise BusinessLogicException(
+                error_code="error_must_be_positive",
+                field="lower_bound",
+                details={"message": "Lower Specification Limit (LSL) must be non-negative"}
+            )
         if target < LSL:
-            return print(f"Error. Target value ({target}) is lower than Lower Specification Limit ({LSL}).")
+            raise BusinessLogicException(
+                error_code="error_target_below_lsl",
+                field="target",
+                details={"message": f"Target value ({target}) is lower than Lower Specification Limit ({LSL})"}
+            )
 
+    # Validate USL
     if USL is not None:
         if USL < 0:
-            return print("Error. Upper Specification Limit (USL) must be non-negative.")
+            raise BusinessLogicException(
+                error_code="error_must_be_positive",
+                field="upper_bound",
+                details={"message": "Upper Specification Limit (USL) must be non-negative"}
+            )
         if target > USL:
-            return print(f"Error. Target value ({target}) is greater than Upper Specification Limit ({USL}).")
+            raise BusinessLogicException(
+                error_code="error_target_above_usl",
+                field="target",
+                details={"message": f"Target value ({target}) is greater than Upper Specification Limit ({USL})"}
+            )
 
+    # Validate LSL and USL relationship
     if LSL is not None and USL is not None:
         if USL <= LSL:
-            return print(f"Error. Upper Specification Limit ({USL}) must be greater than Lower Specification Limit ({LSL}).")
+            raise BusinessLogicException(
+                error_code="error_invalid_bounds",
+                field="bounds",
+                details={"message": f"Upper Specification Limit ({USL}) must be greater than Lower Specification Limit ({LSL})"}
+            )
 
     # Update dataframe
     data.rename(columns={0: "value"}, inplace=True)
 
-    # Validate that there are no negative values
+    # Validate dataset values
     if min(data["value"]) < 0:
-        return print("Error. The data set contains at least one negative value. All values must be non-negative.")
+        raise BusinessLogicException(
+            error_code="error_negative_values_in_dataset",
+            field="values",
+            details={"message": "The data set contains at least one negative value. All values must be non-negative"}
+        )
+
+    # Rest of the I_MR_chart implementation...
 
     # Calculate Moving Range
     data["MR"] = abs(data["value"].diff())

@@ -4,8 +4,10 @@ import pandas as pd
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_pdf import PdfPages
 
-def U_chart(data, title, acceptable_DPU=0, subgroup_size=1):
+from api.schemas import BusinessLogicException
 
+
+def U_chart(data, title, acceptable_DPU=0, subgroup_size=1):
     """
     data: 'pandas DataFrame'
     acceptable_DPU: 'int' = 0
@@ -22,21 +24,44 @@ def U_chart(data, title, acceptable_DPU=0, subgroup_size=1):
         Amount of units per sampled group.
     """
 
+    # Validate acceptable_DPU
     if acceptable_DPU < 0:
-        return print("Error. A non-negative acceptable DPU value must be specified.")
+        raise BusinessLogicException(
+            error_code="error_must_be_positive",
+            field="acceptable_DPU",
+            details={"message": "A non-negative acceptable DPU value must be specified"}
+        )
     if acceptable_DPU % 1 != 0:
-        return print("Error. A discrete value for acceptable DPU must be specified.")
+        raise BusinessLogicException(
+            error_code="error_must_be_integer",
+            field="acceptable_DPU",
+            details={"message": "Only whole numbers are allowed for acceptable_DPU (e.g. 1, 2, 3, not 1.5)"}
+        )
+
+    # Validate subgroup_size
     if subgroup_size <= 0:
-        return print("Error. The subgroup size must be a positive value greater than zero.")
+        raise BusinessLogicException(
+            error_code="error_must_be_positive",
+            field="subgroup_size",
+            details={"message": "The subgroup size must be a positive value greater than zero"}
+        )
     if subgroup_size % 1 != 0:
-        return print("Error. A discrete value for subgroup size must be specified.")
+        raise BusinessLogicException(
+            error_code="error_must_be_integer",
+            field="subgroup_size",
+            details={"message": "Only whole numbers are allowed for subgroup size (e.g. 20, 30, not 20.5)"}
+        )
 
     # Update dataframe
     data.rename(columns={"value": "defects"}, inplace=True)
 
-    # Validate that there are no negative values
+    # Validate dataset values
     if min(data["defects"]) < 0:
-        return print("Error. The data set contains at least one negative value. All values must be non-negative.")
+        raise BusinessLogicException(
+            error_code="error_negative_values_in_dataset",
+            field="values",
+            details={"message": "The data set contains at least one negative value. All values must be non-negative"}
+        )
 
     # Calculate proportion of defective units per sample group
     data["u"] = round(data["defects"] / subgroup_size, 2)

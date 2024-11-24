@@ -1,14 +1,15 @@
+import io
+from typing import List, Optional, Union
+
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import seaborn as sns
-import io
 from matplotlib.backends.backend_pdf import PdfPages
-from scipy.stats import f
 from pydantic import BaseModel, Field
-from typing import List, Optional, Union
+from scipy.stats import f
+
 from api.schemas import BusinessLogicException
-from ..constants import FIGURE_SIZE_DEFAULT
 
 
 class MSA2NestedConfig(BaseModel):
@@ -83,17 +84,69 @@ class MSA2n3NestedChart:
             "Value": values
         })
 
-        data = data.sort_values(["Operator", "Part"])
+        # Validate data structure
+        operators_count = data["Operator"].nunique()
+        parts_count = data["Part"].nunique()
 
-        # Change "Part" column to string-type
+        if operators_count < 2:
+            raise BusinessLogicException(
+                error_code="error_insufficient_operators",
+                field="operators",
+                details={"message": "At least 2 operators/devices are required for nested MSA"}
+            )
+
+        if parts_count < 5:
+            raise BusinessLogicException(
+                error_code="error_insufficient_parts_msa_2_3",
+                field="parts",
+                details={"message": "At least 5 parts are required for MSA 2 and 3"}
+            )
+
+        data = data.sort_values(["Operator", "Part"])
         data["Part"] = data["Part"].astype(str)
 
         # Reset index
         data.reset_index(inplace=True, drop=True)
 
-        # Get replicates by part
-        replicates_per_part = len(data.loc[(data["Part"] == "1")]["Part"]) / data.loc[(data["Part"] == "1")][
-            "Operator"].nunique()
+        # Validate replicates
+        try:
+            replicates_per_part = len(data.loc[(data["Part"] == "1")]["Part"]) / data.loc[(data["Part"] == "1")][
+                "Operator"].nunique()
+            if not replicates_per_part.is_integer():
+                raise BusinessLogicException(
+                    error_code="error_uneven_measurements",
+                    field="values",
+                    details={"message": "Each operator/device must measure each part the same number of times"}
+                )
+            if replicates_per_part < 2:
+                raise BusinessLogicException(
+                    error_code="error_insufficient_replicates",
+                    field="values",
+                    details={"message": "At least 2 replicates per part are required"}
+                )
+        except ZeroDivisionError:
+            raise BusinessLogicException(
+                error_code="error_invalid_data_structure",
+                field="parts",
+                details={"message": "Invalid data structure. Please provide a valid dataset."}
+            )
+
+        # # Validate complete dataset
+        # expected_total = parts_count * operators_count * int(replicates_per_part)
+        # if len(data) != expected_total:
+        #     raise BusinessLogicException(
+        #         error_code="error_data_length_mismatch",
+        #         field="values",
+        #         details={"message": "Data length does not match the expected number of measurements"}
+        #     )
+
+        # Check for missing or invalid values
+        if data['Value'].isna().any():
+            raise BusinessLogicException(
+                error_code="error_missing_values",
+                field="values",
+                details={"message": "Dataset contains missing values"}
+            )
 
         # Calculate "Replicate" column
         data["Replicate"] = list(np.arange(1, replicates_per_part + 1)) * (int(len(data["Part"]) / replicates_per_part))
@@ -112,7 +165,14 @@ class MSA2n3NestedChart:
         data_grouped_by_operator_and_part = data_grouped_by_operator_and_part.reindex(
             list(dict.fromkeys(data["Part"]))).reset_index()
 
-        anova_table, gage_rr_var_comp_df, gage_evaluation_df = self._perform_two_way_anova(label, data)
+        try:
+            anova_table, gage_rr_var_comp_df, gage_evaluation_df = self._perform_two_way_anova(label, data)
+        except Exception as e:
+            raise BusinessLogicException(
+                error_code="error_anova_analysis_failed",
+                field="calculation",
+                details={"message": f"Error performing ANOVA analysis: {str(e)}"}
+            )
 
         # Create a BytesIO object to save the PDF in-memory
         pdf_io = io.BytesIO()

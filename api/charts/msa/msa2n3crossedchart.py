@@ -1,15 +1,16 @@
+import io
+from typing import List, Optional
+
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import seaborn as sns
 import statsmodels.api as sm
-import io
 from matplotlib.backends.backend_pdf import PdfPages
-from statsmodels.formula.api import ols
 from pydantic import BaseModel, Field
-from typing import List, Optional, Dict, Any
+from statsmodels.formula.api import ols
+
 from api.schemas import BusinessLogicException
-from ..constants import FIGURE_SIZE_DEFAULT
 
 
 class MSA2Config(BaseModel):
@@ -89,15 +90,63 @@ class MSA2n3CrossedChart:
         # Reset index
         data.reset_index(inplace=True, drop=True)
 
-        # Get operators count
         operators_count = data["Operator"].nunique()
-
-        # Get parts count
         parts_count = data["Part"].nunique()
 
+        if operators_count < 2:
+            raise BusinessLogicException(
+                error_code="error_insufficient_operators_devices",
+                field="operators",
+                details={"message": "At least 2 operators/devices are required for MSA"}
+            )
+
+        if parts_count < 5:
+            raise BusinessLogicException(
+                error_code="error_insufficient_parts_msa_2_3",
+                field="parts",
+                details={"message": "At least 5 parts are required for MSA"}
+            )
+
         # Get replicates by part
-        replicates_per_part = len(data.loc[(data["Part"] == 1)]["Part"]) / data.loc[(data["Part"] == 1)][
-            "Operator"].nunique()
+        try:
+            replicates_per_part = len(data.loc[(data["Part"] == data["Part"].iloc[0])]["Part"]) / data.loc[(data["Part"] == data["Part"].iloc[0])]["Operator"].nunique()
+        except ZeroDivisionError:
+            raise BusinessLogicException(
+                error_code="error_invalid_data_structure",
+                field="values",
+                details={"message": "Invalid data structure. Please provide a valid dataset."}
+            )
+
+        if replicates_per_part < 2:
+            raise BusinessLogicException(
+                error_code="error_insufficient_replicates",
+                field="values",
+                details={"message": "At least 2 replicates per part are required"}
+            )
+
+        if not replicates_per_part.is_integer():
+            raise BusinessLogicException(
+                error_code="error_uneven_replicates",
+                field="values",
+                details={"message": "Number of measurements must be equal for all parts and operators/devices."}
+            )
+
+        # Validate data consistency
+        expected_length = int(parts_count * operators_count * replicates_per_part)
+        if len(data) != expected_length:
+            raise BusinessLogicException(
+                error_code="error_inconsistent_data",
+                field="values",
+                details={"message": f"Data length mismatch. Expected to have equal number of measurements for all parts and operators/devices."}
+            )
+
+        # Validate no missing values
+        if data['Value'].isna().any():
+            raise BusinessLogicException(
+                error_code="error_missing_values",
+                field="values",
+                details={"message": "Dataset contains missing values"}
+        )
 
         # Calculate "Replicate" column
         data["Replicate"] = list(np.arange(1, replicates_per_part + 1)) * (int(len(data["Part"]) / replicates_per_part))
@@ -454,9 +503,9 @@ class MSA2n3CrossedChart:
         # Calculate components of variation
         var_comp_repeatability = repeatability_ms
         var_comp_operator = (model_2way_interaction_results.loc[f"{label}", "MS"] - repeatability_ms) / (
-                    parts_count * replicates_per_part)
+                parts_count * replicates_per_part)
         var_comp_part_part = (model_2way_interaction_results.loc["Part", "MS"] - repeatability_ms) / (
-                    operators_count * replicates_per_part)
+                operators_count * replicates_per_part)
         var_comp_reproducibility = var_comp_operator
         var_comp_total_gage_rr = var_comp_repeatability + var_comp_reproducibility
         var_comp_total_variation = var_comp_total_gage_rr + var_comp_part_part
@@ -469,7 +518,7 @@ class MSA2n3CrossedChart:
         })
 
         gage_rr_var_comp_no_interaction_df["%Contribution (of VarComp)"] = (
-                    gage_rr_var_comp_no_interaction_df["VarComp"] / var_comp_total_variation * 100).round(2)
+                gage_rr_var_comp_no_interaction_df["VarComp"] / var_comp_total_variation * 100).round(2)
         gage_rr_var_comp_no_interaction_df = gage_rr_var_comp_no_interaction_df.set_index("Source")
 
         # Calculate Gage Evaluation

@@ -4,6 +4,9 @@ import pandas as pd
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_pdf import PdfPages
 
+from api.schemas import BusinessLogicException
+
+
 def P_chart(data, title, acceptable_percent=0, subgroup_size=1):
 
     """
@@ -23,20 +26,42 @@ def P_chart(data, title, acceptable_percent=0, subgroup_size=1):
     """
 
     if acceptable_percent < 0:
-        return print("Error. A non-negative target value must be specified.")
+        raise BusinessLogicException(
+            error_code="error_must_be_positive",
+            field="acceptable_percent",
+            details={"message": "A non-negative target value must be specified"}
+        )
     if acceptable_percent % 1 != 0:
-        return print("Error. A discrete value for the target must be specified.")
+        raise BusinessLogicException(
+            error_code="error_must_be_integer",
+            field="acceptable_percent",
+            details={"message": "A discrete value for acceptable_percent must be specified"}
+        )
+
+    # Validate subgroup_size
     if subgroup_size <= 0:
-        return print("Error. The subgroup size must be a positive value greater than zero.")
+        raise BusinessLogicException(
+            error_code="error_must_be_positive",
+            field="subgroup_size",
+            details={"message": "The subgroup size must be a positive value greater than zero"}
+        )
     if subgroup_size % 1 != 0:
-        return print("Error. A discrete value for the target must be specified.")
+        raise BusinessLogicException(
+            error_code="error_must_be_integer",
+            field="subgroup_size",
+            details={"message": "A discrete value for subgroup_size must be specified"}
+        )
 
     # Update dataframe
     data.rename(columns={"value": "defects"}, inplace=True)
 
     # Validate that there are no negative values
     if min(data["defects"]) < 0:
-        return print("Error. The data set contains at least one negative value. All values must be non-negative.")
+        raise BusinessLogicException(
+            error_code="error_negative_values_in_dataset",
+            field="data",
+            details={"message": "The data set contains at least one negative value. All values must be non-negative."}
+        )
 
     # Calculate proportion of defective units per sample group
     data["p"] = round(data["defects"] / subgroup_size, 2)

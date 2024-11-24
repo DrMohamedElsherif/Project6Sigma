@@ -63,6 +63,21 @@ class MsaGageReportChart:
         lcl = self.config.lcl
         ucl = self.config.ucl
 
+        # Validate control limits
+        if lcl is not None and ucl is not None:
+            raise BusinessLogicException(
+                error_code="error_invalid_limits",
+                field="limits",
+                details={"message": "Cannot specify both LCL and UCL. Choose one control limit"}
+            )
+
+        if lcl is None and ucl is None:
+            raise BusinessLogicException(
+                error_code="error_missing_limits",
+                field="limits",
+                details={"message": "Must specify either LCL or UCL"}
+            )
+
         if lcl is not None:
             control_limit = lcl
             limit_text = "L Limit"
@@ -70,11 +85,43 @@ class MsaGageReportChart:
             control_limit = ucl
             limit_text = "U Limit"
 
+        # Validate data lengths
+        if len(parts) != len(values) or len(values) != len(ok):
+            raise BusinessLogicException(
+                error_code="error_data_length_mismatch",
+                field="data",
+                details={"message": "Parts, values, and ok lists must have the same length"}
+            )
+
+        # Validate ok values against trials
+        if any(x > num_trials for x in ok):
+            raise BusinessLogicException(
+                error_code="error_invalid_ok_values",
+                field="ok",
+                details={"message": "OK values cannot be greater than number of trials"}
+            )
+
+        if any(x < 0 for x in ok):
+            raise BusinessLogicException(
+                error_code="error_must_be_positive",
+                field="ok_values",
+                details={"message": "OK values cannot be negative"}
+            )
+
         data = pd.DataFrame({
             "Part": parts,
             "Known-Value": values,
             "Percent Pass": np.array(ok) / num_trials  # Convert OK counts to proportions
         })
+
+        # Check for missing values
+        if data.isna().any().any():
+            raise BusinessLogicException(
+                error_code="error_missing_values",
+                field="values",
+                details={"message": "Dataset contains missing values"}
+            )
+
         data = data.sort_values(["Known-Value"])
 
         # Define the sigmoid function

@@ -75,6 +75,13 @@ class MSA1Chart:
         UCL = reference + (0.1 * tolerance)
         LCL = reference - (0.1 * tolerance)
 
+        if LCL >= UCL:
+            raise BusinessLogicException(
+                error_code="error_invalid_control_limits",
+                field="tolerance",
+                details={"message": "Invalid control limits: LCL must be less than UCL"}
+            )
+
         below_LCL = [i for i in range(len(data)) if data[i] < LCL]
         above_UCL = [i for i in range(len(data)) if data[i] > UCL]
 
@@ -99,6 +106,13 @@ class MSA1Chart:
         mean_X = np.mean(data)
         std_dev = np.std(data, ddof=1)
 
+        if std_dev == 0:
+            raise BusinessLogicException(
+                error_code="error_zero_variation",
+                field="values",
+                details={"message": "Standard deviation is zero. Data shows no variation"}
+            )
+
         basic_statistics_df = pd.DataFrame({
             "Metric": ["Reference", "Mean", "StDev", "6 x StDev (SV)", "Tolerance (Tol)"],
             "Value": [reference, mean_X, std_dev, 6 * std_dev, tolerance]
@@ -107,6 +121,14 @@ class MSA1Chart:
         # Calculate capability indices
         cg = (percentage_of_tolerance * tolerance) / (3 * std_dev)
         cgk = (percentage_of_tolerance * tolerance - (abs(mean_X - reference))) / (3 * std_dev)
+
+        # Validate capability indices
+        if cg <= 0 or cgk <= 0:
+            raise BusinessLogicException(
+                error_code="error_invalid_capability",
+                field="values",
+                details={"message": "Invalid capability indices."}
+            )
 
         K = 20  # Constant for variance calculation
         bias = mean_X - reference
