@@ -76,4 +76,5 @@ class Interval6:
             ax.grid(True)
 
         plt.tight_layout()
+        plt.close('all')
         return self.figure

@@ -48,5 +48,5 @@ class Timeseriesplot1:
         plt.plot(x, y, linestyle='-', marker='o', color=COLOR_BLUE)
         plt.title(title, fontsize=TITLE_FONT_SIZE, pad=20)
         plt.grid(True, which='both')
-
+        plt.close('all')
         return self.figure

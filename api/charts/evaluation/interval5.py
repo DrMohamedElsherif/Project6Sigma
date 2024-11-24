@@ -128,4 +128,5 @@ class Interval5:
                 ax.grid(True)
 
         plt.tight_layout()
+        plt.close('all')
         return self.figure

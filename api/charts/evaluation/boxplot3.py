@@ -57,5 +57,5 @@ class Boxplot3:
         # Add title and adjust layout
         ax.set_title(title, fontsize=TITLE_FONT_SIZE, color=COLOR_BLACK, pad=20)
         plt.tight_layout()
-
+        plt.close('all')
         return self.figure

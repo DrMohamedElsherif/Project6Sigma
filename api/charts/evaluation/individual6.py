@@ -42,6 +42,7 @@ class Individual6:
 
     def process(self):
         title = self.config.title
+        plt.close('all')
 
         # Create DataFrame from the input data
         df = pd.DataFrame(self.data.values)
@@ -82,4 +83,5 @@ class Individual6:
         plt.subplots_adjust(left=0.1, bottom=0.1, right=0.9, top=0.9)
 
         self.figure = fig
+        plt.close('all')
         return self.figure

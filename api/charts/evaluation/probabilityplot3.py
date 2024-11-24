@@ -98,4 +98,5 @@ class Probabilityplot3:
                 self.figure.delaxes(axes[i])
 
         self.figure.tight_layout()
+        plt.close('all')
         return self.figure

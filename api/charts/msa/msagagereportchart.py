@@ -193,4 +193,5 @@ class MsaGageReportChart:
         img_buffer.seek(0)  # Rewind the buffer
 
         # Return the BytesIO object
+        plt.close('all')
         return img_buffer

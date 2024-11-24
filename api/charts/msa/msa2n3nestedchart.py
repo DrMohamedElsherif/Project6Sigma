@@ -295,6 +295,7 @@ class MSA2n3NestedChart:
             plt.close(fig)
 
         pdf_io.seek(0)
+        plt.close('all')
         return pdf_io
 
     def _perform_two_way_anova(self, label, data):

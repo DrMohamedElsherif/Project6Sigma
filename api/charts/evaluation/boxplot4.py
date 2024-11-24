@@ -53,5 +53,5 @@ class Boxplot4:
         )
 
         ax.set_title(title, fontsize=TITLE_FONT_SIZE, pad=20)
-
+        plt.close('all')
         return self.figure

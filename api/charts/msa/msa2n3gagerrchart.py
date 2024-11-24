@@ -164,7 +164,7 @@ class MSA2n3GagerrChart:
 
         plt.tight_layout()
         self.figure = g.figure  # Save the matplotlib figure instead of the FacetGrid
-        plt.close()
+        plt.close('all')
         return self.figure
 
     def getProcessMessage(self):

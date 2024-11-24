@@ -85,5 +85,5 @@ class Piechart2:
 
         # Adjust layout
         plt.tight_layout(rect=[0, 0, 1, 0.95])
-
+        plt.close('all')
         return self.figure

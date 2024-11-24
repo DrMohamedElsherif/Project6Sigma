@@ -48,5 +48,5 @@ class Scatterplot1:
 
         bp = sns.regplot(x=df.iloc[:, 1], y=df.iloc[:, 0], fit_reg=False)
         bp.set_title(title, fontsize=TITLE_FONT_SIZE, pad=20)
-
+        plt.close('all')
         return self.figure

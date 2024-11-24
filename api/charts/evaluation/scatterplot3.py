@@ -76,4 +76,5 @@ class Scatterplot3:
         g.fig.suptitle(title)
 
         self.figure = g.fig
+        plt.close('all')
         return self.figure

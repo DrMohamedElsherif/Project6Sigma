@@ -69,5 +69,5 @@ class Boxplot6:
         # Set main title for plot
         plt.suptitle(title, fontsize=TITLE_FONT_SIZE)
         plt.tight_layout()
-
+        plt.close('all')
         return self.figure

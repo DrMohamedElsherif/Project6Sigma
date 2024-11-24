@@ -201,6 +201,6 @@ class MSA1Chart:
 
         plt.subplots_adjust(hspace=1.5, top=0.85, bottom=0.15, left=0.15, right=0.85)
         plt.tight_layout(pad=4.0)
-        plt.close()
+        plt.close('all')
 
         return self.figure

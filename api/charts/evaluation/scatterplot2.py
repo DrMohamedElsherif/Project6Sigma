@@ -78,5 +78,5 @@ class Scatterplot2:
         plt.ylabel(self.additional_data.yVar)
         plt.title(title)
         plt.grid(True, which='both', zorder=-1)
-
+        plt.close('all')
         return self.figure

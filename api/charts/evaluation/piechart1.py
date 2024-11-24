@@ -65,5 +65,5 @@ class Piechart1:
 
         # Add title
         plt.title(title, fontsize=TITLE_FONT_SIZE)
-
+        plt.close('all')
         return self.figure

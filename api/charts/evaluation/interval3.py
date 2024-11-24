@@ -4,7 +4,7 @@ import seaborn as sns
 from pydantic import BaseModel, Field
 from typing import List, Dict, Optional
 from api.schemas import BusinessLogicException
-from api.charts.constants import TITLE_FONT_SIZE, MARKERS
+from api.charts.constants import TITLE_FONT_SIZE, MARKERS, COLORS
 
 
 class Interval3Config(BaseModel):
@@ -75,18 +75,32 @@ class Interval3:
             height=5
         )
 
-        # Create point plots
-        sp.map(
-            sns.pointplot,
+        def custom_pointplot(x, y, data, **kwargs):
+            # Get the number of unique categories in the current subplot
+            current_cats = data[x].unique()
+            current_palette = COLORS[:len(current_cats)]
+
+            ax = plt.gca()
+            sns.pointplot(
+                data=data,
+                x=x,
+                y=y,
+                hue=x,  # Use x as hue variable
+                order=kwargs.get('order'),
+                markers=MARKERS[0],
+                linestyle='none',
+                capsize=0.1,
+                palette=current_palette,  # Use dynamically sized color palette
+                markersize=7.5,
+                legend=False,
+                ax=ax
+            )
+
+        # Create point plots with updated parameters
+        sp.map_dataframe(
+            custom_pointplot,
             self.additional_data.catVar,
-            self.additional_data.var,
-            hue=self.additional_data.group,
-            data=df,
-            order=order,
-            marker=MARKERS[0],
-            scale=0.75,
-            capsize=0.1,
-            join=False
+            self.additional_data.var
         )
 
         # Set title and adjust layout
@@ -98,4 +112,5 @@ class Interval3:
             ax.grid(True, axis='both')
 
         self.figure = sp.fig
+        plt.close('all')
         return self.figure

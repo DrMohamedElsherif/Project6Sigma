@@ -53,15 +53,19 @@ class Individual4:
         sns.set(rc={'figure.figsize': FIGURE_SIZE_DEFAULT})
         sns.set(style="whitegrid")
 
-        # Create stripplot
+        palette = self.get_color_palette(len(df['category'].unique()))
+
+        # Create stripplot with updated parameters
         sp = sns.stripplot(
             x='category',
             y='value',
             data=df,
+            hue='category',  # Add hue parameter
             marker=MARKERS[0],
-            size=10,
+            size=10,  # Use size instead of markersize for stripplot
             jitter=False,
-            palette=COLORS
+            palette=palette,  # Use new palette format
+            legend=False  # Hide legend since categories are shown on x-axis
         )
 
         # Rotate x-axis labels
@@ -78,4 +82,9 @@ class Individual4:
         plt.tight_layout(pad=1.5)
 
         self.figure = plt.gcf()
+        plt.close('all')
         return self.figure
+
+    def get_color_palette(self, n_colors):
+        """Get a subset of colors based on the number needed."""
+        return [COLORS[i % len(COLORS)] for i in range(n_colors)]

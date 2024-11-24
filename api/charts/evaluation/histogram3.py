@@ -88,5 +88,5 @@ class Histogram3:
 
         # Adjust the spacing between subplots
         self.figure.subplots_adjust(hspace=0)
-
+        plt.close('all')
         return self.figure

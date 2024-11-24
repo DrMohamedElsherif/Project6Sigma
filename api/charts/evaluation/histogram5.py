@@ -72,5 +72,5 @@ class Histogram5:
 
         plt.suptitle(title, fontsize=TITLE_FONT_SIZE, y=0.95)
         plt.tight_layout()
-
+        plt.close('all')
         return self.figure

@@ -25,6 +25,7 @@ class Interval2Request(BaseModel):
 class Interval2:
     def __init__(self, data: dict):
         try:
+            plt.close('all')  # Clean up any existing figures
             validated_data = Interval2Request(**data)
             self.project = validated_data.project
             self.step = validated_data.step
@@ -33,6 +34,7 @@ class Interval2:
             self.figure = None
 
         except ValueError as e:
+            plt.close('all')
             raise BusinessLogicException(
                 error_code="error_validation",
                 field=str(e),
@@ -40,43 +42,58 @@ class Interval2:
             )
 
     def process(self):
-        title = self.config.title
+        try:
+            title = self.config.title
 
-        # Create DataFrame from the input data
-        df = pd.DataFrame(self.data.values)
+            # Create DataFrame from the input data
+            df = pd.DataFrame(self.data.values)
 
-        # Create figure
-        plt.figure(figsize=FIGURE_SIZE_DEFAULT)
+            # Create figure and axis objects
+            fig, ax = plt.subplots(figsize=FIGURE_SIZE_DEFAULT)
 
-        # Process each column
-        for index, column in enumerate(df):
-            # Calculate statistics
-            mean = np.mean(df[column])
-            stddev = np.std(df[column])
-            confidence_interval = 1.96 * stddev / np.sqrt(len(df[column]))
+            # Process each column
+            for index, column in enumerate(df):
+                # Calculate statistics
+                mean = np.mean(df[column])
+                stddev = np.std(df[column])
+                confidence_interval = 1.96 * stddev / np.sqrt(len(df[column]))
 
-            # Plot error bar
-            plt.errorbar(
-                x=index,
-                y=mean,
-                yerr=confidence_interval,
-                fmt='o',
-                capsize=15,
-                label=column
-            )
+                # Plot error bar
+                ax.errorbar(
+                    x=index,
+                    y=mean,
+                    yerr=confidence_interval,
+                    fmt='o',
+                    capsize=15,
+                    label=column
+                )
 
-        # Set labels and title
-        plt.ylabel('Values')
-        plt.title(title, fontsize=TITLE_FONT_SIZE, pad=TITLE_PADDING)
+            # Set labels and title
+            ax.set_ylabel('Values')
+            ax.set_title(title, fontsize=TITLE_FONT_SIZE, pad=TITLE_PADDING)
 
-        # Hide x-axis labels
-        plt.xticks([])
+            # Hide x-axis labels
+            ax.set_xticks([])
 
-        # Add legend
-        plt.legend(loc='best')
+            # Add legend
+            ax.legend(loc='best')
 
-        # Enable grid
-        plt.grid(True, which='both')
+            # Enable grid
+            ax.grid(True, which='both')
 
-        self.figure = plt.gcf()
-        return self.figure
+            # Store the figure
+            self.figure = fig
+
+            return self.figure
+
+        finally:
+            # Ensure we clean up any other figures that might have been created
+            for fig_num in plt.get_fignums():
+                if plt.figure(fig_num) != self.figure:
+                    plt.close(fig_num)
+
+    def cleanup(self):
+        """Clean up all figures when done"""
+        if self.figure is not None:
+            plt.close(self.figure)
+        plt.close('all')

@@ -312,6 +312,7 @@ class MSA2n3CrossedChart:
             plt.close(fig)
 
         pdf_io.seek(0)
+        plt.close('all')
         return pdf_io
 
     def _plot_value_by_part(self, data, data_grouped_by_part, ax):

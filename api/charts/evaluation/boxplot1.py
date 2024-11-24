@@ -55,5 +55,5 @@ class Boxplot1:
             figsize=FIGURE_SIZE_DEFAULT
         )
         bp.set_title(title, fontsize=TITLE_FONT_SIZE, pad=20)
-
+        plt.close('all')
         return self.figure

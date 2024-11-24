@@ -109,5 +109,5 @@ class Probabilityplot2:
 
         plt.tight_layout()
         plt.xticks([])
-
+        plt.close('all')
         return self.figure

@@ -315,6 +315,7 @@ def I_MR_chart_transformed(data, title, target=0, subgroup_size=1, LSL=None, USL
             plt.close(fig)
 
         pdf_io.seek(0)
+        plt.close('all')
         return pdf_io
     else:
         pass

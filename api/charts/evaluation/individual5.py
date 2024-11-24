@@ -128,4 +128,5 @@ class Individual5:
         plt.tight_layout(pad=1.5)
 
         self.figure = plt.gcf()
+        plt.close('all')
         return self.figure

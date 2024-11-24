@@ -74,18 +74,30 @@ class Individual3:
             height=5
         )
 
-        # Create stripplot
-        sp.map(
-            sns.stripplot,
+        def custom_stripplot(x, y, data, **kwargs):
+            # Get the number of unique categories in the current subplot
+            current_cats = data[x].unique()
+            current_palette = COLORS[:len(current_cats)]
+
+            sns.stripplot(
+                data=data,
+                x=x,
+                y=y,
+                hue=x,  # Use x variable as hue
+                order=kwargs.get('order'),
+                marker='o',
+                size=10,
+                jitter=False,
+                palette=current_palette,  # Use dynamically sized palette
+                legend=False,
+                ax=plt.gca()
+            )
+
+        # Create stripplot using custom function
+        sp.map_dataframe(
+            custom_stripplot,
             self.additional_data.catVar,
-            self.additional_data.var,
-            hue=self.additional_data.group,
-            data=df,
-            order=order,
-            marker='o',
-            size=10,
-            jitter=False,
-            palette=COLORS
+            self.additional_data.var
         )
 
         # Set title and adjust layout
@@ -97,4 +109,5 @@ class Individual3:
             ax.grid(True, axis='both')
 
         self.figure = sp.fig
+        plt.close('all')
         return self.figure

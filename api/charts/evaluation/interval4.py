@@ -72,5 +72,5 @@ class Interval4:
 
         # Adjust layout
         plt.tight_layout()
-
+        plt.close('all')
         return self.figure

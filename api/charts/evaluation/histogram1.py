@@ -61,5 +61,5 @@ class Histogram1:
             color=COLOR_BLUE
         )
         ax.set_title(self.config.title, fontsize=TITLE_FONT_SIZE, pad=20)
-
+        plt.close('all')
         return self.figure

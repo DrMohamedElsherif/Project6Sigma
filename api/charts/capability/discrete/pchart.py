@@ -175,4 +175,5 @@ def P_chart(data, title, acceptable_percent=0, subgroup_size=1):
         plt.close(fig)
 
     pdf_io.seek(0)
+    plt.close('all')
     return pdf_io

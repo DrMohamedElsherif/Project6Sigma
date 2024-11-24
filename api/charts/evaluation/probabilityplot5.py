@@ -100,4 +100,5 @@ class Probabilityplot5:
                 self.figure.delaxes(axes[i])
 
         self.figure.tight_layout()
+        plt.close('all')
         return self.figure

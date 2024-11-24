@@ -62,5 +62,5 @@ class Timeseriesplot5:
 
         plt.suptitle(title, fontsize=TITLE_FONT_SIZE)
         plt.tight_layout()
-
+        plt.close('all')
         return self.figure

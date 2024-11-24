@@ -81,4 +81,5 @@ class Cchart:
         if control:
             self.message = 'All points within control limits.'
 
+        plt.close('all')
         return self.figure

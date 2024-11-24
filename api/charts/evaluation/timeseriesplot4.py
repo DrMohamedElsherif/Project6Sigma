@@ -62,5 +62,5 @@ class Timeseriesplot4:
         plt.grid(True, which='both')
         plt.xlabel('Index')
         plt.ylabel('Data')
-
+        plt.close('all')
         return self.figure

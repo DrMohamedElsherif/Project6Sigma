@@ -55,4 +55,5 @@ class Matrixplot1:
         plt.subplots_adjust(top=0.9)
 
         self.figure = pair_plot.fig
+        plt.close('all')
         return self.figure

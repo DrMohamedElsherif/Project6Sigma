@@ -84,4 +84,5 @@ class Interval1:
         plt.grid(True, which='both')
 
         self.figure = plt.gcf()
+        plt.close('all')
         return self.figure

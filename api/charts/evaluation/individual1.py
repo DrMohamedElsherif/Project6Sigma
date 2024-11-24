@@ -53,8 +53,16 @@ class Individual1:
         # Get first column for plotting
         key = list(df.columns)[0]
 
-        # Create stripplot
-        sns.stripplot(y=df[key], marker='o', size=10, jitter=False, ax=ax)
+        # Create stripplot using modern API
+        sns.stripplot(
+            data=df,
+            y=key,
+            marker='o',
+            size=10,
+            jitter=False,
+            legend=False,
+            ax=ax
+        )
 
         # Add grid lines
         ax.grid(True, which='both')
@@ -64,5 +72,5 @@ class Individual1:
 
         # Adjust layout
         plt.tight_layout()
-
+        plt.close('all')
         return self.figure

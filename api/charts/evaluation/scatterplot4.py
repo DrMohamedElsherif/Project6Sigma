@@ -69,5 +69,5 @@ class Scatterplot4:
         plt.ylabel('Y-Data')
         plt.title(title, fontsize=TITLE_FONT_SIZE, pad=20)
         plt.grid(True)
-
+        plt.close('all')
         return self.figure

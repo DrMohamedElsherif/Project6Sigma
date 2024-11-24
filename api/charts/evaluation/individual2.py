@@ -59,15 +59,20 @@ class Individual2:
         # Create subplot
         ax = self.figure.add_subplot(111)
 
-        # Create stripplot
+        # Get number of unique categories for color limiting
+        n_categories = len(df['category'].unique())
+
+        # Create stripplot with updated parameters to avoid deprecation warnings
         sns.stripplot(
+            data=df,
             x='category',
             y='value',
-            data=df,
             marker=MARKERS[0],
-            size=10,
+            s=10,  # Using 's' instead of 'size' for consistency with matplotlib
             jitter=False,
-            palette=COLORS,
+            hue='category',  # Use the category for both x and hue
+            palette=COLORS[:n_categories],  # Limit colors to number of categories
+            legend=False,  # Hide the legend since categories are shown on x-axis
             ax=ax
         )
 
@@ -79,5 +84,5 @@ class Individual2:
 
         # Adjust layout
         plt.tight_layout()
-
+        plt.close('all')
         return self.figure

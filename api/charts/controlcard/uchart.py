@@ -59,7 +59,7 @@ class Uchart:
         data = pd.DataFrame({
             'defects': defects,
             'group_size': sample_sizes,
-            'u': [d/n for d, n in zip(defects, sample_sizes)]
+            'u': [d / n for d, n in zip(defects, sample_sizes)]
         })
 
         u_mean = data['u'].mean()
@@ -91,4 +91,5 @@ class Uchart:
         else:
             self.message = 'All points within control limits.'
 
+        plt.close('all')
         return self.figure

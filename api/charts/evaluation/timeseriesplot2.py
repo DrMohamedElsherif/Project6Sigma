@@ -61,5 +61,5 @@ class Timeseriesplot2:
         plt.legend(loc='best')
         plt.title(title, fontsize=TITLE_FONT_SIZE, pad=20)
         plt.grid()
-
+        plt.close('all')
         return self.figure

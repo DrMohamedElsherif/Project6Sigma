@@ -75,5 +75,5 @@ class Scatterplot5:
         plt.tight_layout()
         plt.subplots_adjust(top=0.9)
         plt.suptitle(title, fontsize=TITLE_FONT_SIZE, y=0.98)
-
+        plt.close('all')
         return self.figure

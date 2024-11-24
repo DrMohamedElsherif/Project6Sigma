@@ -76,5 +76,5 @@ class Histogram4:
 
         # Add legend
         plt.legend(loc='best')
-
+        plt.close('all')
         return self.figure
