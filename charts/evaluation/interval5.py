@@ -65,7 +65,7 @@ class Interval5(BaseChart):
                 ax.legend(loc='best')
 
                 # Enable grid lines
-                ax.grid(b=True, which='both')
+                ax.grid(visible=True, which='both')
 
             # Hide any extra subplots
             for i in range(n_subplots, len(axes)):
@@ -95,7 +95,7 @@ class Interval5(BaseChart):
                 plt.legend(loc='best')
 
                 # Enable grid lines
-                plt.grid(b=True, which='both')
+                plt.grid(visible=True, which='both')
 
         # Adjust the subplot layout
         plt.tight_layout()

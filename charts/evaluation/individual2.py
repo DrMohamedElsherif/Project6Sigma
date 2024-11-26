@@ -20,10 +20,11 @@ class Individual2(BaseChart):
         # Plot the stripplot using seaborn's stripplot function and specify the x-axis to be the 'Category' column
         sp = sns.stripplot(x=ad["catVar"], y=ad["var"], data=df, marker=MARKERS[0], size=10,
                            jitter=False,
-                           palette=COLORS)  # the jitter parameter is set to True, which will add the random noise and align the circles horizontally.
+                           # the jitter parameter is set to True, which will add the random noise and align the circles horizontally.
+                           palette=COLORS)
 
         # Add grid lines with both horizontal and vertical lines
-        plt.grid(b=True, which='both')
+        plt.grid(visible=True, which='both')
         sp.set_title(title, fontsize=TITLE_FONT_SIZE, pad=20)
 
         return plt

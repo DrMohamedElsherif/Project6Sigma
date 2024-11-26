@@ -33,7 +33,7 @@ class Interval4(BaseChart):
             plt.legend(loc='best')
 
             # Enable grid lines
-            plt.grid(b=True, which='both')
+            plt.grid(visible=True, which='both')
 
         # Adjust the subplot layout
         plt.tight_layout()
