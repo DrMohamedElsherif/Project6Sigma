@@ -2,6 +2,8 @@ from fastapi import APIRouter, File, Form, UploadFile
 import os
 import uuid
 import shutil
+
+from api.schemas import SuccessResponse
 from config import get_settings
 
 router = APIRouter()
@@ -31,4 +33,9 @@ async def create_file(
     with open(save_path, "wb+") as file_object:
         shutil.copyfileobj(file.file, file_object)
 
-    return {"filename": filename, "url": url}
+    return SuccessResponse(
+        data={
+            "filename": filename,
+            "url": url
+        }
+    )
