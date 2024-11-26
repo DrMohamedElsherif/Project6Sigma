@@ -20,7 +20,7 @@ class Individual1(BaseChart):
         bp = sns.stripplot(y=df[key], marker='o', size=10, jitter=False)
 
         # add grid lines with both horizontal and vertical lines
-        plt.grid(b=True, which='both')
+        plt.grid(visible=True, which='both')
         bp.set_title(title, fontsize=TITLE_FONT_SIZE, pad=20)
 
         return plt

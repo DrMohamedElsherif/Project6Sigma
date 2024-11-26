@@ -25,7 +25,7 @@ class Individual4(BaseChart):
         plt.tight_layout(pad=1.5)
 
         # Add grid lines with both horizontal and vertical lines
-        plt.grid(b=True, which='both')
+        plt.grid(visible=True, which='both')
 
         # Set the title for the plot
         sp.set_title(title, fontsize=TITLE_FONT_SIZE, pad=20)

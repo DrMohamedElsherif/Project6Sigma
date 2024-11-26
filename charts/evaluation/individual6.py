@@ -31,7 +31,7 @@ class Individual6(BaseChart):
             ax = axes[index]
             sp = sns.stripplot(y=df[column],
                                marker='o', size=10, jitter=False, ax=ax)
-            ax.grid(b=True, which='both', axis='both')
+            ax.grid(visible=True, which='both', axis='both')
 
         # Remove any extra subplots
         for i in range(num_plots, len(axes)):
