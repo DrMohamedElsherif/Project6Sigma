@@ -25,7 +25,7 @@ class Interval3(BaseChart):
 
         # Plot the stripplot using seaborn's stripplot function and specify the x-axis to be the 'Category' column
         sp.map(sns.pointplot, ad["catVar"], ad["var"], hue=ad["group"],
-               data=df, order=order, marker=MARKERS[0], size=10,
+               data=df, order=order, marker=MARKERS[0],
                capsize=0.1, join=False)
 
         sp.fig.suptitle(title, fontsize=TITLE_FONT_SIZE)

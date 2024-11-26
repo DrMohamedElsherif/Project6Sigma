@@ -36,6 +36,6 @@ class Interval6(BaseChart):
             # Hide x-axis labels
             ax.set_xticks([])
             # Show grid lines for the current plot
-            ax.grid(b=True, which='both', axis='both')
+            ax.grid(visible=True, which='both', axis='both')
 
         return plt

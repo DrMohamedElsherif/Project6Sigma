@@ -32,6 +32,6 @@ class Interval2(BaseChart):
         plt.legend(loc='best')
 
         # Enable grid lines
-        plt.grid(b=True, which='both')
+        plt.grid(visible=True, which='both')
 
         return plt
