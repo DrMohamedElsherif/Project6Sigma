@@ -12,5 +12,8 @@ pipelines:
                 SSH_USER: "web-user"
                 SERVER: "109.71.73.55"
                 SSH_KEY: $MC_SSH_KEY
-                COMMAND: "cd /var/www/share/sixapi-dev/ && git pull"
+                COMMAND: |
+                  cd /var/www/share/sixapi-dev/
+                  git fetch && git checkout $BITBUCKET_BRANCH
+                  git pull origin $BITBUCKET_BRANCH
 
