@@ -31,12 +31,6 @@ def U_chart(data, title, acceptable_DPU=0, subgroup_size=1):
             field="acceptable_DPU",
             details={"message": "A non-negative acceptable DPU value must be specified"}
         )
-    if acceptable_DPU % 1 != 0:
-        raise BusinessLogicException(
-            error_code="error_must_be_integer",
-            field="acceptable_DPU",
-            details={"message": "Only whole numbers are allowed for acceptable_DPU (e.g. 1, 2, 3, not 1.5)"}
-        )
 
     # Validate subgroup_size
     if subgroup_size <= 0:
@@ -116,10 +110,11 @@ def U_chart(data, title, acceptable_DPU=0, subgroup_size=1):
 
         # Plot histogram of observed DPU per subgroup
         axs["Histogram"].hist(data["u"], color="#7DA7D9", edgecolor="black", bins=10)
-        axs["Histogram"].axvline(acceptable_DPU, linestyle="--", color="green", label="Acceptable DPU")
-        axs["Histogram"].annotate(f"{acceptable_DPU}", xy=(acceptable_DPU, 0), color="green")
+        axs["Histogram"].axvline(acceptable_DPU, linestyle="--", color="red", label="Acceptable DPU")
+        axs["Histogram"].annotate(f"{acceptable_DPU}", xy=(acceptable_DPU, 0.5), color="red")
         axs["Histogram"].set_title("Observed DPU per Subgroup")
         axs["Histogram"].grid(color="lightgray", linestyle="--", linewidth=0.5)
+        axs["Histogram"].legend(loc="upper right", fontsize="small")
 
         # Generate Process Characterization dataframe
         process_characterization_df = pd.DataFrame({
