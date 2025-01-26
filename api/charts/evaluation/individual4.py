@@ -11,11 +11,15 @@ class Individual4Config(BaseModel):
     title: str
 
 
+class Individual4Data(BaseModel):
+    values: Dict[str, List[float]] = Field(..., min_length=1)
+
+
 class Individual4Request(BaseModel):
     project: str
     step: str
     config: Individual4Config
-    data: Dict[str, List[float]]
+    data: Individual4Data
 
 
 class Individual4:
@@ -25,7 +29,7 @@ class Individual4:
             self.project = validated_data.project
             self.step = validated_data.step
             self.config = validated_data.config
-            self.data = validated_data.data
+            self.data = validated_data.data.values
             self.figure = None
 
         except ValueError as e:
