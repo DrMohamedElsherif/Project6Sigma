@@ -13,7 +13,6 @@ class Individual4Config(BaseModel):
 
 class Individual4Data(BaseModel):
     values: Dict[str, List[float]] = Field(..., min_length=1)
-    categories: Dict[str, List[str]] = Field(..., min_length=1)
 
 
 class Individual4Request(BaseModel):
@@ -30,7 +29,7 @@ class Individual4:
             self.project = validated_data.project
             self.step = validated_data.step
             self.config = validated_data.config
-            self.data = validated_data.data
+            self.data = validated_data.data.values
             self.figure = None
 
         except ValueError as e:
@@ -43,10 +42,10 @@ class Individual4:
     def process(self):
         title = self.config.title
 
-        # Create DataFrame from the input data
+        # Create DataFrame from the combined input data
         df = pd.DataFrame({
-            'value': list(self.data.values.values())[0],
-            'category': list(self.data.categories.values())[0]
+            'category': [key for key, values in self.data.items() for _ in values],
+            'value': [value for values in self.data.values() for value in values]
         })
 
         # Define size of figure and style
