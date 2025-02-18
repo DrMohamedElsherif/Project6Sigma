@@ -17,18 +17,11 @@ class Interval3Data(BaseModel):
     groups: Dict[str, List[str]] = Field(..., min_length=1)
 
 
-class Interval3AdditionalData(BaseModel):
-    var: str
-    catVar: str
-    group: str
-
-
 class Interval3Request(BaseModel):
     project: str
     step: str
     config: Interval3Config
     data: Interval3Data
-    additional_data: Interval3AdditionalData
 
 
 class Interval3:
@@ -39,7 +32,6 @@ class Interval3:
             self.step = validated_data.step
             self.config = validated_data.config
             self.data = validated_data.data
-            self.additional_data = validated_data.additional_data
             self.figure = None
 
         except ValueError as e:
@@ -52,15 +44,20 @@ class Interval3:
     def process(self):
         title = self.config.title
 
+        # Extract keys from data
+        var_key = list(self.data.values.keys())[0]
+        cat_var_key = list(self.data.categories.keys())[0]
+        group_key = list(self.data.groups.keys())[0]
+
         # Create DataFrame from input data
         df = pd.DataFrame({
-            self.additional_data.var: list(self.data.values.values())[0],
-            self.additional_data.catVar: list(self.data.categories.values())[0],
-            self.additional_data.group: list(self.data.groups.values())[0]
+            var_key: self.data.values[var_key],
+            cat_var_key: self.data.categories[cat_var_key],
+            group_key: self.data.groups[group_key]
         })
 
         # Get unique values for ordering
-        unique_values = df[self.additional_data.catVar].unique()
+        unique_values = df[cat_var_key].unique()
         order = unique_values
 
         # Set style
@@ -69,7 +66,7 @@ class Interval3:
         # Create facet grid
         sp = sns.FacetGrid(
             df,
-            col=self.additional_data.group,
+            col=group_key,
             col_wrap=2,
             aspect=1.5,
             height=5
@@ -99,8 +96,8 @@ class Interval3:
         # Create point plots with updated parameters
         sp.map_dataframe(
             custom_pointplot,
-            self.additional_data.catVar,
-            self.additional_data.var
+            cat_var_key,
+            var_key
         )
 
         # Set title and adjust layout
