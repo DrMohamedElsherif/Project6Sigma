@@ -95,32 +95,38 @@ class Ttest:
             "Range": sample_range.round(5)
         })
 
-        # Calculate the power of the test
+        # Calculate the observed difference between the sample mean and target
         observed_difference = abs(sample_mean[source] - target_mu)
 
+        # Format the confidence interval for display in the report
         sample_95_confidence_interval_values = f"({sample_lower_confidence_interval[source].round(4)};{sample_upper_confidence_interval[source].round(4)})"
-        print(sample_95_confidence_interval_values)
 
+        # Check if the target value falls within the confidence interval and create appropriate message
         if sample_lower_confidence_interval[source] <= target_mu <= sample_upper_confidence_interval[source]:
             difference_string = f"The mean value from ”{source}” is not significantly\ndifferent from target"
         else:
             difference_string = f"The mean value from ”{source}” is significantly\ndifferent from target"
 
-        # Calculate detectable differences for different power levels
+        # Calculate detectable differences for different power levels (60%, 70%, 80%, 90%)
+        # This indicates what magnitude of difference can be detected with a given statistical power
         power_levels = [0.6, 0.7, 0.8, 0.9]
         detectable_differences = {}
         for power in power_levels:
+            # Calculate effect size using z-scores for given alpha and power
             effect_size = stats.norm.ppf(1 - alpha / 2) + stats.norm.ppf(power)
+            # Detectable difference is the effect size multiplied by standard error
             detectable_difference = effect_size * sample_standard_error[source]
             detectable_differences[int(power * 100)] = detectable_difference.round(6)
 
+        # Determine color code based on observed difference relative to detectable differences
         if observed_difference < detectable_differences[60]:
-            observed_difference_color = "#c00000"
+            observed_difference_color = "#c00000"  # Red - difference is too small to detect reliably
         elif detectable_differences[60] <= observed_difference <= detectable_differences[90]:
-            observed_difference_color = "#f9b002"
+            observed_difference_color = "#f9b002"  # Yellow - difference is in the medium detection range
         else:
-            observed_difference_color = "#a7c315"
+            observed_difference_color = "#a7c315"  # Green - difference is large enough for high detection power
 
+        # Determine the power interval that corresponds to the observed difference
         if observed_difference < detectable_differences[60]:
             observed_difference_interval = "<60%"
         elif detectable_differences[60] <= observed_difference < detectable_differences[70]:
@@ -147,16 +153,11 @@ class Ttest:
             fig.suptitle(title, fontsize=16, weight='bold', y=0.94)
 
             # Define the colors + fontsize
-            edgecolor = "#7c7c7c"
             grey = "#e7e6e6"
             green_table = "#9cc563"
             lightgreen_table = "#d6ed5f"
-            font_size=7            
-
-            edge_color = '#D3D3D3'
-            desired_height = 0.12
-            font_size = 7
-            row_height = 0.18
+            font_size=7
+            edge_color = "#7c7c7c"
     
             # Table overview of the t-test results
             ax = axes["T-Test Results"]
@@ -165,70 +166,25 @@ class Ttest:
             
             table_data = [
                 ["Configuration", "", "Hypothesis", "", "", ""],
-                [
-                    "Each sample in its own column",
-                    "",
-                    f"H0: µ = {target_mu}",
-                    "t-Value",
-                    "df",
-                    "p-Value*"
-                ],
-                [
-                    "Test-Setup",
-                    "Different",
-                    f"H1: µ ≠ {target_mu}",
-                    f"{t_statistic[0].round(2)}",
-                    f"{sample_size[source] - 1}",
-                    f"{p_value}"
-                ],
-                [
-                    "Target",
-                    f"{target_mu}",
-                    "",
-                    "",
-                    "",
-                    ""
-                ],
-                [
-                    "Sample",
-                    f"{source}",
-                    "empty",
-                    "",
-                    "",
-                    f"{observed_difference.round(6)}"
-                ],
-                [
-                    "Alpha-Level",
-                    f"{alpha}",
-                    "empty",
-                    "",
-                    "",
-                    f"{sample_95_confidence_interval_values}"
-                ],
-                [
-                    "Interested\ndifference**",
-                    "-",
-                    "empty",
-                    f"{difference_string}",
-                    "",
-                    ""
-                ],
-                [
-                    "",
-                    "","","","",""
-                ]
+                ["Each sample in its own column", "", f"H0: µ = {target_mu}", "t-Value", "df", "p-Value*"],
+                ["Test-Setup", "Different", f"H1: µ ≠ {target_mu}", f"{t_statistic[0].round(2)}", f"{sample_size[source] - 1}", f"{p_value}"],
+                ["Target", f"{target_mu}", "", "", "", ""],
+                ["Sample", f"{source}", "empty", "", "", f"{observed_difference.round(6)}"],
+                ["Alpha-Level", f"{alpha}", "empty", "", "", f"{sample_95_confidence_interval_values}"],
+                ["Interested\ndifference**", "-", "empty", f"{difference_string}", "", ""],
+                ["", "", "", "", "", ""]
             ]
             # Set the column widths as needed
             col_widths = [0.15, 0.15, 0.15, 0.15, 0.15, 0.15]
 
             bg_colors = [
-                ["#e7e6e6", "#e7e6e6", "#e7e6e6", "#e7e6e6", "#e7e6e6", "#e7e6e6"],
-                ["#ffffff", "#ffffff", "#d6ed5f", "#ffffff", "#ffffff", "#ffffff"],
-                ["#ffffff", "#ffffff", "#9cc563", "#ffffff", "#ffffff", "#9cc563"],
-                ["#ffffff", "#ffffff", "#ffffff", "#e7e6e6", "#e7e6e6", "#e7e6e6"],
+                [grey, grey, grey, grey, grey, grey],
+                ["#ffffff", "#ffffff", lightgreen_table, "#ffffff", "#ffffff", "#ffffff"],
+                ["#ffffff", "#ffffff", green_table, "#ffffff", "#ffffff", green_table],
+                ["#ffffff", "#ffffff", "#ffffff", grey, grey, grey],
                 ["#ffffff", "#ffffff", "#ffffff", "#ffffff", "#ffffff", "#ffffff"],
                 ["#ffffff", "#ffffff", "#ffffff", "#ffffff", "#ffffff", "#ffffff"],
-                ["#ffffff", "#ffffff", "#ffffff", "#9cc563", "#9cc563", "#9cc563"],
+                ["#ffffff", "#ffffff", "#ffffff", green_table, green_table, green_table],
                 ["#ffffff", "#ffffff", "#ffffff", "#ffffff", "#ffffff", "#ffffff"]
             ]
 
@@ -259,7 +215,7 @@ class Ttest:
             table.set_fontsize(font_size)
 
             for cell in table._cells.values():
-                cell.set_edgecolor("#7c7c7c")
+                cell.set_edgecolor(edge_color)
                 cell.set_linewidth(0.5)
 
             mergecells(table, [(0, 0), (0, 1)])
@@ -331,13 +287,6 @@ class Ttest:
                 cell = table.get_celld()[(row, col)]
                 cell.set_text_props(ha='right')
             
-            # Set the text of the bottom row to grey
-            # for col in range(6):
-            #     cell = table.get_celld()[(7, col)]
-            #     cell.set_text_props(color='grey')
-
-            # table.auto_set_font_size(False)
-            # table.set_fontsize(font_size)
 
             # Table for descriptive statistics
             axes["Descriptive Statistics"].axis('off')
@@ -348,13 +297,13 @@ class Ttest:
             table_1.auto_set_font_size(False)
             table_1.set_fontsize(font_size)
             for cell in table_1._cells.values():
-                cell.set_edgecolor("#7c7c7c")
+                cell.set_edgecolor(edge_color)
                 cell.set_linewidth(0.5)
 
             # Set the top row color to #e7e6e6
             for col in range(len(descriptive_statistics.columns)):
                 cell = table_1[(0, col)]
-                cell.set_facecolor("#e7e6e6")
+                cell.set_facecolor(grey)
 
             axes["TS1"].plot(df, color='black', marker="o")
             axes["TS1"].set_title("Data Time Series", loc='left')
@@ -384,10 +333,10 @@ class Ttest:
             ]
 
             bg_colors = [
-                ["#e7e6e6", "#e7e6e6", "#e7e6e6"],
+                [grey, grey, grey],
                 ["#c00000", "#f9b002", "#a7c315"],
                 ["#ffffff", "#ffffff", "#ffffff"],
-                ["#e7e6e6", "#e7e6e6", "#e7e6e6"],
+                [grey, grey, grey],
                 ["#ffffff", "#ffffff", observed_difference_color]
             ]
 
@@ -419,51 +368,55 @@ class Ttest:
 
             # Add visible edges to the table
             n_rows, n_cols = 5, 3
-            for (i, j), cell in table.get_celld().items():
-                # Top row: set top edge visible
-                if i == 0:
-                    cell.visible_edges = cell.visible_edges + "T"
-                    cell.set_edgecolor("#7c7c7c")
-                # Bottom row: set bottom edge visible
-                if i == n_rows - 1:
-                    cell.visible_edges = cell.visible_edges + "B"
-                    cell.set_edgecolor("#7c7c7c")
-                if i == n_rows - 2:
-                    cell.visible_edges = cell.visible_edges + "B"
-                    cell.set_edgecolor("#7c7c7c")
-                if i == n_rows - 3:
-                    cell.visible_edges = cell.visible_edges + "B"
-                    cell.set_edgecolor("#7c7c7c")
-                # First column: set left edge visible
-                if j == 0:
-                    cell.visible_edges = cell.visible_edges + "L"
-                    cell.set_edgecolor("#7c7c7c")
-                # Last column: set right edge visible
-                if j == n_cols - 1:
-                    cell.visible_edges = cell.visible_edges + "R"
-                    cell.set_edgecolor("#7c7c7c")
-                if i == n_rows - 1 and j == 0:
-                    cell.visible_edges = "BLR"
-                    cell.set_edgecolor("#7c7c7c")
+            edge_mapping = {
+                'top': [(i, j) for i in [0] for j in range(n_cols)],
+                'bottom': [(i, j) for i in [n_rows-3, n_rows-2, n_rows-1] for j in range(n_cols)],
+                'left': [(i, 0) for i in range(n_rows)],
+                'right': [(i, n_cols-1) for i in range(n_rows)]
+            }
 
-            for key, cell in table.get_celld().items():
-                if key == (0, 0):
-                    cell.set_text_props(ha='right')
-                if key == (0, 2):
-                    cell.set_text_props(ha='left')
-                # if key == (1, 0):
-                #     cell.visible_edges = 'BTL'
-                if key == (2, 0):
-                    cell.set_text_props(ha='right')
-                if key == (2, 2):
-                    cell.set_text_props(ha='left')
-                # if key == (1, 2):
-                #     cell.visible_edges = 'BTR'
-                if key == (3, 1):
-                    cell.set_text_props(ha='right')
+            # Apply edges based on position
+            for (i, j), cell in table.get_celld().items():
+                # Initialize with empty edges
+                edges = ""
                 
+                # Add appropriate edges based on cell position
+                if (i, j) in edge_mapping['top']: 
+                    edges += "T"
+                if (i, j) in edge_mapping['bottom']: 
+                    edges += "B"
+                if (i, j) in edge_mapping['left']: 
+                    edges += "L"
+                if (i, j) in edge_mapping['right']: 
+                    edges += "R"
+                
+                # Special case for bottom-left cell
+                if i == n_rows-1 and j == 0:
+                    edges = "BLR"
+                    
+                # Apply the edges if any were defined
+                if edges:
+                    cell.visible_edges = edges
+                    cell.set_edgecolor(edge_color)
+
+            # Configure text alignment for specific cells
+            text_alignments = {
+                (0, 0): 'right',
+                (0, 2): 'left',
+                (2, 0): 'right',
+                (2, 2): 'left',
+                (3, 1): 'right'
+            }
+
+            # Apply text alignments
+            for pos, alignment in text_alignments.items():
+                if pos in table.get_celld():
+                    table.get_celld()[pos].set_text_props(ha=alignment)
+                
+            # Merge table cells
             mergecells(table, [(3, 1), (3, 2)])
 
+            # Set font size for the table
             table.auto_set_font_size(False)
             table.set_fontsize(font_size)
             
@@ -471,7 +424,7 @@ class Ttest:
             ax = axes["Detectable"]
             ax.axis('off')
             # Create table data for detectable differences
-            power_column = list(detectable_differences.keys())
+            power_column = [f"{power}%" for power in detectable_differences.keys()]
             difference_column = list(detectable_differences.values())
             table_data = list(zip(power_column, difference_column))
 
@@ -494,7 +447,7 @@ class Ttest:
 
             # Change edgecolor of table
             for cell in table._cells.values():
-                cell.set_edgecolor(edgecolor)
+                cell.set_edgecolor(edge_color)
                 cell.set_linewidth(0.5)
 
             # Set the top row color to grey
@@ -514,16 +467,22 @@ class Ttest:
             fig.subplots_adjust(hspace=0.4)
 
             # Histogram
-            axes["Hist"].hist(df[source], color='#95b92a', edgecolor='black', zorder=1)
+            # Create histogram
+            n, bins, patches = axes["Hist"].hist(df[source], color='#95b92a', edgecolor='black', zorder=1)
             axes["Hist"].set_title(f"Histogram of {source}")
             axes["Hist"].set_ylabel("Frequency")
             axes["Hist"].set_xlabel(f"{source}")
+            
+            # Get the current y-axis limits
+            ymin, ymax = axes["Hist"].get_ylim()
+            
             # Plot target_mu as a point at y = -0.5
             axes["Hist"].plot(target_mu, -0.5, color="red", marker="*", label=f'Target Mean: {target_mu}')
-            # Plot sample mean as a point with 95% CI error bars at y = -1
+            # Plot sample mean as a point with 95% CI error bars at y = -0.5
             axes["Hist"].errorbar(sample_mean[source], -0.5, xerr=[[sample_mean[source] - sample_lower_confidence_interval[source]], [sample_upper_confidence_interval[source] - sample_mean[source]]], fmt='|', capsize=5, color='lightblue', label=f'Sample Mean: {sample_mean[source]:.5f}')
-            # Adjust y-axis to make space for the lines
-            axes["Hist"].set_ylim(bottom=-0.1 * axes["Boxplot"].get_ylim()[1])
+            
+            # Adjust y-axis to make space for the points we plotted at y=-0.5
+            axes["Hist"].set_ylim(bottom=-1, top=ymax * 1.05)
             axes["Hist"].set_axisbelow(True)
             axes["Hist"].grid(True, axis='y', zorder=0)
 
