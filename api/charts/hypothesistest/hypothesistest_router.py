@@ -22,9 +22,17 @@ async def generate_pairedttest(request: dict):
     from .paired_ttest import PairedTtest
     return await generate_chart(request, PairedTtest, "error_processing", extension="pdf")
 
-# Anova
+@router.post("/onewayanova")
+async def generate_onewayanova(request: dict):
+    from .one_way_anova import OneWayAnova
+    return await generate_chart(request, OneWayAnova, "error_processing", extension="pdf")
 
 @router.post("/ftest")
 async def generate_ftest(request: dict):
     from .ftest import Ftest
     return await generate_chart(request, Ftest, "error_processing", extension="pdf")
+
+@router.post("/twoftest")
+async def generate_twoftest(request: dict):
+    from .twoftest import TwoFtest
+    return await generate_chart(request, TwoFtest, "error_processing", extension="pdf")
