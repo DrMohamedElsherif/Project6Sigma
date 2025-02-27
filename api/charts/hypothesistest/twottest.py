@@ -3,7 +3,7 @@ import pandas as pd
 import numpy as np
 import scipy.stats as stats
 import matplotlib.pyplot as plt
-import matplotlib as mpl
+from scipy.optimize import curve_fit
 from matplotlib.backends.backend_pdf import PdfPages
 from pydantic import BaseModel, Field
 from typing import List, Dict
@@ -12,19 +12,19 @@ import seaborn as sns
 from .mergecells import mergecells
 
 # check data format
-class TwottestConfig(BaseModel):
+class TwoTtestConfig(BaseModel):
     title: str
     alphalevel: float
 
 
-class TwottestData(BaseModel):
+class TwoTtestData(BaseModel):
     values: Dict[str, List[float]] = Field(..., min_length=1)
 
 class TwoTtestRequest(BaseModel):
     project: str
     step: str
-    config: TwottestConfig
-    data: TwottestData
+    config: TwoTtestConfig
+    data: TwoTtestData
 
 class TwoTtest:
     """
@@ -201,7 +201,7 @@ class TwoTtest:
                 [
                     "Sample 1",
                     f"{source_1}",
-                    r"$H_{0}: \mu_{1} \neq \mu_{2}$",
+                    r"$H_{1}: \mu_{1} \neq \mu_{2}$",
                     f"{t_stat[0]}",
                     f"{sample_1_size.iloc[0] - 1}",
                     f"{p_value}"
@@ -441,7 +441,7 @@ class TwoTtest:
             cellText = [
                 ["60%", "", "90%"],
                 ["", "", ""],
-                ["Diff 60%", "", "Diff 90%"],
+                [f"{detectable_differences[60]}", "", f"{detectable_differences[90]}"],
                 ["Sample size", "Observed difference", ""],
                 [f"{sample_1_size.iloc[0]}", f"{observed_difference}", f"{observed_difference_interval}"]
             ]
@@ -587,30 +587,37 @@ class TwoTtest:
                 figsize=(8.27, 11.69))  # A4 size in inches
             #fig.subplots_adjust(hspace=0.4)  # Increase hspace to add more space between charts
             fig.suptitle(title, fontsize=16, weight='bold', y=0.94)
+
+            # Define gaussian function for fits
+            def gaussian(x, a, mu, sigma):
+                return a * np.exp(-(x-mu)**2 / (2*sigma**2))
             
             # Histogram of first dataset
-            axs["Hist1"].hist(df1.values, color='#95b92a', edgecolor='black')
+            counts_1, bins_1, _ = axs["Hist1"].hist(df1.values, color='#95b92a', edgecolor='black')
             axs["Hist1"].set_title(f"Histogram of {source_1}")
-            axs["Hist1"].set_ylabel("Frequency")
+            axs["Hist1"].set_ylabel("Frequency")            
 
-            # Fit a normal distribution to the data of the first dataset
-            mu, std = stats.norm.fit(df1.values)
-            xmin, xmax = axs["Hist1"].get_xlim()
-            x = np.linspace(xmin, xmax, 100)
-            p = stats.norm.pdf(x, mu, std)
-            axs["Hist1"].plot(x, p * len(df2) * (xmax - xmin) / 10, color='#a03130', lw=1)
+            # Calculate the bin centers
+            bin_center_1 = (bins_1[:-1] + np.diff(bins_1) / 2)
+
+            x_values_to_fit_1 = np.linspace(bins_1[0], bins_1[-1], 1000)
+            param_1, _ = curve_fit(gaussian, bin_center_1, counts_1)
+            axs["Hist1"].plot(x_values_to_fit_1, gaussian(x_values_to_fit_1, *param_1), color='#a03130', lw=1)
 
 
             # Histogram of second dataset
-            axs["Hist2"].hist(df2.values, color='#95b92a', edgecolor='black')
+            counts_2, bins_2, _ = axs["Hist2"].hist(df2.values, color='#95b92a', edgecolor='black')
             axs["Hist2"].set_title(f"Histogram of {source_2}")
 
-            # Fit a normal distribution to the data of the second dataset
-            mu, std = stats.norm.fit(df2.values)
-            xmin, xmax = axs["Hist2"].get_xlim()
-            x = np.linspace(xmin, xmax, 100)
-            p = stats.norm.pdf(x, mu, std)
-            axs["Hist2"].plot(x, p * len(df2) * (xmax - xmin) / 10, color='#a03130', lw=1)
+            # Calculate the bin centers
+            bin_center_2 = (bins_2[:-1] + np.diff(bins_2) / 2)
+
+            x_values_to_fit_2 = np.linspace(bins_2[0], bins_2[-1], 1000)
+            param_2, _ = curve_fit(gaussian, bin_center_2, counts_2, p0=(10, 10, 10))
+            axs["Hist2"].plot(x_values_to_fit_2, gaussian(x_values_to_fit_2, *param_2), color='#a03130', lw=1)
+            print(param_2)
+
+
 
 
             # Boxplot of both datasets

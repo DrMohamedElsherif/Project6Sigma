@@ -383,15 +383,6 @@ class Ttest:
                 ["50", f"{observed_difference.round(6)}", f"{observed_difference_interval}"]
             ]
 
-            # Determine the background color for the bottom right cell based on the observed difference
-            # CHANGE: MOVE UP
-            # if observed_difference > detectable_differences[90]:
-            #     bottom_right_color = "#a7c315"  # green
-            # elif observed_difference < detectable_differences[60]:
-            #     bottom_right_color = "#c00000"  # red
-            # else:
-            #     bottom_right_color = "#f9b002"  # yellow
-
             bg_colors = [
                 ["#e7e6e6", "#e7e6e6", "#e7e6e6"],
                 ["#c00000", "#f9b002", "#a7c315"],
