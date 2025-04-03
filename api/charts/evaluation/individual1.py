@@ -4,7 +4,7 @@ import seaborn as sns
 from pydantic import BaseModel, Field
 from typing import List, Dict
 from api.schemas import BusinessLogicException
-from api.charts.constants import FIGURE_SIZE_DEFAULT, TITLE_FONT_SIZE
+from api.charts.constants import FIGURE_SIZE_A4_PORTRAIT, TITLE_FONT_SIZE
 
 
 class Individual1Config(BaseModel):
@@ -44,8 +44,9 @@ class Individual1:
         df = pd.DataFrame(self.data.values)
 
         # Define size of figure and style
-        self.figure = plt.figure(figsize=FIGURE_SIZE_DEFAULT)
-        sns.set(style="whitegrid")
+        self.figure = plt.figure(figsize=FIGURE_SIZE_A4_PORTRAIT)
+        plt.subplots_adjust(top=0.85, bottom=0.4, left=0.1, right=0.9)
+        sns.set_theme(style="whitegrid")
 
         # Create subplot
         ax = self.figure.add_subplot(111)
@@ -61,7 +62,8 @@ class Individual1:
             size=10,
             jitter=False,
             legend=False,
-            ax=ax
+            ax=ax,
+            color='#95b92a'
         )
 
         # Add grid lines
@@ -71,6 +73,5 @@ class Individual1:
         ax.set_title(title, fontsize=TITLE_FONT_SIZE, pad=20)
 
         # Adjust layout
-        plt.tight_layout()
         plt.close('all')
         return self.figure

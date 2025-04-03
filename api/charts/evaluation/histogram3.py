@@ -51,7 +51,7 @@ class Histogram3:
 
         # Initialize the subplots
         self.figure, axes = plt.subplots(num_rows, num_cols, figsize=(
-            15, num_rows * 5), sharey='row', squeeze=False)
+            11.69, num_rows * 5), sharey='row', squeeze=False)
 
         # Enable grid lines
         for ax_row in axes:
@@ -72,7 +72,7 @@ class Histogram3:
                 df[column],
                 edgecolor=COLOR_BLACK,
                 align="left",
-                color=COLOR_BLUE,
+                color='#95b92a',
                 zorder=3
             )
 
@@ -87,6 +87,6 @@ class Histogram3:
         self.figure.suptitle(title, fontsize=TITLE_FONT_SIZE, y=0.98)
 
         # Adjust the spacing between subplots
-        self.figure.subplots_adjust(hspace=0)
+        self.figure.subplots_adjust(hspace=0.2)
         plt.close('all')
         return self.figure

@@ -4,7 +4,7 @@ import seaborn as sns
 from pydantic import BaseModel, Field
 from typing import List, Dict
 from api.schemas import BusinessLogicException
-from api.charts.constants import FIGURE_SIZE_DEFAULT, TITLE_FONT_SIZE
+from api.charts.constants import FIGURE_SIZE_A4_PORTRAIT, TITLE_FONT_SIZE
 
 
 class Scatterplot1Config(BaseModel):
@@ -43,10 +43,11 @@ class Scatterplot1:
         title = self.config.title
         df = pd.DataFrame(self.data.values)
 
-        self.figure = plt.figure(figsize=FIGURE_SIZE_DEFAULT)
+        self.figure = plt.figure(figsize=FIGURE_SIZE_A4_PORTRAIT)
         sns.set_style("whitegrid")
 
-        bp = sns.regplot(x=df.iloc[:, 1], y=df.iloc[:, 0], fit_reg=False)
+        bp = sns.regplot(x=df.iloc[:, 1], y=df.iloc[:, 0], fit_reg=False, color='#95b92a')
         bp.set_title(title, fontsize=TITLE_FONT_SIZE, pad=20)
+        plt.subplots_adjust(top=0.85, bottom=0.4, left=0.1, right=0.9)
         plt.close('all')
         return self.figure

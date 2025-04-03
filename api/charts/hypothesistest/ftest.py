@@ -1,4 +1,5 @@
 import io
+import math
 import pandas as pd
 import numpy as np
 import scipy.stats as stats
@@ -6,22 +7,27 @@ from scipy.stats import norm
 import matplotlib.pyplot as plt
 from scipy.optimize import curve_fit
 from matplotlib.backends.backend_pdf import PdfPages
-from pydantic import BaseModel, Field
-from typing import List, Dict
+from pydantic import BaseModel, Field, conlist
+from typing import List, Dict, Optional, Annotated
 from api.schemas import BusinessLogicException
 import seaborn as sns
-from .mergecells import mergecells
 
+from ...utils.pdf_utils import add_header_or_footer_to_a4_portrait
 
-# check data format
+header_image_path = 'assets/img/Header.png'
+footer_image_path = 'assets/img/Footer.png'
+
+from ...utils.mpl_table_utils import merge_mpl_table_cells as mergecells
+
 class FtestConfig(BaseModel):
     title: str
     target_sigma: float
+    power: Optional[Annotated[float, Field(gt=0, le=1)]] = None
     alphalevel: float
 
 
 class FtestData(BaseModel):
-    values: Dict[str, List[float]] = Field(..., min_length=1)
+    values: Dict[str, conlist(float, min_length=1)] # type: ignore
 
 class FtestRequest(BaseModel):
     project: str
@@ -29,156 +35,45 @@ class FtestRequest(BaseModel):
     config: FtestConfig
     data: FtestData
 
-def bonett_confidence_interval(data, alpha):
-        """
-        Bonett's confidence interval for the population standard deviation.
-        alpha=0.10 gives a 90% confidence interval.
-        """
-        n = len(data)
-        s2 = np.var(data, ddof=1)  # Unbiased sample variance
-
-        # Step 1: G = ln(s^2)
-        G = np.log(s2)
-
-        # Step 2: z-value for (1 - alpha/2)
-        z = norm.ppf(1 - alpha/2)  # e.g., alpha=0.10 => z=1.645 for 90% CI
-
-        # Step 3: Var(G) ~ 2/(n-1)
-        varG = 2.0 / (n - 1)
-        seG = np.sqrt(varG)  # standard error of G
-
-        # Step 4: Confidence interval for ln(s^2)
-        lower_ln = G - z * seG
-        upper_ln = G + z * seG
-
-        # Step 5: Confidence interval for s^2
-        lower_s2 = np.exp(lower_ln)
-        upper_s2 = np.exp(upper_ln)
-
-        # Step 6: Confidence interval for s
-        lower_s = np.sqrt(lower_s2)
-        upper_s = np.sqrt(upper_s2)
-
-        return lower_s, upper_s
-    
-def bonett_test(data, sigma0):
-    """
-    Bonett test for H0: sigma = sigma0  vs.  H1: sigma != sigma0.
-    Returns Z-statistic and two-sided p-value.
-    """    
-    n = len(data)
-    s2 = np.var(data, ddof=1)
-    # G = ln(s^2 / sigma0^2)
-    G = np.log(s2) - np.log(sigma0**2)
-
-    varG = 2.0 / (n - 1)
-    seG = np.sqrt(varG)
-
-    Z = G / seG
-    # Two-sided p-value
-    p_value = 2 * (1 - norm.cdf(abs(Z)))
-    
-    return Z, p_value
-
-def chi_square_confidence_interval(data, alpha):
-    """
-    Returns the (1-alpha) confidence interval for sigma using the Chi-Square distribution.
-    alpha=0.10 => 90% confidence interval.
-    """
-    from scipy.stats import chi2
-    n = len(data)
-    s2 = np.var(data, ddof=1)
-    df = n - 1
-    
-    # Chi-square critical values
-    chi2_lower = chi2.ppf(alpha/2, df)      # for lower tail
-    chi2_upper = chi2.ppf(1 - alpha/2, df)  # for upper tail
-    
-    lower_sigma = np.sqrt((df * s2) / chi2_upper)
-    upper_sigma = np.sqrt((df * s2) / chi2_lower)
-    
-    return lower_sigma, upper_sigma
-
-
-def chi_square_test(data, sigma0):
-    """
-    Chi-Square test for H0: sigma = sigma0  vs.  H1: sigma != sigma0.
-    Returns the chi-square statistic and two-sided p-value.
-    """
-    n = len(data)
-    s2 = np.var(data, ddof=1)
-    chi_square_stat = (n - 1) * s2 / (sigma0**2)
-    df = n - 1
-    
-    # Two-sided p-value:
-    # p = P(X <= chi_square_stat) for X ~ Chi2(df)
-    # But for a two-sided test we consider both tails.
-    p_one_side = stats.chi2.cdf(chi_square_stat, df)
-    # lower tail is p_one_side
-    # upper tail is 1 - p_one_side
-    # two-sided p-value is how extreme chi_square_stat is in either tail:
-    if chi_square_stat < df:
-        # If chi_square_stat is below the mean (df), then the lower tail is p_one_side
-        p_value = 2 * p_one_side
-    else:
-        # If chi_square_stat is above the mean, the upper tail is (1 - p_one_side)
-        p_value = 2 * (1 - p_one_side)
-    
-    # But ensure p_value <= 1
-    p_value = min(p_value, 1.0)
-    
-    return chi_square_stat, df, p_value
-
-def calculate_detectable_differences(n=50, alpha=0.10, sigma0=0.30, powers=[0.60, 0.70, 0.80, 0.90]):
-    # Two-sided z critical value for alpha=0.1
-    z_alpha = norm.ppf(1 - alpha/2)  # ~1.645
-
-    # Function to get the z-value for a given power
-    def z_for_power(power):
-        # power = 1 - beta -> beta = 1 - power
-        return norm.ppf(power)
-
-    results = {
-        "Power": [],
-        "Greater": [],
-        "Less": []
-    }
-    # Add top labels here, so that the table is correctly formatted
-    results["Power"].append("\nPower")
-    results["Greater"].append("")
-    results["Less"].append("")
-    results["Power"].append("")
-    results["Greater"].append("greater")
-    results["Less"].append("less")
-
-    for p in powers:
-        beta = 1 - p
-        z_beta = z_for_power(p)
-
-        # Combined z factor: (z_alpha + z_beta)
-        z_factor = z_alpha + z_beta
-
-        # sqrt(1 / [2*(n-1)])
-        sqrt_factor = np.sqrt(1 / (2 * (n - 1)))
-
-        # Calculate sigma_greater
-        sigma_greater = sigma0 * np.exp(z_factor * sqrt_factor)
-        diff_greater = sigma_greater - sigma0
-        diff_greater = round(diff_greater, 6)
-
-        # Calculate sigma_less
-        sigma_less = sigma0 * np.exp(-z_factor * sqrt_factor)
-        diff_less = sigma0 - sigma_less
-        diff_less = round(diff_less, 6)
-        
-        results["Power"].append(f"{int(p*100)}%")
-        results["Greater"].append(diff_greater)
-        results["Less"].append(diff_less)
-
-    return pd.DataFrame(results)
-
-
 class Ftest:
+    """
+    A class to perform F-test analysis on data.
+    F-test is used to test if two standard deviations are significantly different or if a standard deviation
+    is significantly different from a target value. This implementation supports both Bonett's method (valid for any
+    continuous distribution) and Chi-Square method (valid for normal distributions).
+    The class handles data validation, processing, and visualization of results including:
+    - Statistical hypothesis testing for standard deviations
+    - Confidence intervals using both Bonett and Chi-Square methods
+    - Power analysis for detecting differences
+    - Sample size calculations
+    - Data visualization through histograms, time series plots, and error bars
+    The output is a PDF report with comprehensive statistical analysis and visualizations.
+    Parameters
+    ----------
+    data : dict
+        A dictionary containing the following keys:
+        - project: Project information
+        - step: Step information
+        - config: Configuration settings including:
+            - title: Title for the report
+            - target_sigma: Target standard deviation to test against
+            - alphalevel: Significance level (typically 0.05 for 95% confidence)
+            - power: Optional power value for sample size calculations
+        - data: The dataset to analyze with:
+            - values: Dictionary of data values with column names as keys
+    Raises
+    ------
+    BusinessLogicException
+        If the input data fails validation
+    Methods
+    -------
+    process()
+        Performs the F-test analysis and generates a PDF report
+    Returns
+    -------
+    io.BytesIO
+        A BytesIO object containing the generated PDF report
+    """
     def __init__(self, data: dict):
         try:
             validated_data = FtestRequest(**data)
@@ -198,26 +93,29 @@ class Ftest:
         title = self.config.title
         target_sigma = self.config.target_sigma
         alpha = self.config.alphalevel
+        power = self.config.power
         source = list(self.data.values.keys())[0]
         df1 = pd.DataFrame(self.data.values)
 
         # Calculate Bonett's confidence interval for the population standard deviation
-        lower_bonett, upper_bonett = bonett_confidence_interval(df1[source], alpha)
+        lower_bonett, upper_bonett = _bonett_confidence_interval(df1[source], alpha)
 
         # Calculate Bonett's test for H0: sigma = target_sigma
-        Z_bonett, p_value_bonett = bonett_test(df1[source], target_sigma)
+        Z_bonett, p_value_bonett = _bonett_test(df1[source], target_sigma)
         
         # Calculate the confidence interval for sigma using the Chi-Square distribution
-        lower_chi, upper_chi = chi_square_confidence_interval(df1[source], alpha)
+        lower_chi, upper_chi = _chi_square_confidence_interval(df1[source], alpha)
 
         # Calculate the Chi-Square test for H0: sigma = target_sigma
-        chi_square_stat, df, p_value_chi = chi_square_test(df1[source], target_sigma)
+        chi_square_stat, df, p_value_chi = _chi_square_test(df1[source], target_sigma)
 
         # Determine if the observed difference is detectable
         if lower_chi > target_sigma or upper_chi < target_sigma:
             difference_string = f"The standard deviation from ”{source}” is\n significantly different from target."
+            difference_color = "#9cc563"
         else:
             difference_string = f"The standard deviation from ”{source}” is\nnot significantly different from target."
+            difference_color = "#d6ed5f"
 
 
         # Calculate descriptive statistics
@@ -242,7 +140,14 @@ class Ftest:
 
         # Calculate detectable differences for given power levels
         power_levels = [0.6, 0.7, 0.8, 0.9]
-        detectable_differences = calculate_detectable_differences(n=sample_1_size, alpha=alpha, sigma0=target_sigma, powers=power_levels)
+        detectable_differences = _calculate_detectable_differences(n=sample_1_size, alpha=alpha, sigma0=target_sigma, powers=power_levels)
+        
+        # Calculate required sample sizes if power provided
+        if power is not None:
+            required_sample_sizes_greater = _calculate_sample_size_variance_test(expected_stddev = target_sigma, target_stddev=(target_sigma + power), alpha=alpha, power_levels=power_levels)
+            required_sample_sizes_less = _calculate_sample_size_variance_test(expected_stddev = target_sigma, target_stddev=(target_sigma - power), alpha=alpha, power_levels=power_levels)
+            power_sample_size_greater = _calculate_power_variance_test(n=sample_1_size, expected_stddev=target_sigma, target_stddev=(target_sigma + power), alpha=alpha)
+            power_sample_size_less = _calculate_power_variance_test(n=sample_1_size, expected_stddev=target_sigma, target_stddev=(target_sigma - power), alpha=alpha)
 
         pdf_io = io.BytesIO()
 
@@ -253,9 +158,13 @@ class Ftest:
                 ["Descriptive Statistics", "Descriptive Statistics"],
                 ["TS1", "TS1"],         # Time Series Plots for each dataset
                 ["Chance", "Detectable"]],    # Chance and Detectable Difference
-                figsize=(8.27, 11.69))  # A4 size in inches
-            #fig.subplots_adjust(hspace=0.4)  # Increase hspace to add more space between charts
-            fig.suptitle(title, fontsize=16, weight='bold', y=0.94)
+                figsize=(8.27, 11.69), dpi=300)  # A4 size in inches
+            # fig.subplots_adjust(hspace=0.4)  # Increase hspace to add more space between charts
+            # fig.suptitle(title, fontsize=16, weight='bold', y=0.94)
+
+            header_ax = add_header_or_footer_to_a4_portrait(fig, header_image_path, position='header')
+            footer_ax = add_header_or_footer_to_a4_portrait(fig, footer_image_path, position='footer', page_number=1, total_pages=2)
+
 
             # Define the colors + font size
             edgecolor = "#7c7c7c"
@@ -278,7 +187,7 @@ class Ftest:
                 ["Sample", f"{source}", "", "", "", "", f"{sample_1_std:.3f}"],
                 ["\nα-Level", f"\n {alpha}", "", "", "Bonett CI", "", f"({lower_bonett:.3f}; {upper_bonett:.3f})"],
                 ["", f"{alpha}", "", "", "", "", f"({lower_chi:.3f}; {upper_chi:.3f})"],
-                ["Interested\ndifference**", "-", "", f"{difference_string}", "", "", ""],
+                ["Interested\ndifference**", f"{power if power is not None else '-'}", "", f"{difference_string}", "", "", ""],
                 ["", "", "", "", "", "", ""]
             ]
 
@@ -288,13 +197,13 @@ class Ftest:
             bg_colors = [
                 ["#e7e6e6", "#e7e6e6", "#e7e6e6", "#e7e6e6", "#e7e6e6", "#e7e6e6", "#e7e6e6"],
                 ["#ffffff", "#ffffff", lightgreen_table, grey, grey, grey, grey],
-                ["#ffffff", "#ffffff", green_table, "#ffffff", "#ffffff", "#ffffff", lightgreen_table],
-                ["#ffffff", "#ffffff", green_table, "#ffffff", "#ffffff", "#ffffff", lightgreen_table],
+                ["#ffffff", "#ffffff", green_table, "#ffffff", "#ffffff", "#ffffff", difference_color],
+                ["#ffffff", "#ffffff", green_table, "#ffffff", "#ffffff", "#ffffff", difference_color],
                 ["#ffffff", "#ffffff", "#ffffff", grey, grey, grey, grey],
                 ["#ffffff", "#ffffff", "#ffffff", "#ffffff", "#ffffff", "#ffffff", "#ffffff"],
                 ["#ffffff", "#ffffff", "#ffffff", "#ffffff", "#ffffff", "#ffffff", "#ffffff"],
                 ["#ffffff", "#ffffff", "#ffffff", "#ffffff", "#ffffff", "#ffffff", "#ffffff"],
-                ["#ffffff", "#ffffff", "#ffffff", lightgreen_table, lightgreen_table, lightgreen_table, lightgreen_table],
+                ["#ffffff", "#ffffff", "#ffffff", difference_color, difference_color, difference_color, difference_color],
                 ["#ffffff", "#ffffff", "#ffffff", "#ffffff", "#ffffff", "#ffffff", "#ffffff"]
             ]
 
@@ -433,7 +342,7 @@ class Ftest:
                 color='grey',
                 ha='left'
             )
-            bold_text = [(1, 3), (1, 4), (1, 5)]
+            bold_text = [(1, 3), (1, 4), (1, 5), (1, 6), (2, 1)]
             for row, col in bold_text:
                 cell = table.get_celld()[(row, col)]
                 cell.set_text_props(weight='bold')
@@ -447,8 +356,6 @@ class Ftest:
             for row, col in right_text:
                 cell = table.get_celld()[(row, col)]
                 cell.set_text_props(ha='right')
-
-
 
             # Descriptive Statistics Table
             ax = axes["Descriptive Statistics"]
@@ -481,10 +388,11 @@ class Ftest:
 
 
             # Data time series plot
-            axes["TS1"].plot(df1, color='black', marker="o", linewidth=0.5)
-            axes["TS1"].set_title("Data Time Series", loc='left')
+            ax = axes["TS1"]
+            ax.plot(df1, color='black', marker="o", linewidth=0.5)
+            ax.set_title("Data Time Series", loc='left')
             sample_mean = df1[source].mean()
-            axes["TS1"].hlines(sample_mean, 0, len(df1) - 1, colors='grey', linestyles='dashed', label=f"Sample mean: {sample_mean:.2f}", alpha=0.7)
+            ax.hlines(sample_mean, 0, len(df1) - 1, colors='grey', linestyles='dashed', label=f"Sample mean: {sample_mean:.2f}", alpha=0.7)
             # Highlight points outside the mean ± standard deviation
             Q1 = df1[source].quantile(0.25)
             Q3 = df1[source].quantile(0.75)
@@ -494,35 +402,121 @@ class Ftest:
 
             for i, value in enumerate(df1[source]):
                 if value < lower_bound or value > upper_bound:
-                    axes["TS1"].plot(i, value, color='red', marker="s")  # Red color, 's' marker
+                    ax.plot(i, value, color='red', marker="s")  # Red color, 's' marker
 
 
             # Power and detected difference
             ax = axes["Chance"]
             ax.axis('off')
-            ax.set_title("Power and Detectable Differences", loc='left', pad=-50, y=1.02)
+            ax.set_title("Power and Detectable Differences", loc='left', pad=-50, y=1.2)
 
-            cellText = [
-                ["60%", "", "90%"],
-                ["", "", ""],
-                [f"{detectable_differences['Greater'][2]}|-{detectable_differences['Less'][2]}", "", f"{detectable_differences['Greater'][5]}|-{detectable_differences['Less'][5]}"],
-            ]
 
-            bg_colors = [
+            if power is not None:
+
+                ax.set_title(f"What is the chance of detecting a difference of {power}?", pad=-70, y=1.02, fontsize=font_size)
+
+                if power_sample_size_greater < 0.60:
+                    observed_difference_color_1 = "#c00000"
+                elif 0.60 <= power_sample_size_greater <= 0.90:
+                    observed_difference_color_1 = "#f9b002"
+                else:
+                    observed_difference_color_1 = "#a7c315"
+
+                if power_sample_size_less < 0.60:
+                    observed_difference_color_2 = "#c00000"
+                    observed_difference_text_color = "#ffffff"
+                elif 0.60 <= power_sample_size_less <= 0.90:
+                    observed_difference_color_2 = "#f9b002"
+                    observed_difference_text_color = "#000000"
+                else:
+                    observed_difference_color_2 = "#a7c315"
+                    observed_difference_text_color = "#000000"
+
+                cellText = [
+                    ["60%", "", "90%"],
+                    ["", "", ""],
+                    [f"{detectable_differences['Greater'][2]}|-{detectable_differences['Less'][2]}", "", f"{detectable_differences['Greater'][5]}|-{detectable_differences['Less'][5]}"],
+                    ["Sample size", "Chance of Detecting a difference", ""],
+                    [f"{sample_1_size}", "greater", f"{power_sample_size_greater*100:.1f}%"],
+                    ["", "less", f"{power_sample_size_less*100:.1f}%"]
+                ]
+                bg_colors = [
                 ["#e7e6e6", "#e7e6e6", "#e7e6e6"],
                 ["#c00000", "#f9b002", "#a7c315"],
-                ["#ffffff", "#ffffff", "#ffffff"]
-            ]
+                ["#ffffff", "#ffffff", "#ffffff"],
+                [grey, grey, grey],
+                ["#ffffff", "#ffffff", observed_difference_color_1],
+                ["#ffffff", "#ffffff", observed_difference_color_2]
+                ]
 
-            table_bg = ax.table(bbox=[0, 0, 1, 0.5], cellColours=bg_colors, colWidths=[0.18, 0.44, 0.20])
-            for cell in table_bg._cells.values():
-                cell.set_edgecolor("none")
+                table_bg = ax.table(bbox=[0, 0, 1, 0.5], cellColours=bg_colors, colWidths=[0.18, 0.44, 0.20])
+                for cell in table_bg._cells.values():
+                    cell.set_edgecolor("none")
 
-            bg_none = [
-                ["none", "none", "none"],
-                ["none", "none", "none"],
-                ["none", "none", "none"]
-            ]
+                bg_none = [
+                    ["none", "none", "none"],
+                    ["none", "none", "none"],
+                    ["none", "none", "none"],
+                    ["none", "none", "none"],
+                    ["none", "none", "none"],
+                    ["none", "none", "none"]
+                ]
+
+            else: 
+                # Calculate observed difference from target
+                observed_difference = abs(sample_1_std - target_sigma)
+
+                # Determine the observed difference interval based on detectable differences
+                if observed_difference < detectable_differences['Greater'][2]:  # Less than 60% power
+                    observed_difference_interval = "<60%"
+                    observed_difference_color = "#c00000"
+                    observed_difference_text_color = "#ffffff"
+                elif detectable_differences['Greater'][2] <= observed_difference < detectable_differences['Greater'][3]:  # Between 60-70% power
+                    observed_difference_interval = "60%-70%"
+                    observed_difference_color = "#f9b002"
+                    observed_difference_text_color = "#000000"
+                elif detectable_differences['Greater'][3] <= observed_difference < detectable_differences['Greater'][4]:  # Between 70-80% power
+                    observed_difference_interval = "70%-80%"
+                    observed_difference_color = "#f9b002"
+                    observed_difference_text_color = "#000000"
+                elif detectable_differences['Greater'][4] <= observed_difference < detectable_differences['Greater'][5]:  # Between 80-90% power
+                    observed_difference_interval = "80%-90%"
+                    observed_difference_color = "#f9b002"
+                    observed_difference_text_color = "#000000"
+                else:  # Greater than 90% power
+                    observed_difference_interval = ">90%"
+                    observed_difference_color = "#a7c315"
+                    observed_difference_text_color = "#000000"
+
+                ax.set_title("Chance of detecting a difference", loc='center', pad=-70, y=1.02, fontsize=font_size)
+
+                cellText = [
+                    ["60%", "", "90%"],
+                    ["", "", ""],
+                    [f"{detectable_differences['Greater'][2]}|-{detectable_differences['Less'][2]}", "", f"{detectable_differences['Greater'][5]}|-{detectable_differences['Less'][5]}"],
+                    ["Sample size", "Observed difference", ""],
+                    [f"{sample_1_size}", "", f"{observed_difference_interval}"]
+                ]
+
+                bg_colors = [
+                    ["#e7e6e6", "#e7e6e6", "#e7e6e6"],
+                    ["#c00000", "#f9b002", "#a7c315"],
+                    ["#ffffff", "#ffffff", "#ffffff"],
+                    [grey, grey, grey],
+                    ["#ffffff", "#ffffff", observed_difference_color]
+                ]
+
+                table_bg = ax.table(bbox=[0, 0, 1, 0.5], cellColours=bg_colors, colWidths=[0.18, 0.44, 0.20])
+                for cell in table_bg._cells.values():
+                    cell.set_edgecolor("none")
+
+                bg_none = [
+                    ["none", "none", "none"],
+                    ["none", "none", "none"],
+                    ["none", "none", "none"],
+                    ["none", "none", "none"],
+                    ["none", "none", "none"]
+                ]
 
             table = ax.table(
                 bbox=[0, 0, 1, 0.5],
@@ -530,51 +524,86 @@ class Ftest:
                 cellLoc='center',
                 loc='center',
                 colWidths=[0.12, 0.17, 0.12],
-                cellColours=bg_none
+                cellColours=bg_none,
+                edges='open'
             )
 
-            # Set table font size
+            table[(4, 2)].set_text_props(color=observed_difference_text_color)
+
+            for cell in table._cells.values():
+                cell.set_linewidth(0.5)
+
+            # Add visible edges to the table
+            n_rows, n_cols = 5, 3
+            edge_mapping = {
+                'top': [(i, j) for i in [0] for j in range(n_cols)],
+                'bottom': [(i, j) for i in [n_rows-3, n_rows-2, n_rows-1] for j in range(n_cols)],
+                'left': [(i, 0) for i in range(n_rows)],
+                'right': [(i, n_cols-1) for i in range(n_rows)]
+            }
+
+            # Apply edges based on position
+            for (i, j), cell in table.get_celld().items():
+                edges = ""
+                if (i, j) in edge_mapping['top']: 
+                    edges += "T"
+                if (i, j) in edge_mapping['bottom']: 
+                    edges += "B"
+                if (i, j) in edge_mapping['left']: 
+                    edges += "L"
+                if (i, j) in edge_mapping['right']: 
+                    edges += "R"
+                
+                # Special case for bottom-left cell
+                if i == n_rows-1 and j == 0:
+                    edges = "BLR"
+                    
+                # Apply the edges if any were defined
+                if edges:
+                    cell.visible_edges = edges
+                    cell.set_edgecolor(edgecolor)
+
+            # Configure text alignment
+            text_alignments = {
+                (0, 0): 'right',
+                (0, 2): 'left',
+                (2, 0): 'left',
+                (2, 2): 'right',
+                (3, 1): 'left'
+            }
+
+            # Apply text alignments
+            for pos, alignment in text_alignments.items():
+                if pos in table.get_celld():
+                    table.get_celld()[pos].set_text_props(ha=alignment)
+            
+            # Merge cells
+            mergecells(table, [(3, 1), (3, 2)])
+
+            # Set font size
             table.auto_set_font_size(False)
             table.set_fontsize(font_size)
 
-            # Add only outer edges to the table
-            for key, cell in table.get_celld().items():
-                row, col = key
-                
-                # Remove all edges first
-                cell.visible_edges = ""
-                
-                # Add edges only for cells on the outside
-                if row == 0:  # Top row
-                    cell.visible_edges += "T"
-                # if row == 2:  # Bottom row
-                #     cell.visible_edges += "B"
-                if col == 0:  # Left column
-                    cell.visible_edges += "L"
-                if col == 2:  # Right column
-                    cell.visible_edges += "R"
-                    
-                # Adjust text positioning
-                if key == (0, 0):
-                    cell.set_text_props(ha='right')
-                if key == (0, 2):
-                    cell.set_text_props(ha='left')
-                if key == (2, 0):
-                    cell.set_text_props(ha='left')
-                if key == (2, 2):
-                    cell.set_text_props(ha='right')
-                
-                # Set edge color
-                cell.set_edgecolor(edgecolor)
-                cell.set_linewidth(0.5)
-
             ax = axes["Detectable"]
             ax.axis('off')
-            # Define table data
-            table_data = detectable_differences.values.tolist()
 
-            # Define column widths
-            col_widths = [0.5, 0.25, 0.25]
+            if power is not None:
+                ax.set_title(f"What sample size is required to detect a differnce\nof {power}?", pad=-70, y=1.02, fontsize=font_size)
+                table_data = [
+                [f"\nPower", "",""],
+                ["", "greater", "less"],
+                ["60%", f"{required_sample_sizes_greater[0.6]}", f"{required_sample_sizes_less[0.6]}"],
+                ["70%", f"{required_sample_sizes_greater[0.7]}", f"{required_sample_sizes_less[0.7]}"],
+                ["80%", f"{required_sample_sizes_greater[0.8]}", f"{required_sample_sizes_less[0.8]}"],
+                ["90%", f"{required_sample_sizes_greater[0.9]}", f"{required_sample_sizes_less[0.9]}"]
+                ]
+            else:
+                ax.set_title(f"Detectable difference with sample sizes of N = {sample_1_size}", pad=-70, y=1.02, fontsize=font_size)
+                # Define table data
+                table_data = detectable_differences.values.tolist()
+
+                # Define column widths
+                col_widths = [0.5, 0.25, 0.25]
 
             # Define background colors
             bg_colors = [
@@ -621,39 +650,46 @@ class Ftest:
             mergecells(table, [(0, 0), (1, 0)])
             mergecells(table, [(0, 1), (0, 2)])
 
-            # Set the top row color to grey
-            # for cell in table._cells:
-            #     if cell[0] == 0 or cell[0] == 1:
-            #         table._cells[cell].set_facecolor(grey)
 
             cell_text_right = table.get_celld()[(0, 1)]
-            cell_text_right.set_text_props(
-                text='Difference to target',
-                x=0.5,
-                y=0.5,
-                visible=True,
-                ha='left'
-            )
+            if power is not None:
+                cell_text_right.set_text_props(
+                    text='Required sample size',
+                    x=0.5,
+                    y=0.5,
+                    visible=True,
+                    ha='left'
+                )
+            else:
+                cell_text_right.set_text_props(
+                    text='Difference to target',
+                    x=0.5,
+                    y=0.5,
+                    visible=True,
+                    ha='left'
+                )
 
             pdf.savefig(fig)
             plt.close(fig)            
-
-
-
 
             # NEW PDF PAGE - Histogram and Errorbar
             fig, axs = plt.subplot_mosaic([
                 ["Hist"],
                 ["Errorbar"]],
-                figsize=(8.27, 11.69), gridspec_kw={'height_ratios': [3, 1]})  # A4 size in inches
+                figsize=(8.27, 11.69), gridspec_kw={'height_ratios': [3, 1]}, dpi=300)  # A4 size in inches
             fig.subplots_adjust(hspace=0.8)  # Increase hspace to add more space between charts
-            fig.suptitle(title, fontsize=16, weight='bold', y=0.94)
+            # fig.suptitle(title, fontsize=16, weight='bold', y=0.94)
+
+            header_ax = add_header_or_footer_to_a4_portrait(fig, header_image_path, position='header')
+            footer_ax = add_header_or_footer_to_a4_portrait(fig, footer_image_path, position='footer', page_number=2, total_pages=2)
+
 
             # Histogram
             ax = axs["Hist"]
-            ax.hist(df1[source], color='#95b92a', edgecolor='black')
+            ax.hist(df1[source], color='#95b92a', edgecolor='black', zorder=2)
             ax.set_title(f"Histogram of {source}", loc='left')
             ax.set_ylabel("Frequency")
+            ax.grid(True, alpha=0.3, zorder=0)
 
             # Fit a gaussian function to the data
             counts, bins, _ = ax.hist(df1[source], color='#95b92a', edgecolor='black')
@@ -667,7 +703,7 @@ class Ftest:
 
             x_values_to_fit = np.linspace(bins[0], bins[-1], 1000)
             param, cov = curve_fit(gaussian, bin_center, counts)
-            ax.plot(x_values_to_fit, gaussian(x_values_to_fit, *param), color='red', label='Gaussian fit')
+            ax.plot(x_values_to_fit, gaussian(x_values_to_fit, *param), color='#a03130', label='Gaussian fit', zorder=5)
 
             # Errorbar
             ax = axs["Errorbar"]
@@ -690,3 +726,223 @@ class Ftest:
         pdf_io.seek(0)
         plt.close('all')
         return pdf_io
+    
+
+def _bonett_confidence_interval(data, alpha):
+        """
+        Bonett's confidence interval for the population standard deviation.
+        alpha=0.10 gives a 90% confidence interval.
+        """
+        n = len(data)
+        s2 = np.var(data, ddof=1)  # Unbiased sample variance
+
+        # Step 1: G = ln(s^2)
+        G = np.log(s2)
+
+        # Step 2: z-value for (1 - alpha/2)
+        z = norm.ppf(1 - alpha/2)  # e.g., alpha=0.10 => z=1.645 for 90% CI
+
+        # Step 3: Var(G) ~ 2/(n-1)
+        varG = 2.0 / (n - 1)
+        seG = np.sqrt(varG)  # standard error of G
+
+        # Step 4: Confidence interval for ln(s^2)
+        lower_ln = G - z * seG
+        upper_ln = G + z * seG
+
+        # Step 5: Confidence interval for s^2
+        lower_s2 = np.exp(lower_ln)
+        upper_s2 = np.exp(upper_ln)
+
+        # Step 6: Confidence interval for s
+        lower_s = np.sqrt(lower_s2)
+        upper_s = np.sqrt(upper_s2)
+
+        return lower_s, upper_s
+    
+def _bonett_test(data, sigma0):
+    """
+    Bonett test for H0: sigma = sigma0  vs.  H1: sigma != sigma0.
+    Returns Z-statistic and two-sided p-value.
+    """    
+    n = len(data)
+    s2 = np.var(data, ddof=1)
+    # G = ln(s^2 / sigma0^2)
+    G = np.log(s2) - np.log(sigma0**2)
+
+    varG = 2.0 / (n - 1)
+    seG = np.sqrt(varG)
+
+    Z = G / seG
+    # Two-sided p-value
+    p_value = 2 * (1 - norm.cdf(abs(Z)))
+    
+    return Z, p_value
+
+def _chi_square_confidence_interval(data, alpha):
+    """
+    Returns the (1-alpha) confidence interval for sigma using the Chi-Square distribution.
+    alpha=0.10 => 90% confidence interval.
+    """
+    from scipy.stats import chi2
+    n = len(data)
+    s2 = np.var(data, ddof=1)
+    df = n - 1
+    
+    # Chi-square critical values
+    chi2_lower = chi2.ppf(alpha/2, df)      # for lower tail
+    chi2_upper = chi2.ppf(1 - alpha/2, df)  # for upper tail
+    
+    lower_sigma = np.sqrt((df * s2) / chi2_upper)
+    upper_sigma = np.sqrt((df * s2) / chi2_lower)
+    
+    return lower_sigma, upper_sigma
+
+
+def _chi_square_test(data, sigma0):
+    """
+    Chi-Square test for H0: sigma = sigma0  vs.  H1: sigma != sigma0.
+    Returns the chi-square statistic and two-sided p-value.
+    """
+    n = len(data)
+    s2 = np.var(data, ddof=1)
+    chi_square_stat = (n - 1) * s2 / (sigma0**2)
+    df = n - 1
+    
+    # Two-sided p-value:
+    # p = P(X <= chi_square_stat) for X ~ Chi2(df)
+    # But for a two-sided test we consider both tails.
+    p_one_side = stats.chi2.cdf(chi_square_stat, df)
+    # lower tail is p_one_side
+    # upper tail is 1 - p_one_side
+    # two-sided p-value is how extreme chi_square_stat is in either tail:
+    if chi_square_stat < df:
+        # If chi_square_stat is below the mean (df), then the lower tail is p_one_side
+        p_value = 2 * p_one_side
+    else:
+        # If chi_square_stat is above the mean, the upper tail is (1 - p_one_side)
+        p_value = 2 * (1 - p_one_side)
+    
+    # But ensure p_value <= 1
+    p_value = min(p_value, 1.0)
+    
+    return chi_square_stat, df, p_value
+
+def _calculate_detectable_differences(n=50, alpha=0.10, sigma0=0.30, powers=[0.60, 0.70, 0.80, 0.90]):
+    # Two-sided z critical value for alpha=0.1
+    z_alpha = norm.ppf(1 - alpha/2)  # ~1.645
+
+    # Function to get the z-value for a given power
+    def z_for_power(power):
+        # power = 1 - beta -> beta = 1 - power
+        return norm.ppf(power)
+
+    results = {
+        "Power": [],
+        "Greater": [],
+        "Less": []
+    }
+    # Add top labels here, so that the table is correctly formatted
+    results["Power"].append("\nPower")
+    results["Greater"].append("")
+    results["Less"].append("")
+    results["Power"].append("")
+    results["Greater"].append("greater")
+    results["Less"].append("less")
+
+    for p in powers:
+        beta = 1 - p
+        z_beta = z_for_power(p)
+
+        # Combined z factor: (z_alpha + z_beta)
+        z_factor = z_alpha + z_beta
+
+        # sqrt(1 / [2*(n-1)])
+        sqrt_factor = np.sqrt(1 / (2 * (n - 1)))
+
+        # Calculate sigma_greater
+        sigma_greater = sigma0 * np.exp(z_factor * sqrt_factor)
+        diff_greater = sigma_greater - sigma0
+        diff_greater = round(diff_greater, 6)
+
+        # Calculate sigma_less
+        sigma_less = sigma0 * np.exp(-z_factor * sqrt_factor)
+        diff_less = sigma0 - sigma_less
+        diff_less = round(diff_less, 6)
+        
+        results["Power"].append(f"{int(p*100)}%")
+        results["Greater"].append(diff_greater)
+        results["Less"].append(diff_less)
+
+    return pd.DataFrame(results)
+
+def _calculate_sample_size_variance_test(expected_stddev, target_stddev, alpha=0.1, power_levels=None):
+    """
+    Calculate required sample sizes for a 1-sample F-test (variance test).
+    
+    Parameters:
+    -----------
+    expected_stddev : float
+        The expected standard deviation (null hypothesis)
+    target_stddev : float
+        The target standard deviation to detect (alternative hypothesis)
+    alpha : float, optional
+        Significance level for the test (default is 0.1)
+    power_levels : list of float, optional
+        List of power levels to calculate sample sizes for
+        (default is [0.6, 0.7, 0.8, 0.9])
+    
+    Returns:
+    --------
+    dict
+        Dictionary mapping power levels to required sample sizes
+    """
+    if power_levels is None:
+        power_levels = [0.6, 0.7, 0.8, 0.9]
+    
+    # Variance ratio
+    variance_ratio = (target_stddev / expected_stddev) ** 2
+    
+    # Critical z-value for alpha/2 (two-tailed test)
+    z_alpha_half = stats.norm.ppf(1 - alpha/2)
+    
+    results = {}
+    
+    for power in power_levels:
+        # z-value for the desired power
+        z_beta = stats.norm.ppf(power)
+        
+        # Calculate sample size using the formula:
+        # n ≈ 1 + 2(z_α/2 + z_β)² / (ln(σ₁²/σ₀²))²
+        numerator = 2 * (z_alpha_half + z_beta) ** 2
+        denominator = (math.log(variance_ratio)) ** 2
+        
+        # Ensure we don't divide by zero (in case variance_ratio is very close to 1)
+        if abs(denominator) < 1e-10:
+            sample_size = float('inf')
+        else:
+            sample_size = 1 + (numerator / denominator)
+        
+        # Round up to the nearest integer
+        results[power] = math.ceil(sample_size)
+    
+    return results
+
+def _calculate_power_variance_test(n, expected_stddev, target_stddev, alpha=0.1):
+    """
+    Calculates the statistical power to detect a difference in standard deviation using a two-sided variance test.
+
+    Parameters:
+        n (int): Sample size for each group in the test.
+        expected_stddev (float): The expected (baseline) standard deviation.
+        target_stddev (float): The actual or hypothesized standard deviation to be detected.
+        alpha (float, optional): Significance level for the test, with a default value of 0.1.
+
+    Returns:
+        float: The calculated power of the two-sided variance test.
+    """
+    variance_ratio = (target_stddev / expected_stddev) ** 2
+    z_alpha_half = stats.norm.ppf(1 - alpha / 2)
+    effect_size = math.sqrt(n / 2) * math.log(variance_ratio)
+    cdf = stats.norm.cdf
+    return cdf(-z_alpha_half - effect_size) + (1 - cdf(z_alpha_half - effect_size))

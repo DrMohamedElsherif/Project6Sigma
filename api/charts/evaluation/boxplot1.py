@@ -1,9 +1,10 @@
 import pandas as pd
 import matplotlib.pyplot as plt
+import seaborn as sns
 from pydantic import BaseModel, Field
 from typing import List, Dict
 from api.schemas import BusinessLogicException
-from api.charts.constants import COLORS, FIGURE_SIZE_DEFAULT, COLOR_BLACK, TITLE_FONT_SIZE
+from api.charts.constants import COLORS, FIGURE_SIZE_A4_PORTRAIT, COLOR_BLACK, TITLE_FONT_SIZE
 
 
 class Boxplot1Config(BaseModel):
@@ -43,17 +44,32 @@ class Boxplot1:
         title = self.config.title
         df = pd.DataFrame(self.data.values)
 
-        self.figure = plt.figure(figsize=FIGURE_SIZE_DEFAULT)
+        self.figure = plt.figure(figsize=FIGURE_SIZE_A4_PORTRAIT)
 
         key, _ = list(self.data.values.items())[0]
 
-        bp = df.boxplot(
-            column=[key],
-            color=COLOR_BLACK,
-            patch_artist=True,
-            boxprops=dict(facecolor=COLORS[0]),
-            figsize=FIGURE_SIZE_DEFAULT
-        )
+        plt.subplots_adjust(top=0.85, bottom=0.4, left=0.1, right=0.9)
+
+        # bp = df.boxplot(
+        #     column=[key],
+        #     color=COLOR_BLACK,
+        #     patch_artist=True,
+        #     boxprops=dict(facecolor=COLORS[0]),
+        #     figsize=FIGURE_SIZE_A4_PORTRAIT
+        # )
+        bp = sns.boxplot(
+                data=df,
+                y=key,
+                orient='h',
+                color="#a1d111", 
+                linecolor='black', 
+                showcaps=False, 
+                linewidth=1, 
+                flierprops={"marker": "x"},
+                width=0.3
+            )
+
         bp.set_title(title, fontsize=TITLE_FONT_SIZE, pad=20)
+        bp.grid(True, alpha=0.3)
         plt.close('all')
         return self.figure

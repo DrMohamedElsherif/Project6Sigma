@@ -4,7 +4,7 @@ import seaborn as sns
 from pydantic import BaseModel, Field
 from typing import List, Dict
 from api.schemas import BusinessLogicException
-from api.charts.constants import TITLE_FONT_SIZE
+from api.charts.constants import TITLE_FONT_SIZE, FIGURE_SIZE_A4_PORTRAIT
 
 
 class Scatterplot5Config(BaseModel):
@@ -54,7 +54,7 @@ class Scatterplot5:
         num_cols = 2
         num_rows = (num_plots + num_cols - 1) // num_cols
 
-        self.figure, axes = plt.subplots(num_rows, num_cols, figsize=(15, num_rows * 5))
+        self.figure, axes = plt.subplots(num_rows, num_cols, figsize=FIGURE_SIZE_A4_PORTRAIT)
         axes = axes.flatten()
 
         for i, y_variable in enumerate(self.additional_data.yVars):
@@ -64,15 +64,16 @@ class Scatterplot5:
                 x=self.additional_data.xVar,
                 y=y_variable,
                 ax=ax,
-                zorder=3
+                zorder=3,
+                color='#95b92a'
             )
-            ax.grid(True, axis='both', zorder=-1)
+            ax.grid(True, axis='both', zorder=-1, alpha=0.3)
 
         # Remove extra subplots
         for i in range(num_plots, len(axes)):
             self.figure.delaxes(axes[i])
 
-        plt.tight_layout()
+        plt.tight_layout(pad=2.0)
         plt.subplots_adjust(top=0.9)
         plt.suptitle(title, fontsize=TITLE_FONT_SIZE, y=0.98)
         plt.close('all')

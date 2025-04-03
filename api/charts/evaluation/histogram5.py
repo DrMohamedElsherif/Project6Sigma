@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 from pydantic import BaseModel, Field
 from typing import List, Dict
 from api.schemas import BusinessLogicException
-from api.charts.constants import COLOR_BLACK, TITLE_FONT_SIZE, COLORS, FIGURE_SIZE_DEFAULT
+from api.charts.constants import COLOR_BLACK, TITLE_FONT_SIZE, COLOR_PALETTE, FIGURE_SIZE_DEFAULT
 
 
 class Histogram5Config(BaseModel):
@@ -49,7 +49,7 @@ class Histogram5:
         num_datasets = len(df.columns)
 
         # Generate a list of colors for each subplot
-        colors = COLORS[:num_datasets]
+        colors = COLOR_PALETTE[:num_datasets]
 
         # Find the number of rows needed
         num_rows = num_datasets // 2 + num_datasets % 2
@@ -57,7 +57,7 @@ class Histogram5:
         # Get the column names as a list to plot
         columns = df.columns.tolist()
 
-        self.figure = plt.figure(figsize=(15, num_rows * 5))
+        self.figure = plt.figure(figsize=(11.69, num_rows * 5))
 
         for idx, column in enumerate(columns, 1):
             ax = self.figure.add_subplot(num_rows, num_columns, idx)

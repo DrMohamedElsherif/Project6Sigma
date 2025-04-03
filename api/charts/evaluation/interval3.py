@@ -4,7 +4,7 @@ import seaborn as sns
 from pydantic import BaseModel, Field
 from typing import List, Dict, Optional
 from api.schemas import BusinessLogicException
-from api.charts.constants import TITLE_FONT_SIZE, MARKERS, COLORS
+from api.charts.constants import TITLE_FONT_SIZE, MARKERS, COLOR_PALETTE, FIGURE_SIZE_A4_PORTRAIT
 
 
 class Interval3Config(BaseModel):
@@ -63,6 +63,9 @@ class Interval3:
         # Set style
         sns.set_style("whitegrid")
 
+        # Set figure size
+        plt.figure(figsize=FIGURE_SIZE_A4_PORTRAIT)
+
         # Create facet grid
         sp = sns.FacetGrid(
             df,
@@ -75,7 +78,7 @@ class Interval3:
         def custom_pointplot(x, y, data, **kwargs):
             # Get the number of unique categories in the current subplot
             current_cats = data[x].unique()
-            current_palette = COLORS[:len(current_cats)]
+            current_palette = COLOR_PALETTE[:len(current_cats)]
 
             ax = plt.gca()
             sns.pointplot(
@@ -101,13 +104,13 @@ class Interval3:
         )
 
         # Set title and adjust layout
-        sp.fig.suptitle(title, fontsize=TITLE_FONT_SIZE)
+        sp.figure.suptitle(title, fontsize=TITLE_FONT_SIZE)
         plt.subplots_adjust(top=0.9)
 
         # Add grid to all subplots
         for ax in sp.axes.flat:
-            ax.grid(True, axis='both')
+            ax.grid(True, axis='both', alpha=0.3)
 
-        self.figure = sp.fig
+        self.figure = sp.figure
         plt.close('all')
         return self.figure

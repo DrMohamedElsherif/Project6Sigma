@@ -4,7 +4,7 @@ from collections import Counter
 from pydantic import BaseModel, Field
 from typing import List, Dict
 from api.schemas import BusinessLogicException
-from api.charts.constants import FIGURE_SIZE_DEFAULT, TITLE_FONT_SIZE
+from api.charts.constants import FIGURE_SIZE_A4_PORTRAIT, TITLE_FONT_SIZE, COLOR_PALETTE
 
 
 class Piechart1Config(BaseModel):
@@ -46,7 +46,7 @@ class Piechart1:
         categories = df.iloc[:, 0]  # Get first column
 
         # Set figure size
-        self.figure = plt.figure(figsize=FIGURE_SIZE_DEFAULT)
+        self.figure = plt.figure(figsize=FIGURE_SIZE_A4_PORTRAIT)
 
         # Count occurrences of each category
         data_counts = Counter(categories)
@@ -60,7 +60,8 @@ class Piechart1:
             labels=sorted_labels,
             autopct='%1.1f%%',
             startangle=90,
-            counterclock=False
+            counterclock=False, 
+            colors=COLOR_PALETTE
         )
 
         # Add title

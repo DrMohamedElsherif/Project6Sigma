@@ -1,6 +1,5 @@
 from fastapi import APIRouter
 
-from .ttest import Ttest
 from ...utils.file_utils import generate_chart
 
 router = APIRouter()
@@ -36,3 +35,38 @@ async def generate_ftest(request: dict):
 async def generate_twoftest(request: dict):
     from .twoftest import TwoFtest
     return await generate_chart(request, TwoFtest, "error_processing", extension="pdf")
+
+@router.post("/ftestmultiple")
+async def generate_ftestmultiple(request: dict):
+    from .ftest_multiple import FtestMultiple
+    return await generate_chart(request, FtestMultiple, "error_processing", extension="pdf")
+
+@router.post("/defectivetest")
+async def generate_defectivetest(request: dict):
+    from .defectivetest import Defectivetest
+    return await generate_chart(request, Defectivetest, "error_processing", extension="pdf")
+
+@router.post("/twodefectivetest")
+async def generate_twodefectivetest(request: dict):
+    from .twodefectivetest import TwoDefectivetest
+    return await generate_chart(request, TwoDefectivetest, "error_processing", extension="pdf")
+
+@router.post("/multipledefectivetest")
+async def generate_multipledefectivetest(request: dict):
+    from .multipledefectivetest import MultipleDefectiveTest
+    return await generate_chart(request, MultipleDefectiveTest, "error_processing", extension="pdf")
+
+@router.post("/chisquared")
+async def generate_chisquared(request: dict):
+    from .chi_squared import ChiSquared
+    return await generate_chart(request, ChiSquared, "error_processing", extension="pdf")
+
+@router.post("/twochisquared")
+async def generate_twochisquared(request: dict):
+    from .twochi_squared import TwoChiSquared
+    return await generate_chart(request, TwoChiSquared, "error_processing", extension="pdf")
+
+@router.post("/multiplechisquared")
+async def generate_multiplechisquared(request: dict):
+    from .multiple_chi_squared import MultipleChiSquared
+    return await generate_chart(request, MultipleChiSquared, "error_processing", extension="pdf")

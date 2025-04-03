@@ -4,7 +4,7 @@ import seaborn as sns
 from pydantic import BaseModel, Field
 from typing import List, Dict
 from api.schemas import BusinessLogicException
-from api.charts.constants import FIGURE_SIZE_DEFAULT, COLORS, MARKERS
+from api.charts.constants import FIGURE_SIZE_A4_PORTRAIT, COLORS, MARKERS
 
 
 class Scatterplot3Config(BaseModel):
@@ -70,11 +70,15 @@ class Scatterplot3:
         g.set_axis_labels(self.additional_data.yVar, self.additional_data.xVar)
 
         for ax in g.axes:
-            ax.grid(True, axis='both', zorder=-1)
+            ax.grid(True, axis='both', zorder=-1, alpha=0.3)
 
         plt.subplots_adjust(top=0.9)
-        g.fig.suptitle(title)
+        g.figure.suptitle(title)
 
-        self.figure = g.fig
+        # Set the figure size to A4 portrait
+        g.figure.set_size_inches(*FIGURE_SIZE_A4_PORTRAIT)
+
+        self.figure = g.figure
+        plt.tight_layout(pad=2.0)
         plt.close('all')
         return self.figure

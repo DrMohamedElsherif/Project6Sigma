@@ -4,7 +4,7 @@ import seaborn as sns
 from pydantic import BaseModel, Field
 from typing import List, Dict
 from api.schemas import BusinessLogicException
-from api.charts.constants import FIGURE_SIZE_DEFAULT, TITLE_FONT_SIZE, COLORS, MARKERS
+from api.charts.constants import FIGURE_SIZE_A4_PORTRAIT, TITLE_FONT_SIZE, COLOR_PALETTE, MARKERS
 
 
 class Individual2Config(BaseModel):
@@ -53,8 +53,11 @@ class Individual2:
         })
 
         # Define size of figure and style
-        self.figure = plt.figure(figsize=FIGURE_SIZE_DEFAULT)
-        sns.set(style="whitegrid")
+        self.figure = plt.figure(figsize=FIGURE_SIZE_A4_PORTRAIT)
+
+        plt.subplots_adjust(top=0.85, bottom=0.4, left=0.1, right=0.9)
+
+        sns.set_theme(style="whitegrid")
 
         # Create subplot
         ax = self.figure.add_subplot(111)
@@ -71,7 +74,7 @@ class Individual2:
             s=10,  # Using 's' instead of 'size' for consistency with matplotlib
             jitter=False,
             hue='category',  # Use the category for both x and hue
-            palette=COLORS[:n_categories],  # Limit colors to number of categories
+            palette=COLOR_PALETTE[:n_categories],  # Limit colors to number of categories
             legend=False,  # Hide the legend since categories are shown on x-axis
             ax=ax
         )
@@ -83,6 +86,6 @@ class Individual2:
         ax.set_title(title, fontsize=TITLE_FONT_SIZE, pad=20)
 
         # Adjust layout
-        plt.tight_layout()
+        #plt.tight_layout()
         plt.close('all')
         return self.figure

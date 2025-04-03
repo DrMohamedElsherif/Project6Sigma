@@ -4,7 +4,7 @@ import seaborn as sns
 from pydantic import BaseModel, Field
 from typing import List, Dict, Optional
 from api.schemas import BusinessLogicException
-from api.charts.constants import FIGURE_SIZE_DEFAULT, TITLE_FONT_SIZE, COLORS, MARKERS
+from api.charts.constants import FIGURE_SIZE_A4_PORTRAIT, TITLE_FONT_SIZE, COLOR_PALETTE, MARKERS
 
 
 class Individual5Config(BaseModel):
@@ -49,7 +49,7 @@ class Individual5:
 
     def get_color_palette(self, n_colors):
         """Get a subset of colors based on the number needed."""
-        return [COLORS[i % len(COLORS)] for i in range(n_colors)]
+        return [COLOR_PALETTE[i % len(COLOR_PALETTE)] for i in range(n_colors)]
 
     def process(self):
         title = self.config.title
@@ -61,8 +61,8 @@ class Individual5:
         })
 
         # Set figure size and style
-        sns.set(rc={'figure.figsize': FIGURE_SIZE_DEFAULT})
-        sns.set(style="whitegrid")
+        sns.set_theme(rc={'figure.figsize': FIGURE_SIZE_A4_PORTRAIT})
+        sns.set_theme(style="whitegrid")
 
         if self.additional_data and self.additional_data.values2 is not None:
             # Create additional data DataFrame
@@ -115,6 +115,7 @@ class Individual5:
             )
 
         # Rotate x-axis labels
+        plt.subplots_adjust(top=0.85, bottom=0.4, left=0.1, right=0.9)
         sp.set_xticks(range(len(sp.get_xticklabels())))
         sp.set_xticklabels(sp.get_xticklabels(), rotation=45, ha='right')
 
@@ -125,7 +126,7 @@ class Individual5:
         sp.set_title(title, fontsize=TITLE_FONT_SIZE, pad=20)
 
         # Adjust layout
-        plt.tight_layout(pad=1.5)
+        # plt.tight_layout(pad=1.5)
 
         self.figure = plt.gcf()
         plt.close('all')

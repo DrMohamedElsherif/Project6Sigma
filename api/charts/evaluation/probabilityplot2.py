@@ -5,7 +5,7 @@ import numpy as np
 from pydantic import BaseModel, Field
 from typing import List, Dict
 from api.schemas import BusinessLogicException
-from api.charts.constants import FIGURE_SIZE_DEFAULT, TITLE_FONT_SIZE, TITLE_PADDING, COLORS, MARKERS
+from api.charts.constants import FIGURE_SIZE_A4_PORTRAIT, TITLE_FONT_SIZE, TITLE_PADDING, COLOR_PALETTE, MARKERS
 
 
 class Probabilityplot2Config(BaseModel):
@@ -75,7 +75,7 @@ class Probabilityplot2:
             result.statistic < result.critical_values)[0][-1]]
 
         # Create figure
-        self.figure = plt.figure(figsize=FIGURE_SIZE_DEFAULT)
+        self.figure = plt.figure(figsize=FIGURE_SIZE_A4_PORTRAIT)
 
         # Create plots for each column
         for index, column in enumerate(df):
@@ -83,7 +83,7 @@ class Probabilityplot2:
             probplot = stats.probplot(df[column], plot=None)
 
             plt.scatter(probplot[0][0], probplot[0][1],
-                        color=COLORS[index], marker=MARKERS[index], zorder=3)
+                        color=COLOR_PALETTE[index*2], marker=MARKERS[index], zorder=3)
 
             regression = np.polyfit(probplot[0][0], probplot[0][1], 1)
             se = np.sqrt(np.mean((probplot[0][1] - np.polyval(regression, probplot[0][0])) ** 2))
@@ -92,9 +92,9 @@ class Probabilityplot2:
                                              scale=se)
 
             plt.plot(probplot[0][0], np.polyval(regression, probplot[0][0]),
-                     color=COLORS[index], zorder=3)
+                     color=COLOR_PALETTE[index*2], zorder=3)
             plt.fill_between(probplot[0][0], conf_interval[0], conf_interval[1],
-                             color=COLORS[index], alpha=0.2,
+                             color=COLOR_PALETTE[index*2], alpha=0.2,
                              label='Confidence Interval (95%)')
 
         # Set labels and title
@@ -107,7 +107,7 @@ class Probabilityplot2:
         plt.annotate(text, (0, 0), (0, -30), xycoords='axes fraction',
                      textcoords='offset points', va='top', fontsize=12)
 
-        plt.tight_layout()
+        plt.subplots_adjust(top=0.85, bottom=0.4, left=0.1, right=0.9)
         plt.xticks([])
         plt.close('all')
         return self.figure

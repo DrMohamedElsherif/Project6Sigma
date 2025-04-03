@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 from pydantic import BaseModel, Field
 from typing import List, Dict
 from api.schemas import BusinessLogicException
-from api.charts.constants import COLOR_BLACK, TITLE_FONT_SIZE, COLORS, FIGURE_SIZE_DEFAULT
+from api.charts.constants import COLOR_BLACK, TITLE_FONT_SIZE, COLOR_PALETTE, FIGURE_SIZE_A4_PORTRAIT
 
 
 class Histogram4Config(BaseModel):
@@ -49,9 +49,11 @@ class Histogram4:
         data = [df[column].values.tolist() for column in df.columns]
 
         # Generate a list of colors for each subplot
-        colors = COLORS[:num_datasets]
+        colors = COLOR_PALETTE[:num_datasets]
 
-        self.figure, ax = plt.subplots(figsize=FIGURE_SIZE_DEFAULT)
+        self.figure, ax = plt.subplots(figsize=FIGURE_SIZE_A4_PORTRAIT)
+
+        plt.subplots_adjust(top=0.85, bottom=0.4, left=0.1, right=0.9)
 
         # Enable grid lines
         plt.grid(True)

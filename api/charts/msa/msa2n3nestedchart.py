@@ -8,6 +8,11 @@ import seaborn as sns
 from matplotlib.backends.backend_pdf import PdfPages
 from pydantic import BaseModel, Field
 from scipy.stats import f
+from ..constants import FIGURE_SIZE_A4_PORTRAIT, TABLE_EDGE_COLOR, TABLE_BG_COLOR_GREY, COLOR_PALETTE
+from ...utils.pdf_utils import add_header_or_footer_to_a4_portrait
+
+header_image_path = 'assets/img/Header.png'
+footer_image_path = 'assets/img/Footer.png'
 
 from api.schemas import BusinessLogicException
 
@@ -222,10 +227,12 @@ class MSA2n3NestedChart:
         pdf_io = io.BytesIO()
 
         with PdfPages(pdf_io) as pdf:
-            fig, axes = plt.subplots(2, 1, figsize=(8.27, 11.69))  # A4 size in inches
+            fig, axes = plt.subplots(2, 1, figsize=(FIGURE_SIZE_A4_PORTRAIT), dpi=300)  # A4 size in inches
             fig.subplots_adjust(hspace=0.4)  # Increase hspace to add more space between charts
-            fig.suptitle(title, fontsize=16, weight='bold', y=0.94)
-
+            # fig.suptitle(title, fontsize=16, weight='bold', y=0.94)
+            header_ax = add_header_or_footer_to_a4_portrait(fig, header_image_path, position='header')
+            footer_ax = add_header_or_footer_to_a4_portrait(fig, footer_image_path, position='footer', page_number=1, total_pages=3)
+ 
             # Plot Value by Part Scatter Plot
             self._plot_value_by_part(data, data_grouped_by_part, axes[0])
 
@@ -273,9 +280,11 @@ class MSA2n3NestedChart:
                 list(dict.fromkeys(data["Part"]))).reset_index()
 
             # NEW PDF PAGE - X-bar and R Charts for all Operators in single charts
-            fig, (ax_xbar, ax_r) = plt.subplots(2, 1, figsize=(11.69, 8.27))  # A4 size in landscape
+            fig, (ax_xbar, ax_r) = plt.subplots(2, 1, figsize=(FIGURE_SIZE_A4_PORTRAIT), dpi=300)  # A4 size in landscape
             fig.subplots_adjust(hspace=0.35, top=0.85)
-            fig.suptitle(f"{title}\nX-bar and R Charts by {label}", fontsize=16, weight='bold', y=0.95)
+            # fig.suptitle(f"{title}\nX-bar and R Charts by {label}", fontsize=16, weight='bold', y=0.95)
+            header_ax = add_header_or_footer_to_a4_portrait(fig, header_image_path, position='header')
+            footer_ax = add_header_or_footer_to_a4_portrait(fig, footer_image_path, position='footer', page_number=2, total_pages=3)
 
             self._plot_r_chart_all_operators(data_grouped_by_operator_and_part_stats, label, ax_xbar)
             self._plot_xbar_chart_all_operators(data_grouped_by_operator_and_part_stats, label, ax_r)
@@ -284,10 +293,11 @@ class MSA2n3NestedChart:
             plt.close(fig)
 
             # NEW PDF PAGE - Tables
-            fig, axes = plt.subplots(4, 1, figsize=(8.27, 11.69))  # A4 size in inches
+            fig, axes = plt.subplots(4, 1, figsize=(FIGURE_SIZE_A4_PORTRAIT), dpi=300)  # A4 size in inches
             fig.subplots_adjust(hspace=0.5)
+            header_ax = add_header_or_footer_to_a4_portrait(fig, header_image_path, position='header')
+            footer_ax = add_header_or_footer_to_a4_portrait(fig, footer_image_path, position='footer', page_number=3, total_pages=3)
 
-            edge_color = '#D3D3D3'
             desired_height = 0.15
             font_size = 8
 
@@ -302,8 +312,11 @@ class MSA2n3NestedChart:
                 if (cell.get_text().get_text() == 'nan'):
                     cell.get_text().set_text('')
                 cell.set_linewidth(1)
-                cell.set_edgecolor(edge_color)
+                cell.set_edgecolor(TABLE_EDGE_COLOR)
                 cell.set_height(desired_height)
+                # Add background color to header row
+                if key[0] == 0:
+                    cell.set_facecolor(TABLE_BG_COLOR_GREY)
 
             axes[1].axis('off')
             axes[1].set_title("Gage R&R Variance Components", fontsize=11, weight="semibold")
@@ -316,8 +329,11 @@ class MSA2n3NestedChart:
                 if (cell.get_text().get_text() == 'nan'):
                     cell.get_text().set_text('')
                 cell.set_linewidth(1)
-                cell.set_edgecolor(edge_color)
+                cell.set_edgecolor(TABLE_EDGE_COLOR)
                 cell.set_height(desired_height)
+                # Add background color to header row
+                if key[0] == 0:
+                    cell.set_facecolor(TABLE_BG_COLOR_GREY)
 
             axes[2].axis('off')
             axes[2].set_title("Gage R&R Evaluation", fontsize=11, weight="semibold")
@@ -330,8 +346,11 @@ class MSA2n3NestedChart:
                 if (cell.get_text().get_text() == 'nan'):
                     cell.get_text().set_text('')
                 cell.set_linewidth(1)
-                cell.set_edgecolor(edge_color)
+                cell.set_edgecolor(TABLE_EDGE_COLOR)
                 cell.set_height(desired_height)
+                # Add background color to header row
+                if key[0] == 0:
+                    cell.set_facecolor(TABLE_BG_COLOR_GREY)
 
             axes[3].axis('off')
 
@@ -483,15 +502,17 @@ class MSA2n3NestedChart:
 
     def _plot_value_by_part(self, data, data_grouped_by_part, ax):
         ax.scatter(x=data["Part"], y=data["Value"], color="grey")
-        ax.scatter(x=data_grouped_by_part["Part"], y=data_grouped_by_part["Value"], color="#7DA7D9", facecolors="none")
-        ax.plot(data_grouped_by_part["Part"], data_grouped_by_part["Value"], color="#7DA7D9")
+        ax.scatter(x=data_grouped_by_part["Part"], y=data_grouped_by_part["Value"], color="#95b92a", facecolors="none")
+        ax.plot(data_grouped_by_part["Part"], data_grouped_by_part["Value"], color="#95b92a")
         ax.set_xticks(list(data_grouped_by_part["Part"]))
         ax.set_title("Value by Part")
         ax.set_xlabel("Part")
         ax.grid(color="lightgrey")
 
     def _plot_value_by_operator(self, data, label, data_grouped_by_operator, ax):
-        sns.boxplot(x="Operator", y="Value", data=data, color="#7DA7D9", width=0.4, ax=ax)
+        sns.boxplot(x="Operator", y="Value", data=data, color="#a1d111", width=0.4, ax=ax, showcaps=False, 
+                linewidth=1, 
+                flierprops={"marker": "x"})
         ax.set_xlabel(label)
         ax.plot(data_grouped_by_operator["Operator"], data_grouped_by_operator["Value"], color="grey")
         ax.scatter(x=data_grouped_by_operator["Operator"], y=data_grouped_by_operator["Value"], facecolors="none",
@@ -504,34 +525,33 @@ class MSA2n3NestedChart:
         overall_mean = data['Mean'].mean()
         overall_range_mean = data['Range'].mean()
 
-        colors = plt.cm.tab10(np.linspace(0, 1, len(operators)))
         cumulative_parts = 0
 
         for i, operator in enumerate(operators):
             operator_data = data[data['Operator'] == operator]
             n_parts = len(operator_data)
             x = np.arange(cumulative_parts, cumulative_parts + n_parts)
-            ax.plot(x, operator_data['Mean'], marker='o', color=colors[i])
+            ax.plot(x, operator_data['Mean'], marker='o', color=COLOR_PALETTE[i], zorder=5)
             cumulative_parts += n_parts
 
-        ax.axhline(overall_mean, color="green", label="Overall X-bar", linewidth=0.9)
-        ax.axhline(overall_mean + (1.023 * overall_range_mean), color="red", label="UCL", linewidth=0.9)
-        ax.axhline(overall_mean - (1.023 * overall_range_mean), color="red", label="LCL", linewidth=0.9)
+        ax.axhline(overall_mean, color="grey", label="Overall X-bar", linewidth=0.9)
+        ax.axhline(overall_mean + (1.023 * overall_range_mean), color="#a03130", label="UCL", linewidth=1, zorder=3)
+        ax.axhline(overall_mean - (1.023 * overall_range_mean), color="#a03130", label="LCL", linewidth=1, zorder=3)
 
         x_max = ax.get_xlim()[1]
         x_min = ax.get_xlim()[0]
         space = x_max + (x_max - x_min) * 0.01
-        ax.text(space, overall_mean, f'{overall_mean:.2f}', color="green", va='center')
+        ax.text(space, overall_mean, f'{overall_mean:.2f}', color="grey", va='center')
         ax.text(space, overall_mean + (1.023 * overall_range_mean),
-                f'{(overall_mean + 1.023 * overall_range_mean):.2f}', color="red", va='center')
+                f'{(overall_mean + 1.023 * overall_range_mean):.2f}', color="#a03130", va='center')
         ax.text(space, overall_mean - (1.023 * overall_range_mean),
-                f'{(overall_mean - 1.023 * overall_range_mean):.2f}', color="red", va='center')
+                f'{(overall_mean - 1.023 * overall_range_mean):.2f}', color="#a03130", va='center')
 
         ax.set_title(f"X-bar Chart by {label}")
         ax.set_xlabel("Part")
         ax.set_ylabel("Sample Mean")
-        ax.legend(fontsize='small', loc='upper right')
-        ax.grid(color="lightgrey")
+        ax.legend(fontsize='small', loc='best')
+        ax.grid(True, alpha=0.3, zorder=0)
 
         # Set x-ticks and labels
         ax.set_xticks(range(cumulative_parts))
@@ -552,32 +572,31 @@ class MSA2n3NestedChart:
         operators = data['Operator'].unique()
         overall_range_mean = data['Range'].mean()
 
-        colors = plt.cm.tab10(np.linspace(0, 1, len(operators)))
         cumulative_parts = 0
 
         for i, operator in enumerate(operators):
             operator_data = data[data['Operator'] == operator]
             n_parts = len(operator_data)
             x = np.arange(cumulative_parts, cumulative_parts + n_parts)
-            ax.plot(x, operator_data['Range'], marker='o', color=colors[i])
+            ax.plot(x, operator_data['Range'], marker='o', color=COLOR_PALETTE[i], zorder=5)
             cumulative_parts += n_parts
 
-        ax.axhline(overall_range_mean, color="green", label="Overall R-bar", linewidth=0.9)
-        ax.axhline(2.574 * overall_range_mean, color="red", label="UCL", linewidth=0.9)
-        ax.axhline(0, color="red", label="LCL", linewidth=0.9)
+        ax.axhline(overall_range_mean, color="grey", label="Overall R-bar", linewidth=1, zorder=3)
+        ax.axhline(2.574 * overall_range_mean, color="#a03130", label="UCL", linewidth=1, zorder=3)
+        ax.axhline(0, color="#a03130", label="LCL", linewidth=0.9)
 
         x_max = ax.get_xlim()[1]
         x_min = ax.get_xlim()[0]
         space = x_max + (x_max - x_min) * 0.01
-        ax.text(space, overall_range_mean, f'{overall_range_mean:.3f}', color="green", va='center')
-        ax.text(space, 2.574 * overall_range_mean, f'{(2.574 * overall_range_mean):.3f}', color="red", va='center')
-        ax.text(space, 0, '0.000', color="red", va='center')
+        ax.text(space, overall_range_mean, f'{overall_range_mean:.3f}', color="grey", va='center')
+        ax.text(space, 2.574 * overall_range_mean, f'{(2.574 * overall_range_mean):.3f}', color="#a03130", va='center')
+        ax.text(space, 0, '0.000', color="#a03130", va='center')
 
         ax.set_title(f"R Chart by {label}")
         ax.set_xlabel("Part")
         ax.set_ylabel("Sample Range")
-        ax.legend(fontsize='small', loc='upper right')
-        ax.grid(color="lightgrey")
+        ax.legend(fontsize='small', loc='best')
+        ax.grid(True, alpha=0.3, zorder=0)
 
         # Set x-ticks and labels
         ax.set_xticks(range(cumulative_parts))

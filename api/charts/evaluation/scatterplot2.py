@@ -4,7 +4,7 @@ import seaborn as sns
 from pydantic import BaseModel, Field
 from typing import List, Dict
 from api.schemas import BusinessLogicException
-from api.charts.constants import FIGURE_SIZE_DEFAULT, COLORS, MARKERS
+from api.charts.constants import FIGURE_SIZE_A4_PORTRAIT, COLOR_PALETTE, MARKERS
 
 
 class Scatterplot2Config(BaseModel):
@@ -51,10 +51,10 @@ class Scatterplot2:
         title = self.config.title
         df = pd.DataFrame(self.data.values)
 
-        self.figure = plt.figure(figsize=FIGURE_SIZE_DEFAULT)
+        self.figure = plt.figure(figsize=FIGURE_SIZE_A4_PORTRAIT)
 
         groups = df[self.additional_data.group].unique()
-        colors = dict(zip(groups, COLORS[:len(groups)]))
+        colors = dict(zip(groups, COLOR_PALETTE[:len(groups)]))
         markers = dict(zip(groups, MARKERS[:len(groups)]))
 
         for group in groups:
@@ -77,6 +77,7 @@ class Scatterplot2:
         plt.xlabel(self.additional_data.xVar)
         plt.ylabel(self.additional_data.yVar)
         plt.title(title)
-        plt.grid(True, which='both', zorder=-1)
+        plt.grid(True, which='both', zorder=-1, alpha=0.3)
+        plt.subplots_adjust(top=0.85, bottom=0.4, left=0.1, right=0.9)
         plt.close('all')
         return self.figure

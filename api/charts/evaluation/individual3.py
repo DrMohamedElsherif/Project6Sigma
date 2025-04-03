@@ -4,7 +4,7 @@ import seaborn as sns
 from pydantic import BaseModel, Field
 from typing import List, Dict
 from api.schemas import BusinessLogicException
-from api.charts.constants import FIGURE_SIZE_DEFAULT, TITLE_FONT_SIZE, COLORS
+from api.charts.constants import COLOR_PALETTE, TITLE_FONT_SIZE
 
 
 class Individual3Config(BaseModel):
@@ -65,19 +65,24 @@ class Individual3:
 
         sns.set_style("whitegrid")
 
+        # Calculate the number of rows and columns dynamically based on the number of groups
+        num_groups = df[self.additional_data.group].nunique()
+        cols = 2  # Fixed number of columns
+        rows = -(-num_groups // cols)  # Ceiling division to determine rows
+
         # Create facet grid with subplots for each group
         sp = sns.FacetGrid(
             df,
             col=self.additional_data.group,
-            col_wrap=2,
-            aspect=1.5,
-            height=5
+            col_wrap=cols,
+            aspect=0.7,
+            height=(11.69 - 2) / rows,  # Adjust height dynamically for A4 portrait
         )
 
         def custom_stripplot(x, y, data, **kwargs):
             # Get the number of unique categories in the current subplot
             current_cats = data[x].unique()
-            current_palette = COLORS[:len(current_cats)]
+            current_palette = COLOR_PALETTE[:len(current_cats)]
 
             sns.stripplot(
                 data=data,
@@ -101,13 +106,16 @@ class Individual3:
         )
 
         # Set title and adjust layout
-        sp.fig.suptitle(title, fontsize=TITLE_FONT_SIZE)
+        sp.figure.suptitle(title, fontsize=TITLE_FONT_SIZE)
         plt.subplots_adjust(top=0.9)
 
         # Add grid to all subplots
         for ax in sp.axes.flat:
             ax.grid(True, axis='both')
 
-        self.figure = sp.fig
+        # Set the figure size to A4 portrait
+        sp.figure.set_size_inches(8.27, 11.69)
+
+        self.figure = sp.figure
         plt.close('all')
         return self.figure

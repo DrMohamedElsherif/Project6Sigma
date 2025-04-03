@@ -3,6 +3,11 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_pdf import PdfPages
+from ...constants import TABLE_BG_COLOR_GREY, TABLE_EDGE_COLOR
+from ....utils.pdf_utils import add_header_or_footer_to_a4_portrait
+
+header_image_path = 'assets/img/Header.png'
+footer_image_path = 'assets/img/Footer.png'
 
 from api.schemas import BusinessLogicException
 
@@ -73,30 +78,33 @@ def U_chart(data, title, acceptable_DPU=0, subgroup_size=1):
         fig, axs = plt.subplot_mosaic([
             ["U", "U"],
             ["Cumulative DPU", "Cumulative DPU"]],
-            figsize=(11.69, 8.27))  # A4 size in inches for landscape
+            figsize=(8.27, 11.69), dpi=300)  # A4 size in inches for landscape
 
         plt.tight_layout()
-        plt.subplots_adjust(left=0.1, right=0.9, top=0.9, bottom=0.1, hspace=0.8, wspace=0.5)
-        plt.suptitle(f"{title}", fontsize=16, y=0.96)
+        plt.subplots_adjust(left=0.1, right=0.9, top=0.85, bottom=0.15, hspace=0.2, wspace=0.5)
+        # plt.suptitle(f"{title}", fontsize=16, y=0.96)
+
+        header_ax = add_header_or_footer_to_a4_portrait(fig, header_image_path, position='header')
+        footer_ax = add_header_or_footer_to_a4_portrait(fig, footer_image_path, position='footer', page_number=1, total_pages=2)
 
         # Plot U chart
-        axs["U"].plot(data["u"], linestyle="-", marker="o", color="black")
-        axs["U"].plot(data[data["u"] > UCL]["u"], linestyle="", marker="s", color="red")
-        axs["U"].plot(data[data["u"] < LCL]["u"], linestyle="", marker="s", color="red")
-        axs["U"].axhline(np.mean(data["u"]), color="green", label="Mean")
-        axs["U"].axhline(UCL, color="#A50021", label="UCL")
-        axs["U"].axhline(LCL, color="#A50021", label="LCL")
+        axs["U"].plot(data["u"], color='black', marker='o', lw=0.5, zorder=3)
+        axs["U"].plot(data[data["u"] > UCL]["u"], linestyle="", marker="s", color="red", zorder=3)
+        axs["U"].plot(data[data["u"] < LCL]["u"], linestyle="", marker="s", color="red", zorder=3)
+        axs["U"].axhline(np.mean(data["u"]), color="grey", label="Mean", linestyle='dashed', zorder=1)
+        axs["U"].axhline(UCL, color="#a03130", label="UCL")
+        axs["U"].axhline(LCL, color="#a03130", label="LCL")
         axs["U"].set_title("U Chart")
         axs["U"].set_ylabel("Defects per Unit")
-        axs["U"].grid(True)
+        axs["U"].grid(True, alpha=0.3, zorder=0)
 
         # Plot Cumulative DPU chart
-        axs["Cumulative DPU"].plot(data["u"].expanding().mean(), linestyle="-", marker="o", color="black")
-        axs["Cumulative DPU"].axhline(data["u"].mean(), linestyle="--", color="grey")
+        axs["Cumulative DPU"].plot(data["u"].expanding().mean(), color='black', marker='o', lw=0.5, zorder=3)
+        axs["Cumulative DPU"].axhline(data["u"].mean(), linestyle="--", color="grey", zorder=1)
         axs["Cumulative DPU"].set_title("Cumulative DPU")
         axs["Cumulative DPU"].set_xlabel("Subgroup")
         axs["Cumulative DPU"].set_ylabel("Defects per Unit")
-        axs["Cumulative DPU"].grid(color="gray", linewidth=0.5)
+        axs["Cumulative DPU"].grid(color="gray", linewidth=0.5, zorder=0)
 
         pdf.savefig(fig)
         plt.close(fig)
@@ -105,15 +113,18 @@ def U_chart(data, title, acceptable_DPU=0, subgroup_size=1):
         fig, axs = plt.subplot_mosaic([
             ["Histogram", "Probability Plot"],
             ["Process Characterization", "Process Capability"]],
-            figsize=(11.69, 8.27))  # A4 size in inches for landscape
-        plt.subplots_adjust(left=0.1, right=0.9, top=0.9, bottom=0.1, hspace=0.6, wspace=0.1)
+            figsize=(8.27, 11.69), dpi=300)  # A4 size in inches for landscape
+        plt.subplots_adjust(left=0.1, right=0.9, top=0.85, bottom=0.15, hspace=0.6, wspace=0.1)
+
+        header_ax = add_header_or_footer_to_a4_portrait(fig, header_image_path, position='header')
+        footer_ax = add_header_or_footer_to_a4_portrait(fig, footer_image_path, position='footer', page_number=2, total_pages=2)
 
         # Plot histogram of observed DPU per subgroup
-        axs["Histogram"].hist(data["u"], color="#7DA7D9", edgecolor="black", bins=10)
-        axs["Histogram"].axvline(acceptable_DPU, linestyle="--", color="red", label="Acceptable DPU")
-        axs["Histogram"].annotate(f"{acceptable_DPU}", xy=(acceptable_DPU, 0.5), color="red")
+        axs["Histogram"].hist(data["u"], color="#95b92a", edgecolor="black", bins=10, zorder=3)
+        axs["Histogram"].axvline(acceptable_DPU, linestyle="--", color="grey", label="Acceptable DPU", zorder=3)
+        axs["Histogram"].annotate(f"{acceptable_DPU}", xy=(acceptable_DPU * 1.03, axs['Histogram'].get_ylim()[1]*0.95), color="grey")
         axs["Histogram"].set_title("Observed DPU per Subgroup")
-        axs["Histogram"].grid(color="lightgray", linestyle="--", linewidth=0.5)
+        axs["Histogram"].grid(True, alpha=0.3, zorder=0)
         axs["Histogram"].legend(loc="upper right", fontsize="small")
 
         # Generate Process Characterization dataframe
@@ -146,6 +157,16 @@ def U_chart(data, title, acceptable_DPU=0, subgroup_size=1):
             colWidths=[0.3, 0.25],
             bbox=[0.4, 0.38, 0.425, 0.6]
         )
+
+        # Set edge color for process_characterization_table
+        for cell in process_characterization_table.get_celld().values():
+            cell.set_edgecolor(TABLE_EDGE_COLOR)
+        process_characterization_table.auto_set_font_size(False)
+        process_characterization_table.set_fontsize(8)
+
+        # Set the top-left cell background color to TABLE_BG_COLOR_GREY
+        process_characterization_table[(0, 0)].set_facecolor(TABLE_BG_COLOR_GREY)
+        
         axs["Process Characterization"].axis('off')
         process_characterization_table.scale(1, 1)
         axs["Process Characterization"].set_title("Process Characterization", pad=20)
@@ -160,6 +181,15 @@ def U_chart(data, title, acceptable_DPU=0, subgroup_size=1):
             colWidths=[0.3, 0.25],
             bbox=[0.35, 0.5, 0.5, 0.5]
         )
+
+        # Set edge color for process_capability_table
+        for cell in process_capability_table.get_celld().values():
+            cell.set_edgecolor(TABLE_EDGE_COLOR)
+        process_capability_table.auto_set_font_size(False)
+        process_capability_table.set_fontsize(8)
+
+        process_capability_table[(0, 0)].set_facecolor(TABLE_BG_COLOR_GREY)  
+
         axs["Process Capability"].axis('off')
         axs["Process Capability"].set_title("Process Capability", pad=20)
 

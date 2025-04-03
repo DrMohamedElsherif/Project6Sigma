@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 from pydantic import BaseModel, Field
 from typing import List, Dict, Union
 from api.schemas import BusinessLogicException
-from api.charts.constants import TITLE_FONT_SIZE, MARKERS, COLORS
+from api.charts.constants import TITLE_FONT_SIZE, MARKERS, COLOR_PALETTE, FIGURE_SIZE_A4_PORTRAIT
 
 
 class Matrixplot2Config(BaseModel):
@@ -50,7 +50,7 @@ class Matrixplot2:
         df[self.data.group_variable] = self.data.groups
 
         # Set style
-        sns.set(style="whitegrid")
+        sns.set_theme(style="whitegrid")
 
         # Get number of unique groups
         num_unique = len(set(self.data.groups))
@@ -61,17 +61,20 @@ class Matrixplot2:
             hue=self.data.group_variable,
             diag_kind="kde",
             markers=MARKERS[0:num_unique],
-            palette=COLORS[0:num_unique],
+            palette=COLOR_PALETTE[0:num_unique],
             height=1.8,
             aspect=1.8
         )
 
         # Add title
-        pair_plot.fig.suptitle(title, fontsize=TITLE_FONT_SIZE)
+        pair_plot.figure.suptitle(title, fontsize=TITLE_FONT_SIZE)
 
         # Adjust layout
-        plt.subplots_adjust(top=0.9)
+        plt.subplots_adjust(top=0.9, bottom=0.1, left=0.1, right=0.9)
 
-        self.figure = pair_plot.fig
+        # Set figure size
+        pair_plot.figure.set_size_inches(FIGURE_SIZE_A4_PORTRAIT)
+
+        self.figure = pair_plot.figure
         plt.close('all')
         return self.figure

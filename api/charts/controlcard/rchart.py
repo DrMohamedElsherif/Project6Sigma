@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from pydantic import BaseModel, Field
 
-from api.charts.constants import FIGURE_SIZE_DEFAULT
+from api.charts.constants import FIGURE_SIZE_A4_PORTRAIT
 from api.schemas import BusinessLogicException
 
 
@@ -89,21 +89,23 @@ class Rchart:
         r_ucl = D4 * r_mean
         r_lcl = D3 * r_mean
 
-        self.figure, (ax1, ax2) = plt.subplots(2, figsize=FIGURE_SIZE_DEFAULT)
+        self.figure, (ax1, ax2) = plt.subplots(2, figsize=FIGURE_SIZE_A4_PORTRAIT)
 
-        ax1.plot(x_bars, linestyle='-', marker='o', color='blue')
+        ax1.plot(x_bars, color='black', marker='o', lw=0.5)
         ax1.axhline(x_ucl, color='red', linestyle='dashed', label=f'UCL={round(x_ucl, 3)}')
-        ax1.axhline(x_mean, color='green', label=f'X={round(x_mean, 3)}')
+        ax1.axhline(x_mean, color='grey', label=f'X={round(x_mean, 3)}', linestyle='dashed', alpha=0.7)
         ax1.axhline(x_lcl, color='red', linestyle='dashed', label=f'LCL={round(x_lcl, 3)}')
         ax1.set_title(self.config.title, fontsize=28, pad=20)
         ax1.set(ylabel='Sample Mean')
+        ax1.grid(True, alpha=0.3)
         ax1.legend(loc='upper right', framealpha=1)
 
-        ax2.plot(ranges, linestyle='-', marker='o', color='blue')
+        ax2.plot(ranges, color='black', marker='o', lw=0.5)
         ax2.axhline(r_ucl, color='red', linestyle='dashed', label=f'UCL={round(r_ucl, 3)}')
-        ax2.axhline(r_mean, color='green', label=f'R={round(r_mean, 3)}')
+        ax2.axhline(r_mean, color='grey', label=f'R={round(r_mean, 3)}', linestyle='dashed', alpha=0.7)
         ax2.axhline(r_lcl, color='red', linestyle='dashed', label=f'LCL={round(r_lcl, 3)}')
         ax2.set(xlabel='Sample', ylabel='Sample Range')
+        ax2.grid(True, alpha=0.3)
         ax2.legend(loc='upper right', framealpha=1)
 
         x_violations = [i for i, x in enumerate(x_bars) if x > x_ucl or x < x_lcl]

@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 from pydantic import BaseModel, Field
 from typing import List, Dict
 from api.schemas import BusinessLogicException
-from api.charts.constants import FIGURE_SIZE_DEFAULT, TITLE_FONT_SIZE, TITLE_PADDING
+from api.charts.constants import FIGURE_SIZE_A4_PORTRAIT, TITLE_FONT_SIZE, TITLE_PADDING, COLOR_PALETTE
 
 
 class Interval2Config(BaseModel):
@@ -49,7 +49,7 @@ class Interval2:
             df = pd.DataFrame(self.data.values)
 
             # Create figure and axis objects
-            fig, ax = plt.subplots(figsize=FIGURE_SIZE_DEFAULT)
+            fig, ax = plt.subplots(figsize=FIGURE_SIZE_A4_PORTRAIT)
 
             # Process each column
             for index, column in enumerate(df):
@@ -65,7 +65,8 @@ class Interval2:
                     yerr=confidence_interval,
                     fmt='o',
                     capsize=15,
-                    label=column
+                    label=column,
+                    color=COLOR_PALETTE[index % len(COLOR_PALETTE)]
                 )
 
             # Set labels and title
@@ -78,8 +79,10 @@ class Interval2:
             # Add legend
             ax.legend(loc='best')
 
+            plt.subplots_adjust(top=0.85, bottom=0.4, left=0.1, right=0.9)
+
             # Enable grid
-            ax.grid(True, which='both')
+            ax.grid(True, which='both', alpha=0.3)
 
             # Store the figure
             self.figure = fig

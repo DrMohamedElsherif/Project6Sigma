@@ -9,6 +9,11 @@ import statsmodels.api as sm
 from matplotlib.backends.backend_pdf import PdfPages
 from pydantic import BaseModel, Field
 from statsmodels.formula.api import ols
+from ..constants import FIGURE_SIZE_A4_PORTRAIT, TABLE_EDGE_COLOR, TABLE_BG_COLOR_GREY, COLOR_PALETTE
+from ...utils.pdf_utils import add_header_or_footer_to_a4_portrait
+
+header_image_path = 'assets/img/Header.png'
+footer_image_path = 'assets/img/Footer.png'
 
 from api.schemas import BusinessLogicException
 
@@ -228,9 +233,13 @@ class MSA2n3CrossedChart:
 
         with PdfPages(pdf_io) as pdf:
             # NEW PDF PAGE - Value by Part, Value by Operator, Part * Operator Interaction
-            fig, axes = plt.subplots(3, 1, figsize=(8.27, 11.69))  # A4 size in inches
+            fig, axes = plt.subplots(3, 1, figsize=(FIGURE_SIZE_A4_PORTRAIT), dpi=300)  # A4 size in inches
             fig.subplots_adjust(hspace=0.4)  # Increase hspace to add more space between charts
-            fig.suptitle(title, fontsize=16, weight='bold', y=0.94)
+            # fig.suptitle(title, fontsize=16, weight='bold', y=0.94)
+
+            header_ax = add_header_or_footer_to_a4_portrait(fig, header_image_path, position='header')
+            footer_ax = add_header_or_footer_to_a4_portrait(fig, footer_image_path, position='footer', page_number=1, total_pages=4)
+      
 
             # Plot Value by Part Scatter Plot
             self._plot_value_by_part(data, data_grouped_by_part, axes[0])
@@ -246,9 +255,12 @@ class MSA2n3CrossedChart:
 
             # NEW PDF PAGE - X-bar and R Charts for all Operators side by side
             # NEW PDF PAGE - X-bar and R Charts for all Operators in single charts
-            fig, (ax_xbar, ax_r) = plt.subplots(2, 1, figsize=(11.69, 8.27))
+            fig, (ax_xbar, ax_r) = plt.subplots(2, 1, figsize=(FIGURE_SIZE_A4_PORTRAIT), dpi=300)
             fig.subplots_adjust(hspace=0.35, top=0.85)
-            fig.suptitle(f"{title}\nX-bar and R Charts by {label}", fontsize=16, weight='bold', y=0.95)
+            # fig.suptitle(f"{title}\nX-bar and R Charts by {label}", fontsize=16, weight='bold', y=0.95)
+
+            header_ax = add_header_or_footer_to_a4_portrait(fig, header_image_path, position='header')
+            footer_ax = add_header_or_footer_to_a4_portrait(fig, footer_image_path, position='footer', page_number=2, total_pages=4)
 
             self._plot_r_chart_all_operators(data_grouped_by_operator_and_part_stats, label, ax_xbar)
             self._plot_xbar_chart_all_operators(data_grouped_by_operator_and_part_stats, label, ax_r)
@@ -257,10 +269,11 @@ class MSA2n3CrossedChart:
             plt.close(fig)
 
             # NEW PDF PAGE - Tables
-            fig, axes = plt.subplots(4, 1, figsize=(8.27, 11.69))  # A4 size in inches
+            fig, axes = plt.subplots(4, 1, figsize=(FIGURE_SIZE_A4_PORTRAIT), dpi=300)  # A4 size in inches
             fig.subplots_adjust(hspace=0.5)
+            header_ax = add_header_or_footer_to_a4_portrait(fig, header_image_path, position='header')
+            footer_ax = add_header_or_footer_to_a4_portrait(fig, footer_image_path, position='footer', page_number=3, total_pages=4)
 
-            edge_color = '#D3D3D3'
             desired_height = 0.12
             font_size = 7
 
@@ -291,8 +304,10 @@ class MSA2n3CrossedChart:
             table_0.scale(1, 2)  # Adjust scaling if needed
             for key, cell in table_0.get_celld().items():
                 cell.set_linewidth(1)
-                cell.set_edgecolor(edge_color)
+                cell.set_edgecolor(TABLE_EDGE_COLOR)
                 cell.set_height(desired_height)
+                if key[0] == 0:  # Apply background color to the first row
+                    cell.set_facecolor(TABLE_BG_COLOR_GREY)
 
             # Two-Way ANOVA Table Without Interaction
             axes[1].axis('off')
@@ -304,8 +319,10 @@ class MSA2n3CrossedChart:
             table_1.scale(1, 2)  # Adjust scaling if needed
             for key, cell in table_1.get_celld().items():
                 cell.set_linewidth(1)
-                cell.set_edgecolor(edge_color)
+                cell.set_edgecolor(TABLE_EDGE_COLOR)
                 cell.set_height(desired_height)
+                if key[0] == 0:  # Apply background color to the first row
+                    cell.set_facecolor(TABLE_BG_COLOR_GREY)
 
             # Gage R&R Components of Variation
             axes[2].axis('off')
@@ -317,8 +334,10 @@ class MSA2n3CrossedChart:
             table_2.scale(1, 2)  # Adjust scaling if needed
             for key, cell in table_2.get_celld().items():
                 cell.set_linewidth(1)
-                cell.set_edgecolor(edge_color)
+                cell.set_edgecolor(TABLE_EDGE_COLOR)
                 cell.set_height(desired_height)
+                if key[0] == 0:  # Apply background color to the first row
+                    cell.set_facecolor(TABLE_BG_COLOR_GREY)
 
             # Gage Evaluation
             axes[3].axis('off')
@@ -330,15 +349,19 @@ class MSA2n3CrossedChart:
             table_3.scale(1, 2)  # Adjust scaling if needed
             for key, cell in table_3.get_celld().items():
                 cell.set_linewidth(1)
-                cell.set_edgecolor(edge_color)
+                cell.set_edgecolor(TABLE_EDGE_COLOR)
                 cell.set_height(desired_height)
+                if key[0] == 0:  # Apply background color to the first row
+                    cell.set_facecolor(TABLE_BG_COLOR_GREY)
 
             pdf.savefig(fig)
             plt.close(fig)
 
             # NEW PDF PAGE - Two-way ANOVA
-            fig, ax = plt.subplots(1, 1, figsize=(8.27, 11.69))  # A4 size in portrait
+            fig, ax = plt.subplots(1, 1, figsize=(FIGURE_SIZE_A4_PORTRAIT), dpi=300)  # A4 size in portrait
             fig.subplots_adjust(bottom=0.20, top=0.85)  # Increase bottom space and headspace
+            header_ax = add_header_or_footer_to_a4_portrait(fig, header_image_path, position='header')
+            footer_ax = add_header_or_footer_to_a4_portrait(fig, footer_image_path, position='footer', page_number=4, total_pages=4)
 
             # Perform two-way ANOVA with and without interaction and plot the results
             self._perform_two_way_anova(data, label, operators_count, parts_count,
@@ -353,24 +376,23 @@ class MSA2n3CrossedChart:
 
     def _plot_value_by_part(self, data, data_grouped_by_part, ax):
         ax.scatter(x=data["Part"], y=data["Value"], color="grey")
-        ax.scatter(x=data_grouped_by_part["Part"], y=data_grouped_by_part["Value"], color="#7DA7D9", facecolors="none")
-        ax.plot(data_grouped_by_part["Part"], data_grouped_by_part["Value"], color="#7DA7D9")
+        ax.scatter(x=data_grouped_by_part["Part"], y=data_grouped_by_part["Value"], color="#95b92a", facecolors="none")
+        ax.plot(data_grouped_by_part["Part"], data_grouped_by_part["Value"], color="#95b92a")
         ax.set_xticks(list(data_grouped_by_part["Part"]))
         ax.set_title("Value by Part")
         ax.set_xlabel("Part")
-        ax.grid(color="lightgrey")
+        ax.grid(True, alpha=0.3)
 
     def _plot_value_by_operator(self, data, label, data_grouped_by_operator, ax):
-        sns.boxplot(x="Operator", y="Value", data=data, color="#7DA7D9", width=0.4, ax=ax)
+        sns.boxplot(x="Operator", y="Value", data=data, color="#a1d111", width=0.4, ax=ax, showcaps=False, linewidth=1, flierprops={'marker': 'x'})
         ax.plot(data_grouped_by_operator["Operator"], data_grouped_by_operator["Value"], color="grey")
         ax.scatter(x=data_grouped_by_operator["Operator"], y=data_grouped_by_operator["Value"], facecolors="none",
                    edgecolors="grey")
         ax.set_title(f"Value by {label}")
         ax.set_xlabel(label)
-        ax.grid(color="lightgrey")
+        ax.grid(True, alpha=0.3)
 
     def _plot_part_operator_interaction(self, data_grouped_by_operator_and_part, label, ax):
-        colors = ["#0051A5", "#971817", "#4DA862", "orange", "yellow", "pink", "lightgreen", "purple", "brown", "grey"]
         markers = ["o", "s", "D", "^", "v", "+", "x", "H", "<", ">"]
         linestyles = ["solid", "dashed", "dotted", "dashdot", "solid", "dotted", "dashed", "dashdot", "solid", "dotted"]
 
@@ -380,13 +402,13 @@ class MSA2n3CrossedChart:
             ax.scatter(
                 x=operator_data["Part"],
                 y=operator_data["Value"],
-                c=colors[i],
+                c=COLOR_PALETTE[i],
                 marker=markers[i],
                 label=operator)
             ax.plot(
                 operator_data["Part"],
                 operator_data["Value"],
-                color=colors[i],
+                color=COLOR_PALETTE[i],
                 linestyle=linestyles[i])
             i += 1
 
@@ -395,7 +417,7 @@ class MSA2n3CrossedChart:
         ax.set_xlabel("Part")
         ax.set_ylabel("Average")
         ax.legend()
-        ax.grid(color="lightgrey")
+        ax.grid(True, alpha=0.3)
 
     def _plot_xbar_chart_all_operators(self, data, label, ax):
         operators = data['Operator'].unique()
@@ -408,27 +430,27 @@ class MSA2n3CrossedChart:
         for i, operator in enumerate(operators):
             operator_data = data[data['Operator'] == operator]
             x = np.array(operator_data['Part']) + i * (n_parts + 1)  # Offset each operator's data
-            ax.plot(x, operator_data['Mean'], marker='o')
+            ax.plot(x, operator_data['Mean'], marker='o', color=COLOR_PALETTE[i], zorder=5)
 
         # Lines with Values
-        ax.axhline(overall_mean, color="green", label="Overall X-bar", linewidth=0.9)
-        ax.axhline(overall_mean + (1.023 * overall_range_mean), color="red", label="UCL", linewidth=0.9)
-        ax.axhline(overall_mean - (1.023 * overall_range_mean), color="red", label="LCL", linewidth=0.9)
+        ax.axhline(overall_mean, color="grey", label="Overall X-bar", zorder=3)
+        ax.axhline(overall_mean + (1.023 * overall_range_mean), color="#a03130", label="UCL", zorder=3)
+        ax.axhline(overall_mean - (1.023 * overall_range_mean), color="#a03130", label="LCL", zorder=3)
 
         x_max = ax.get_xlim()[1]
         x_min = ax.get_xlim()[0]
         space = x_max + (x_max - x_min) * 0.01
-        ax.text(space, overall_mean, f'{overall_mean:.2f}', color="green", va='center')
+        ax.text(space, overall_mean, f'{overall_mean:.2f}', color="grey", va='center')
         ax.text(space, overall_mean + (1.023 * overall_range_mean),
-                f'{(overall_mean + 1.023 * overall_range_mean):.2f}', color="red", va='center')
+                f'{(overall_mean + 1.023 * overall_range_mean):.2f}', color="#a03130", va='center')
         ax.text(space, overall_mean - (1.023 * overall_range_mean),
-                f'{(overall_mean - 1.023 * overall_range_mean):.2f}', color="red", va='center')
+                f'{(overall_mean - 1.023 * overall_range_mean):.2f}', color="#a03130", va='center')
 
         ax.set_title(f"X-bar Chart by {label}")
         ax.set_xlabel("Part")
         ax.set_ylabel("Sample Mean")
         ax.legend()
-        ax.grid(color="lightgrey")
+        ax.grid(True, alpha=0.3, zorder=0)
 
         # Set x-ticks and labels
         all_x = np.array([np.array(range(1, n_parts + 1)) + i * (n_parts + 1) for i in range(n_operators)]).flatten()
@@ -455,20 +477,20 @@ class MSA2n3CrossedChart:
         for i, operator in enumerate(operators):
             operator_data = data[data['Operator'] == operator]
             x = np.array(operator_data['Part']) + i * (n_parts + 1)  # Offset each operator's data
-            ax.plot(x, operator_data['Range'], marker='o')
+            ax.plot(x, operator_data['Range'], marker='o', color=COLOR_PALETTE[i], zorder=5)
 
-        ax.axhline(overall_range_mean, color="green", label="Overall R-bar", linewidth=0.9)
-        ax.axhline(overall_range_mean + (1.023 * overall_range_std), color="red", label="UCL", linewidth=0.9)
-        ax.axhline(max(0, overall_range_mean - (1.023 * overall_range_std)), color="red", label="LCL", linewidth=0.9)
+        ax.axhline(overall_range_mean, color="grey", label="Overall R-bar", zorder=3)
+        ax.axhline(overall_range_mean + (1.023 * overall_range_std), color="#a03130", label="UCL", zorder=3)
+        ax.axhline(max(0, overall_range_mean - (1.023 * overall_range_std)), color="#a03130", label="LCL", zorder=3)
 
         x_max = ax.get_xlim()[1]
         x_min = ax.get_xlim()[0]
         space = x_max + (x_max - x_min) * 0.01
         ax.text(space, overall_range_mean, f'{overall_range_mean:.2f}', color="green", va='center')
         ax.text(space, overall_range_mean + (1.023 * overall_range_std),
-                f'{(overall_range_mean + 1.023 * overall_range_std):.2f}', color="red", va='center')
+                f'{(overall_range_mean + 1.023 * overall_range_std):.2f}', color="#a03130", va='center')
         ax.text(space, overall_range_mean - (1.023 * overall_range_std),
-                f'{(overall_range_mean - 1.023 * overall_range_std):.2f}', color="red", va='center')
+                f'{(overall_range_mean - 1.023 * overall_range_std):.2f}', color="#a03130", va='center')
 
         ax.set_title(f"R Chart by {label}")
         ax.set_xlabel("Part")
@@ -569,13 +591,14 @@ class MSA2n3CrossedChart:
 
         if ax and pdf:
             gage_evaluation_df.loc[["Total Gage R&R", "Repeatability", "Reproducibility", "Part-To-Part"]][
-                ["%Contrib. (VarComp)", "%Study Var (%SV)", "%Tol. (SV/Toler)"]].plot(kind="bar", figsize=(10, 6),
-                                                                                      ax=ax)
+                ["%Contrib. (VarComp)", "%Study Var (%SV)", "%Tol. (SV/Toler)"]].plot(kind="bar",
+                                                                                      ax=ax, width=0.6, color=COLOR_PALETTE, zorder=5)
             ax.set_title("Components of Variation")
             ax.set_ylabel("Percent")
             ax.set_xlabel("")
-            ax.grid(color="lightgrey")
+            ax.grid(True, alpha=0.3, zorder=0)
             ax.set_xticklabels(ax.get_xticklabels(), rotation=45)
+            plt.subplots_adjust(top=0.85, bottom=0.4, left=0.1, right=0.9)
 
         return (model_2way_interaction_results, model_2way_no_interaction_results, gage_rr_var_comp_no_interaction_df,
                 gage_evaluation_df)

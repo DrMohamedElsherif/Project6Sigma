@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 from pydantic import BaseModel, Field
 from typing import List, Dict
 from api.schemas import BusinessLogicException
-from api.charts.constants import COLOR_BLACK, COLOR_BLUE, TITLE_FONT_SIZE
+from api.charts.constants import COLOR_BLACK, COLOR_BLUE, TITLE_FONT_SIZE, FIGURE_SIZE_A4_PORTRAIT
 
 
 class Histogram1Config(BaseModel):
@@ -44,10 +44,12 @@ class Histogram1:
         df = pd.DataFrame(self.data.values)
         data = df.iloc[:, 0]
 
-        self.figure, ax = plt.subplots(figsize=(15, 11))
+        self.figure, ax = plt.subplots(figsize=(FIGURE_SIZE_A4_PORTRAIT))
+
+        plt.subplots_adjust(top=0.85, bottom=0.4, left=0.1, right=0.9)
 
         # Enable grid lines
-        plt.grid(True)
+        plt.grid(True, zorder=0, alpha=0.3)
 
         # Add labels
         plt.xlabel(self.config.labelx)
@@ -56,9 +58,9 @@ class Histogram1:
         # Plot histogram
         ax.hist(
             data,
-            edgecolor=COLOR_BLACK,
-            align="left",
-            color=COLOR_BLUE
+            color='#95b92a', 
+            edgecolor='black', 
+            zorder=1
         )
         ax.set_title(self.config.title, fontsize=TITLE_FONT_SIZE, pad=20)
         plt.close('all')

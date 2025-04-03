@@ -5,26 +5,114 @@ import scipy.stats as stats
 import matplotlib.pyplot as plt
 from scipy.optimize import curve_fit
 from matplotlib.backends.backend_pdf import PdfPages
-from pydantic import BaseModel, Field
-from typing import List, Dict
+from pydantic import BaseModel, Field, field_validator
+from typing import List, Dict, Optional, Union, Any
 from api.schemas import BusinessLogicException
 import seaborn as sns
-from .mergecells import mergecells
+from statsmodels.stats.power import TTestIndPower
+
+from ...utils.pdf_utils import add_header_or_footer_to_a4_portrait
+
+header_image_path = 'assets/img/Header.png'
+footer_image_path = 'assets/img/Footer.png'
+
+from ...utils.mpl_table_utils import merge_mpl_table_cells as mergecells
 
 # check data format
 class TwoTtestConfig(BaseModel):
     title: str
     alphalevel: float
+    power: Optional[float] = Field(None, gt=0, le=1)    # Optional field with a value between 0 and 1
 
 
-class TwoTtestData(BaseModel):
-    values: Dict[str, List[float]] = Field(..., min_length=1)
+# class TwoTtestData(BaseModel):
+#     values: Dict[str, List[float]] = Field(..., min_length=1)
+
+class TwoTtestDataSeparate(BaseModel):
+    values: Dict[str, List[float]]
+    
+    @field_validator('values')
+    def check_exactly_two_series(cls, v):
+        if len(v) != 2:
+            raise ValueError("Exactly two data series are required for a two-sample t-test")
+        
+        for series_name, data in v.items():
+            if len(data) < 5:  # Statistical minimum for meaningful t-test
+                raise ValueError(f"Series '{series_name}' has fewer than 5 samples")
+            
+            if any(not np.isfinite(x) for x in data):
+                raise ValueError(f"Series '{series_name}' contains NaN or infinite values")
+        
+        # Check if variances are very different (optional warning)
+        keys = list(v.keys())
+        var1 = np.var(v[keys[0]], ddof=1)
+        var2 = np.var(v[keys[1]], ddof=1)
+        variance_ratio = var1 / var2
+        if variance_ratio > 4 or variance_ratio < 0.25:
+            print(f"Warning: Sample variances differ by a factor of {variance_ratio:.2f}. Results may be affected.")
+            
+        return v
+
+# Alternative data format with values in a single column
+class TwoTtestDataCombined(BaseModel):
+    values: List[float]
+    groups: List[str]
+    
+    @field_validator('groups')
+    def check_exactly_two_groups(cls, v, values):
+        unique_groups = set(v)
+        if len(unique_groups) != 2:
+            raise ValueError("Exactly two different group identifiers are required")
+        
+        # Check if we have the data values too
+        if 'values' in values and len(values['values']) != len(v):
+            raise ValueError("Values and groups must have the same length")
+            
+        # Count samples per group
+        group_counts = {}
+        for group in v:
+            group_counts[group] = group_counts.get(group, 0) + 1
+            
+        for group, count in group_counts.items():
+            if count < 5:  # Statistical minimum for meaningful t-test
+                raise ValueError(f"Group '{group}' has fewer than 5 samples")
+        
+        return v
+    
+    @field_validator('values')
+    def check_valid_numbers(cls, v):
+        if any(not np.isfinite(x) for x in v):
+            raise ValueError("Data contains NaN or infinite values")
+        return v
+
+# Union type to accept either format
+TwoTtestData = Union[TwoTtestDataSeparate, TwoTtestDataCombined]
 
 class TwoTtestRequest(BaseModel):
     project: str
     step: str
     config: TwoTtestConfig
-    data: TwoTtestData
+    data: Any  # Use Any type to handle both formats
+    
+    @field_validator('data')
+    def validate_data_format(cls, v):
+        # Check if the data is in separate format
+        if 'values' in v and isinstance(v['values'], dict):
+            try:
+                return TwoTtestDataSeparate(**v)
+            except Exception as e:
+                raise ValueError(f"Invalid separate data format: {str(e)}")
+        
+        # Check if the data is in combined format
+        elif 'values' in v and isinstance(v['values'], list) and 'groups' in v:
+            try:
+                return TwoTtestDataCombined(**v)
+            except Exception as e:
+                raise ValueError(f"Invalid combined data format: {str(e)}")
+        
+        # If neither format matches
+        else:
+            raise ValueError("Data must be either in separate format (dictionary of lists) or combined format (list of values with group identifiers)")
 
 class TwoTtest:
     """
@@ -42,21 +130,70 @@ class TwoTtest:
     """
     def __init__(self, data:dict):
         try:
-            validated_data = TwoTtestRequest(**data)
-            self.project = validated_data.project
-            self.step = validated_data.step
-            self.config = validated_data.config
-            self.data = validated_data.data
+            # Try to validate with either data format
+            if 'values' in data['data'] and isinstance(data['data']['values'], dict):
+                # Separate format - multiple columns
+                validated_data = TwoTtestRequest(**data)
+                self.project = validated_data.project
+                self.step = validated_data.step
+                self.config = validated_data.config
+                self.data = validated_data.data
+            elif 'values' in data['data'] and isinstance(data['data']['values'], list) and 'groups' in data['data']:
+                # Combined format - need to convert
+                self.project = data['project']
+                self.step = data['step']
+                self.config = TwoTtestConfig(**data['config'])
+                
+                # Store original data format temporarily
+                combined_data = {
+                    'values': data['data']['values'],
+                    'groups': data['data']['groups']
+                }
+                
+                # Convert to separate format
+                separate_data = self._convert_combined_to_separate(combined_data)
+                
+                # Replace with converted data
+                self.data = TwoTtestDataSeparate(values=separate_data)
+            else:
+                raise ValueError("Unrecognized data format")
+                
         except Exception as e:
             raise BusinessLogicException(
                 error_code="error_validation",
                 field=str(e),
                 details={"message": f"Invalid or missing field: {str(e)}"}
             )
+    
+    def _convert_combined_to_separate(self, combined_data):
+        """
+        Convert data from combined format (single column with group identifiers)
+        to separate format (dictionary with group names as keys).
         
+        Args:
+            combined_data: Dictionary with 'values' (list) and 'groups' (list) keys
+            
+        Returns:
+            Dictionary with group names as keys and lists of values as values
+        """
+        values = combined_data['values']
+        groups = combined_data['groups']
+        
+        # Create dictionary of separate data series
+        separate_data = {}
+        unique_groups = set(groups)
+        
+        for group in unique_groups:
+            # Extract values for this group
+            group_values = [values[i] for i in range(len(values)) if groups[i] == group]
+            separate_data[group] = group_values
+        
+        return separate_data
+
     def process(self):
         title = self.config.title
         alpha = self.config.alphalevel
+        power = self.config.power
         source_1 = list(self.data.values.keys())[0]
         source_2 = list(self.data.values.keys())[1]
         # Create two dataframes for each dataset
@@ -64,102 +201,28 @@ class TwoTtest:
         df1 = pd.DataFrame(self.data.values[data_keys[0]], columns=[data_keys[0]])
         df2 = pd.DataFrame(self.data.values[data_keys[1]], columns=[data_keys[1]])
         df_combined = pd.concat([df1, df2], axis=1)
+        confidence_percent = int((1 - alpha) * 100)
 
-        # Perform the 2 sample t-test
-        t_stat, p_value = stats.ttest_ind(df1, df2)
-        t_stat = np.round(t_stat, 2)
-        p_value = p_value[0]
-        p_value = np.round(p_value, 4)
-        if p_value < 0.0001:
-            p_value = "0.000"
+        results = _calculate_statistics(df1, df2, power, alpha)
 
-        # Calculate the descriptive statistics for each dataset
-        sample_1_size = df1.count().astype(int)
-        sample_1_mean = df1.mean().astype(float)
-        sample_1_median = df1.median()
-        sample_1_std = df1.std(ddof=1)
-        sample_1_standard_error = sample_1_std / (sample_1_size ** 0.5)
-        sample_1_lower_confidence_interval = sample_1_mean - stats.t.ppf(1 - alpha / 2, sample_1_size - 1) * sample_1_standard_error
-        sample_1_lower_confidence_interval = sample_1_lower_confidence_interval.round(5)
-        sample_1_upper_confidence_interval = sample_1_mean + stats.t.ppf(1 - alpha / 2, sample_1_size - 1) * sample_1_standard_error
-        sample_1_upper_confidence_interval = sample_1_upper_confidence_interval.round(5)
-        sample_1_95_confidence_interval = "(" + sample_1_lower_confidence_interval.astype(str) + "; " + sample_1_upper_confidence_interval.astype(str) + ")"
-        sample_1_range = df1.max() - df1.min()
-
-        sample_2_size = df2.count().astype(int)
-        sample_2_mean = df2.mean().astype(float)
-        sample_2_median = df2.median()
-        sample_2_std = df2.std(ddof=1)
-        sample_2_standard_error = sample_2_std / (sample_2_size ** 0.5)
-        sample_2_lower_confidence_interval = sample_2_mean - stats.t.ppf(1 - alpha / 2, sample_2_size - 1) * sample_2_standard_error
-        sample_2_lower_confidence_interval = sample_2_lower_confidence_interval.round(5)
-        sample_2_upper_confidence_interval = sample_2_mean + stats.t.ppf(1 - alpha / 2, sample_2_size - 1) * sample_2_standard_error
-        sample_2_upper_confidence_interval = sample_2_upper_confidence_interval.round(5)
-        sample_2_95_confidence_interval = "(" + sample_2_lower_confidence_interval.astype(str) + "; " + sample_2_upper_confidence_interval.astype(str) + ")"
-        sample_2_range = df2.max() - df2.min()
-
-        # Further calculations for the first table
-        mean_difference = sample_1_mean.iloc[0] - sample_2_mean.iloc[0]
-        mean_difference = mean_difference.round(5)
-        observed_difference = mean_difference
-        # Calculate the 95% confidence interval for the observed difference
-        observed_difference_standard_error = np.sqrt(
-            (sample_1_std.values[0] ** 2 / sample_1_size.values[0]) + (sample_2_std.values[0] ** 2 / sample_2_size.values[0])
-        )
-
-        # Calculate the degrees of freedom for the total sample
-        deg_freedom_total = df_combined.count().sum() - 2
-        # Calculate the 95% confidence interval for the observed difference
-        observed_difference_lower_confidence_interval = observed_difference - stats.t.ppf(1 - alpha / 2, deg_freedom_total) * observed_difference_standard_error
-        observed_difference_upper_confidence_interval = observed_difference + stats.t.ppf(1 - alpha / 2, deg_freedom_total) * observed_difference_standard_error
-        observed_difference_95_confidence_interval = f"({observed_difference_lower_confidence_interval.round(5)}; {observed_difference_upper_confidence_interval.round(5)})"
-
-        # Determine if the observed difference is significant
-        if observed_difference_lower_confidence_interval <= 0 <= observed_difference_upper_confidence_interval:
-            difference_string = f"The mean values from ”{source_1}” and\n ”{source_2}” are not significantly different"
+        # Hypothesis test result
+        if results['p_value'] > alpha:
+            difference_string = f"The mean value from ”{source_1}” is not significantly\ndifferent from the mean value of ”{source_2}”"
+            difference_color = "#d6ed5f"
         else:
-            difference_string = f"The mean values from ”{source_1}” and\n ”{source_2}” are significantly different"
+            difference_string = f"The mean value from ”{source_1}” is not significantly\ndifferent from the mean value of ”{source_2}”"
+            difference_color = "#9cc563"
 
-        descriptive_statistics = {
+        descriptive_statistics = pd.DataFrame({
             "Quelle": [source_1, source_2],
-            "N": [sample_1_size.iloc[0], sample_2_size.iloc[0]],
-            "Mean": [sample_1_mean.iloc[0].round(5), sample_2_mean.iloc[0].round(5)],
-            "Median": [sample_1_median.iloc[0].round(5), sample_2_median.iloc[0].round(5)],
-            "StDev": [sample_1_std.iloc[0].round(5), sample_2_std.iloc[0].round(5)],
-            "SE Mean": [sample_1_standard_error.iloc[0].round(5), sample_2_standard_error.iloc[0].round(5)],
-            "95% CI for mu": [sample_1_95_confidence_interval.iloc[0], sample_2_95_confidence_interval.iloc[0]],
-            "Range": [sample_1_range.iloc[0].round(5), sample_2_range.iloc[0].round(5)]
-        }
-
-        # Calculate the detectable difference with sample size of N for different power levels
-        power_levels = [0.6, 0.7, 0.8, 0.9]
-        detectable_differences = {}
-
-        for power in power_levels:
-            effect_size = stats.norm.ppf(1 - alpha / 2) + stats.norm.ppf(power)
-            pooled_std = np.sqrt((sample_1_std.values[0] ** 2 + sample_2_std.values[0] ** 2) / 2)
-            detectable_difference = effect_size * pooled_std * np.sqrt(2 / sample_1_size)
-            detectable_differences[int(power * 100)] = detectable_difference.iloc[0].round(5)
-
-        # Check if the observed difference is lower than 0.6, between 0.6 and 0.9 or higher than 0.9
-        if observed_difference < detectable_differences[60]:
-            observed_difference_color = "#c00000"
-        elif detectable_differences[60] <= observed_difference <= detectable_differences[90]:
-            observed_difference_color = "#f9b002"
-        else:
-            observed_difference_color = "#a7c315"
-
-        # Determine the interval of detectable differences the observed difference falls into
-        if observed_difference < detectable_differences[60]:
-            observed_difference_interval = "<60%"
-        elif detectable_differences[60] <= observed_difference < detectable_differences[70]:
-            observed_difference_interval = "60%-70%"
-        elif detectable_differences[70] <= observed_difference < detectable_differences[80]:
-            observed_difference_interval = "70%-80%"
-        elif detectable_differences[80] <= observed_difference < detectable_differences[90]:
-            observed_difference_interval = "80%-90%"
-        else:
-            observed_difference_interval = ">90%"
+            "N": [results['data1_stats']['sample_size'], results['data2_stats']['sample_size']],
+            "Mean": [results['data1_stats']['mean'].iloc[0].round(5), results['data2_stats']['mean'].iloc[0].round(5)],
+            "Median": [results['data1_stats']['median'].iloc[0].round(5), results['data2_stats']['median'].iloc[0].round(5)],
+            "StDev": [results['data1_stats']['std_dev'].iloc[0].round(5), results['data2_stats']['std_dev'].iloc[0].round(5)],
+            "SE Mean": [results['data1_stats']['std_err'].iloc[0].round(5), results['data2_stats']['std_err'].iloc[0].round(5)],
+            f"{confidence_percent}% CI for µ": [f"({results['data1_stats']['confidence_interval'][0][0].round(5)}; {results['data1_stats']['confidence_interval'][1][0].round(5)})", f"({results['data2_stats']['confidence_interval'][0][0].round(5)}; {results['data2_stats']['confidence_interval'][1][0].round(5)})"],
+            "Range": [results['data1_stats']['range'].iloc[0].round(5), results['data2_stats']['range'].iloc[0].round(5)]
+        })
 
         # Create a PDF report
         pdf_io = io.BytesIO()
@@ -171,77 +234,35 @@ class TwoTtest:
                 ["Descriptive Statistics", "Descriptive Statistics"],
                 ["TS1", "TS2"],         # Time Series Plots for each dataset
                 ["Chance", "Detectable"]],    # Chance and Detectable Difference
-                figsize=(8.27, 11.69))  # A4 size in inches
+                figsize=(8.27, 11.69), dpi=300)  # A4 size in inches
             # fig.subplots_adjust(hspace=0.4)  # Increase hspace to add more space between charts
+            # fig.suptitle(title, fontsize=16, weight='bold', y=0.94)
 
-            fig.suptitle(title, fontsize=16, weight='bold', y=0.94)
-            
+            header_ax = add_header_or_footer_to_a4_portrait(fig, header_image_path, position='header')
+            footer_ax = add_header_or_footer_to_a4_portrait(fig, footer_image_path, position='footer', page_number=1, total_pages=2)
+
             # Define the colors + font size
             edgecolor = "#7c7c7c"
             grey = "#e7e6e6"
             green_table = "#9cc563"
             lightgreen_table = "#d6ed5f"
             font_size=7
+            edge_color="#7c7c7c"
 
             # T-Test Results Table
             ax = axs["T-Test Results"]
             ax.axis('off')
 
             # Define table data
-            cellText = [
+            table_data = [
                 ["Configuration", "", "Hypothesis", "", "", ""],
-                [
-                    "Each sample in its own column",
-                    "",
-                    r"$H_{0}: \mu_{1} = \mu_{2}$",
-                    "t-Value",
-                    "df",
-                    "p-Value*"
-                ],
-                [
-                    "Sample 1",
-                    f"{source_1}",
-                    r"$H_{1}: \mu_{1} \neq \mu_{2}$",
-                    f"{t_stat[0]}",
-                    f"{sample_1_size.iloc[0] - 1}",
-                    f"{p_value}"
-                ],
-                [
-                    "Sample 2",
-                    f"{source_2}",
-                    "",
-                    "",
-                    "",
-                    ""
-                ],
-                [
-                    "Test-Setup",
-                    "Different",
-                    "",
-                    "",
-                    "",
-                    f"{observed_difference}"
-                ],
-                [
-                    "Alpha-Level",
-                    f"{alpha}",
-                    "empty",
-                    "",
-                    "",
-                    f"{observed_difference_95_confidence_interval}"
-                ],
-                [
-                    "Interested\ndifference**",
-                    "-",
-                    "empty",
-                    f"{difference_string}",
-                    "",
-                    ""
-                ],
-                [
-                    "",
-                    "","","","",""
-                ]
+                ["Each sample in its own column", "", r"$\mathrm{H_{0}: \mu_{1} = \mu_{2}}$", "t-Value", "df", "p-Value*"],
+                ["Sample 1", f"{source_1}", r"$\mathrm{H_{1}: \mu_{1} \neq \mu_{2}}$", f"{results['t_statistic'][0].round(2)}", f"{results['degrees_of_freedom']}", f"{results['p_value'][0]:.3f}"],
+                ["Sample 2", f"{source_2}", "", "", "", ""],
+                ["Test-Setup", "Different", "", "", "", f"{results['observed_difference']:.6f}"],
+                ["Alpha-Level", f"{alpha}", "empty", "", "", f"({results['observed_difference_interval'][0][0]:.4f}; {results['observed_difference_interval'][1][0]:.4f})"],
+                ["Interested\ndifference**", f"{power if power is not None else '-'}", "empty", f"{difference_string}", "", ""],
+                ["", "", "", "", "", ""]
             ]
             # Set the column widths as needed
             col_widths = [0.15, 0.15, 0.15, 0.15, 0.15, 0.15]
@@ -250,11 +271,11 @@ class TwoTtest:
             bg_colors = [
                 ["#e7e6e6", "#e7e6e6", "#e7e6e6", "#e7e6e6", "#e7e6e6", "#e7e6e6"],
                 ["#ffffff", "#ffffff", "#d6ed5f", "#ffffff", "#ffffff", "#ffffff"],
-                ["#ffffff", "#ffffff", "#9cc563", "#ffffff", "#ffffff", "#9cc563"],
+                ["#ffffff", "#ffffff", "#9cc563", "#ffffff", "#ffffff", difference_color],
                 ["#ffffff", "#ffffff", "#ffffff", "#e7e6e6", "#e7e6e6", "#e7e6e6"],
                 ["#ffffff", "#ffffff", "#ffffff", "#ffffff", "#ffffff", "#ffffff"],
                 ["#ffffff", "#ffffff", "#ffffff", "#ffffff", "#ffffff", "#ffffff"],
-                ["#ffffff", "#ffffff", "#ffffff", "#9cc563", "#9cc563", "#9cc563"],
+                ["#ffffff", "#ffffff", "#ffffff", difference_color, difference_color, difference_color],
                 ["#ffffff", "#ffffff", "#ffffff", "#ffffff", "#ffffff", "#ffffff"]
             ]
 
@@ -278,7 +299,7 @@ class TwoTtest:
             # Create the table with the data + "none" as the color
             table = ax.table(
                 bbox=[0, 0, 1, 1],
-                cellText=cellText,
+                cellText=table_data,
                 colWidths=col_widths,
                 loc='upper left',
                 cellLoc='center',
@@ -308,93 +329,107 @@ class TwoTtest:
             table.get_celld()[7, 0].set_fontsize(5)
             
 
-            cell_text_centered_1 = table.get_celld()[(0, 4)]
-            cell_text_centered_1.set_text_props(
-                text='Results',
-                x=1.5,
-                y=0.5,
-                visible=True,
-                ha='center'
-            )
-            cell_text_centered_2 = table.get_celld()[(4, 4)]
-            cell_text_centered_2.set_text_props(
-                text='Mean difference between\nsample 1 and sample 2',
+            # Define a dictionary of cell configurations for better organization
+            cell_configs = {
+                (0, 4): {
+                    'text': 'Results',
+                    'x': 1.5,
+                    'y': 0.5,
+                    'ha': 'center'
+                },
+                (4, 4): {
+                    'text': 'Mean difference between\nsample 1 and sample 2',
+                    'x': 1.5,
+                    'y': 0.5,
+                    'ha': 'right'
+                },
+                (5, 4): {
+                    'text': f'{confidence_percent}% CI (confidence interval)',
+                    'x': 1.5,
+                    'y': 0.5,
+                    'ha': 'right'
+                },
+                (3, 4): {
+                    'text': 'Difference of means',
+                    'x': 1.5,
+                    'y': 0.5,
+                    'ha': 'center'
+                },
+                (7, 0): {
+                    'text': '* If the p-value is less than the α-level, then H0 is to be rejected and the alternative hypothesis H1 is to be accepted.\n** Optional: What difference between the two means has a practical value? (Power and sample size)',
+                    'color': 'grey',
+                    'ha': 'right',
+                    'fontsize': 5
+                }
+            }
 
-                x=1.5,
-                y=0.5,
-                visible=True,
-                ha='right'
-            )
-            cell_text_centered_3 = table.get_celld()[(5, 4)]
-            cell_text_centered_3.set_text_props(
-                text='95% CI (confidence interval)',
-                x=1.5,
-                y=0.5,
-                visible=True,
-                ha='right'
-            )     
-            cell_text_centered_4 = table.get_celld()[(3, 4)]
-            cell_text_centered_4.set_text_props(
-                text='Difference of means',
-                x=1.5,
-                y=0.5,
-                visible=True,
-                ha='center'
-            )
-            cell_text_small = table.get_celld()[(7, 0)]
-            cell_text_small.set_text_props(
-                text='* If the p-value is less than the α-level, then H0 is to be rejected and the alternative hypothesis H1 is to be accepted.\n** Optional: What difference between the two means has a practical value? (Power and sample size)',
-                visible=True,
-                color='grey',
-                ha='right'
-            )
-            bold_text = [(1, 3), (1, 4), (1, 5)]
-            for row, col in bold_text:
+            # Apply configurations to cells using a loop
+            for (row, col), config in cell_configs.items():
                 cell = table.get_celld()[(row, col)]
-                cell.set_text_props(weight='bold')
+                props = {
+                    'text': config['text'],
+                    'x': config.get('x', 0.5),
+                    'y': config.get('y', 0.5),
+                    'visible': True
+                }
+                
+                # Add optional properties if they exist
+                for prop in ['ha', 'color', 'fontsize']:
+                    if prop in config:
+                        props[prop] = config[prop]
+                        
+                cell.set_text_props(**props)
+            # Define cell text styling configurations in a dictionary
+            text_styles = {
+                'bold': [(1, 3), (1, 4), (1, 5), (4, 1)],
+                'align_left': [(1, 0), (5, 3), (6, 3), (7, 0)],
+                'align_right': [(0, 0), (3, 3), (4, 3)]
+            }
 
-            left_text = [(1, 0), (5, 3), (6, 3), (7, 0)]
-            for row, col in left_text:
-                cell = table.get_celld()[(row, col)]
-                cell.set_text_props(ha='left')
-
-            right_text = [(0, 0), (3, 3), (4, 3)]
-            for row, col in right_text:
-                cell = table.get_celld()[(row, col)]
-                cell.set_text_props(ha='right')
-
+            # Apply styles to cells using a loop
+            for style, cell_positions in text_styles.items():
+                for row, col in cell_positions:
+                    cell = table.get_celld()[(row, col)]
+                    if style == 'bold':
+                        cell.set_text_props(weight='bold')
+                    elif style == 'align_left':
+                        cell.set_text_props(ha='left')
+                    elif style == 'align_right':
+                        cell.set_text_props(ha='right')
 
             # Descriptive Statistics Table
-            axs["Descriptive Statistics"].axis('off')
-            axs["Descriptive Statistics"].set_title("Descriptive Statistics", loc='left', pad=-50, y=1.02)
-            descriptive_table_widths = [0.18, 0.06, 0.11, 0.11, 0.11, 0.11, 0.21, 0.11]
-            cellText = list(zip(*descriptive_statistics.values()))
-            descriptive_table = axs["Descriptive Statistics"].table(
-                cellText=cellText,
-                colLabels=list(descriptive_statistics.keys()),
-                cellLoc='center',
-                loc='center',
-                colWidths=descriptive_table_widths
-            )
-            # Change edgecolor of table
-            for cell in descriptive_table._cells.values():
-                cell.set_edgecolor(edgecolor)
-                cell.set_linewidth(0.5)
+            ax = axs['Descriptive Statistics']
+            ax.axis('off')
+            ax.set_title("Descriptive Statistics", loc='left', pad=-50, y=1.02)
+            ax.axis('tight')
             
-            # Set the top row color to #e7e6e6
-            for cell in descriptive_table._cells:
-                if cell[0] == 0:
-                    descriptive_table._cells[cell].set_facecolor(grey)
+            # Adjust column widths as needed
+            table_1_widths = [0.18, 0.06, 0.11, 0.11, 0.11, 0.11, 0.21, 0.11]
+            table_1 = axs["Descriptive Statistics"].table(
+                cellText=descriptive_statistics.values, 
+                colLabels=descriptive_statistics.columns, 
+                loc='center', 
+                cellLoc='center', 
+                colWidths=table_1_widths
+            )
+            table_1.auto_set_font_size(False)
+            table_1.set_fontsize(font_size)
+            
+            for cell in table_1._cells.values():
+                cell.set_edgecolor(edge_color)
+                cell.set_linewidth(0.5)
 
-
-
-
+            # Set the top row color to grey
+            for col in range(len(descriptive_statistics.columns)):
+                cell = table_1[(0, col)]
+                cell.set_facecolor(grey)
 
             # Data Time series plot first dataset
-            axs["TS1"].plot(df1, color='black', marker='o', linewidth=0.5)
-            axs["TS1"].set_title("Data Time Series", loc='left')
-            axs["TS1"].hlines(sample_1_mean, 0, sample_1_size, colors='grey', linestyles='dashed', alpha=0.7)
-            axs["TS1"].text(0.2 , 0.1, source_1, transform=axs["TS1"].transAxes, fontsize=7, verticalalignment='top', horizontalalignment='center')
+            ax = axs["TS1"]
+            ax.plot(df1, color='black', marker='o', linewidth=0.5)
+            ax.set_title("Data Time Series", loc='left')
+            ax.hlines(results['data1_stats']['mean'].iloc[0], 0, results['data1_stats']['sample_size'], colors='grey', linestyles='dashed', alpha=0.7, lw=0.5)
+            ax.text(0.2, 0.1, source_1, transform=ax.transAxes, fontsize=7, verticalalignment='top', horizontalalignment='center')
 
             # Mark outliers of TS1 data
             Q1_TS1 = df1.quantile(0.25)
@@ -405,13 +440,14 @@ class TwoTtest:
 
             for i, value in enumerate(df1.values):
                 if value < lower_bound_TS1.values or value > upper_bound_TS1.values:
-                    axs["TS1"].plot(i, value, color='red', marker='s')
+                    ax.plot(i, value, color='red', marker='s')
 
             # Data Time series plot second dataset
-            axs["TS2"].plot(df2, color='black', marker='o', linewidth=0.5)
-            axs["TS2"].hlines(sample_2_mean, 0, sample_2_size, colors='grey', linestyles='dashed', alpha=0.7)
-            axs["TS2"].set_yticks([])
-            axs["TS2"].text(0.2 , 0.1, source_2, transform=axs["TS2"].transAxes, fontsize=7, verticalalignment='top', horizontalalignment='center')
+            ax = axs["TS2"]
+            ax.plot(df2, color='black', marker='o', linewidth=0.5)
+            ax.hlines(results['data2_stats']['mean'].iloc[0], 0, results['data2_stats']['sample_size'], colors='grey', linestyles='dashed', alpha=0.7, lw=0.5)
+            ax.set_yticks([])
+            ax.text(0.2 , 0.1, source_2, transform=ax.transAxes, fontsize=7, verticalalignment='top', horizontalalignment='center')
 
             # Mark outliers of TS2 data
             Q1_TS2 = df2.quantile(0.25)
@@ -422,7 +458,7 @@ class TwoTtest:
 
             for i, value in enumerate(df2.values):
                 if value < lower_bound_TS2.values or value > upper_bound_TS2.values:
-                    axs["TS2"].plot(i, value, color='red', marker='s')
+                    ax.plot(i, value, color='red', marker='s')
 
             # Set y-limits for both plots
             max_y = max(df1.max().values[0], df2.max().values[0])
@@ -432,37 +468,74 @@ class TwoTtest:
             axs["TS2"].set_ylim(min_y - y_margin, max_y + y_margin)
 
 
-            # Power and detected difference
+            # Chance of detecting a difference table
             ax = axs["Chance"]
             ax.axis('off')
-            ax.set_title("Power and detected difference", loc='left', pad=-50, y=1.02)
+            ax.set_title("Power and detected difference", loc='left', pad=-50, y=1.2)
 
-            # Define table data
-            cellText = [
-                ["60%", "", "90%"],
-                ["", "", ""],
-                [f"{detectable_differences[60]}", "", f"{detectable_differences[90]}"],
-                ["Sample size", "Observed difference", ""],
-                [f"{sample_1_size.iloc[0]}", f"{observed_difference}", f"{observed_difference_interval}"]
-            ]
+            if power is not None:
 
-            # Determine color of the bottom right cell
+                if results['power_analysis']['Detection Chance'] < 60:
+                    observed_difference_color = "#c00000"
+                    observed_difference_text_color = "#ffffff"
+                elif 60 <= results['power_analysis']['Detection Chance'] <= 90:
+                    observed_difference_color = "#f9b002"
+                    observed_difference_text_color = "#000000"
+                else:
+                    observed_difference_color = "#a7c315"
+                    observed_difference_text_color = "#000000"
+                
+                ax.set_title(f"What is the chance of detecting a difference of {power}?", pad=-70, y=1.02, fontsize=font_size)
+                cellText = [
+                    ["60%", "", "90%"],
+                    ["", "", ""],
+                    [f"{results['detectable_difference']['Power 60%']:.6f}", "", f"{results['detectable_difference']['Power 90%']:.6f}"],
+                    ["Sample size", "Chance of Detecting a difference", ""],
+                    [f"{results['data1_stats']['sample_size']}", "", f"{results['power_analysis']['Detection Chance']}%"]
+                ]
+            else:
+                if results['observed_difference'] < results['detectable_difference']['Power 60%']:
+                    observed_difference_interval = "<60%"
+                    observed_difference_color = "#c00000"
+                    observed_difference_text_color = "#ffffff"
+                elif results['detectable_difference']['Power 60%'] <= results['observed_difference'] < results['detectable_difference']['Power 70%']:
+                    observed_difference_interval = "60%-70%"
+                    observed_difference_color = "#f9b002"
+                    observed_difference_text_color = "#000000"
+                elif results['detectable_difference']['Power 70%'] <= results['observed_difference'] < results['detectable_difference']['Power 80%']:
+                    observed_difference_interval = "70%-80%"
+                    observed_difference_color = "#f9b002"
+                    observed_difference_text_color = "#000000"
+                elif results['detectable_difference']['Power 80%'] <= results['observed_difference'] < results['detectable_difference']['Power 90%']:
+                    observed_difference_interval = "80%-90%"
+                    observed_difference_text_color = "#000000"
+                else:
+                    observed_difference_interval = ">90%" 
+                    observed_difference_color = "#a7c315"
+                    observed_difference_text_color = "#000000"
 
-            # Define background 
+                ax.set_title("Chance of detecting a difference", loc='center', pad=-70, y=1.02, fontsize=font_size)
+
+                cellText = [
+                    ["60%", "", "90%"],
+                    ["", "", ""],
+                    [f"{results['detectable_difference']['Power 60%']:.6f}", "", f"{results['detectable_difference']['Power 60%']:.6f}"],
+                    ["Sample size", "Observed difference", ""],
+                    [f"{results['data1_stats']['sample_size']}", f"{results['observed_difference']:.6f}", f"{observed_difference_interval}"]
+                ]
+
             bg_colors = [
-                ["#e7e6e6", "#e7e6e6", "#e7e6e6"],
+                [grey, grey, grey],
                 ["#c00000", "#f9b002", "#a7c315"],
                 ["#ffffff", "#ffffff", "#ffffff"],
-                ["#e7e6e6", "#e7e6e6", "#e7e6e6"],
-                ["#ffffff", "#ffffff", f"{observed_difference_color}"]
+                [grey, grey, grey],
+                ["#ffffff", "#ffffff", observed_difference_color]
             ]
 
-            # Create table with background colors only and remove edgecolor
             table_bg = ax.table(bbox=[0, 0, 1, 0.5], cellColours=bg_colors, colWidths=[0.18, 0.44, 0.20])
             for cell in table_bg._cells.values():
                 cell.set_edgecolor("none")
 
-            # Recreate the table layout with "none" as the color
             bg_none = [
                 ["none", "none", "none"],
                 ["none", "none", "none"],
@@ -471,83 +544,92 @@ class TwoTtest:
                 ["none", "none", "none"]
             ]
 
-            # Create the table with the data + "none" as the color
             table = ax.table(
                 bbox=[0, 0, 1, 0.5],
                 cellText=cellText,
                 cellLoc='center',
                 loc='lower left',
-                colWidths=[0.12, 0.17, 0.12],  # Set column widths for the left table
+                colWidths=[0.12, 0.17, 0.12],  # Column widths for the left table
                 cellColours=bg_none,
                 edges='open'
             )
 
+            table[(4, 2)].set_text_props(color=observed_difference_text_color)
+
             for cell in table._cells.values():
                 cell.set_linewidth(0.5)
 
-
             # Add visible edges to the table
             n_rows, n_cols = 5, 3
-            for (i, j), cell in table.get_celld().items():
-                # Top row: set top edge visible
-                if i == 0:
-                    cell.visible_edges = cell.visible_edges + "T"
-                    cell.set_edgecolor("#7c7c7c")
-                # Bottom row: set bottom edge visible
-                if i == n_rows - 1:
-                    cell.visible_edges = cell.visible_edges + "B"
-                    cell.set_edgecolor("#7c7c7c")
-                # 2nd to last row: set bottom edge visible
-                if i == n_rows - 2:
-                    cell.visible_edges = cell.visible_edges + "B"
-                    cell.set_edgecolor("#7c7c7c")
-                # Middle row: set the bottom edge visible
-                if i == n_rows - 3:
-                    cell.visible_edges = cell.visible_edges + "B"
-                    cell.set_edgecolor("#7c7c7c")
-                # First column: set left edge visible
-                if j == 0:
-                    cell.visible_edges = cell.visible_edges + "L"
-                    cell.set_edgecolor("#7c7c7c")
-                # Last column: set right edge visible
-                if j == n_cols - 1:
-                    cell.visible_edges = cell.visible_edges + "R"
-                    cell.set_edgecolor("#7c7c7c")
-                # Last row, first column: set bottom, left, and right edges visible
-                if i == n_rows - 1 and j == 0:
-                    cell.visible_edges = "BLR"
-                    cell.set_edgecolor("#7c7c7c")
+            edge_mapping = {
+                'top': [(i, j) for i in [0] for j in range(n_cols)],
+                'bottom': [(i, j) for i in [n_rows-3, n_rows-2, n_rows-1] for j in range(n_cols)],
+                'left': [(i, 0) for i in range(n_rows)],
+                'right': [(i, n_cols-1) for i in range(n_rows)]
+            }
 
-            for key, cell in table.get_celld().items():
-                if key == (0, 0):
-                    cell.set_text_props(ha='right')
-                if key == (0, 2):
-                    cell.set_text_props(ha='left')
-                # if key == (1, 0):
-                #     cell.visible_edges = 'BTL'
-                if key == (2, 0):
-                    cell.set_text_props(ha='right')
-                if key == (2, 2):
-                    cell.set_text_props(ha='left')
-                # if key == (1, 2):
-                #     cell.visible_edges = 'BTR'
-                if key == (3, 1):
-                    cell.set_text_props(ha='right')
+            # Apply edges based on position
+            for (i, j), cell in table.get_celld().items():
+                edges = ""
+                if (i, j) in edge_mapping['top']: 
+                    edges += "T"
+                if (i, j) in edge_mapping['bottom']: 
+                    edges += "B"
+                if (i, j) in edge_mapping['left']: 
+                    edges += "L"
+                if (i, j) in edge_mapping['right']: 
+                    edges += "R"
                 
-            # Merge table cells
+                # Special case for bottom-left cell
+                if i == n_rows-1 and j == 0:
+                    edges = "BLR"
+                    
+                # Apply the edges if any were defined
+                if edges:
+                    cell.visible_edges = edges
+                    cell.set_edgecolor(edge_color)
+
+            # Configure text alignment
+            text_alignments = {
+                (0, 0): 'right',
+                (0, 2): 'left',
+                (2, 0): 'right',
+                (2, 2): 'left',
+                (3, 1): 'left'
+            }
+
+            # Apply text alignments
+            for pos, alignment in text_alignments.items():
+                if pos in table.get_celld():
+                    table.get_celld()[pos].set_text_props(ha=alignment)
+            
+            # Merge cells
             mergecells(table, [(3, 1), (3, 2)])
 
-            # Set the font size for the table
+            # Set font size
             table.auto_set_font_size(False)
             table.set_fontsize(font_size)
 
-            # Detectable difference with samples of N
+            # Detectable difference table
             ax = axs["Detectable"]
             ax.axis('off')
-            # Create table data for detectable differences
-            power_column = list(detectable_differences.keys())
-            difference_column = list(detectable_differences.values())
-            table_data = list(zip(power_column, difference_column))
+            
+            # Create table data
+            # Create table data from power analysis results
+            if power is not None:
+                # If power was provided, show required sample sizes
+                ax.set_title(f"What sample size is required to detect a difference\nof {power}?", loc='center', pad=-70, y=1.02, fontsize=font_size)
+                power_column = ["60%", "70%", "80%", "90%"]
+                sample_sizes = [f"{results['required_sample_sizes'][f'Power {p}']:.0f}" for p in power_column]
+                table_data = list(zip(power_column, sample_sizes))
+                colLabels_difference = ["Power", "Sample Size"]
+            else:
+                # Otherwise show detectable differences
+                ax.set_title("Detectable difference with sample sizes of N", loc='center', pad=-70, y=1.02, fontsize=font_size)
+                power_column = ["60%", "70%", "80%", "90%"]
+                differences = [f"{results['detectable_difference'][f'Power {p}']:.6f}" for p in power_column]
+                table_data = list(zip(power_column, differences))
+                colLabels_difference = ["Power", "Difference"]
 
             # Define table column widths
             col_widths = [0.5, 0.5]
@@ -556,26 +638,25 @@ class TwoTtest:
             table = ax.table(
                 bbox=[0, 0, 1, 0.5],
                 cellText=table_data,
-                colLabels=["Power", "Difference"],
+                colLabels=colLabels_difference,
                 cellLoc='center',
                 loc='center',
                 colWidths=col_widths
             )
 
-            # Set the font size for the table
+            # Set font size
             table.auto_set_font_size(False)
             table.set_fontsize(font_size)
 
-            # Change edgecolor of table
+            # Set table styling
             for cell in table._cells.values():
-                cell.set_edgecolor(edgecolor)
+                cell.set_edgecolor(edge_color)
                 cell.set_linewidth(0.5)
 
             # Set the top row color to grey
             for cell in table._cells:
                 if cell[0] == 0:
                     table._cells[cell].set_facecolor(grey)
-
 
             pdf.savefig(fig)
             plt.close(fig)
@@ -584,52 +665,57 @@ class TwoTtest:
             fig, axs = plt.subplot_mosaic([
                 ["Hist1", "Hist2"],
                 ["Boxplot", "Boxplot"]],
-                figsize=(8.27, 11.69))  # A4 size in inches
+                figsize=(8.27, 11.69), dpi=300)  # A4 size in inches
             #fig.subplots_adjust(hspace=0.4)  # Increase hspace to add more space between charts
-            fig.suptitle(title, fontsize=16, weight='bold', y=0.94)
+            # fig.suptitle(title, fontsize=16, weight='bold', y=0.94)
+
+            header_ax = add_header_or_footer_to_a4_portrait(fig, header_image_path, position='header')
+            footer_ax = add_header_or_footer_to_a4_portrait(fig, footer_image_path, position='footer', page_number=2, total_pages=2)
 
             # Define gaussian function for fits
             def gaussian(x, a, mu, sigma):
                 return a * np.exp(-(x-mu)**2 / (2*sigma**2))
             
             # Histogram of first dataset
-            counts_1, bins_1, _ = axs["Hist1"].hist(df1.values, color='#95b92a', edgecolor='black')
-            axs["Hist1"].set_title(f"Histogram of {source_1}")
-            axs["Hist1"].set_ylabel("Frequency")            
+            ax = axs["Hist1"]
+            counts_1, bins_1, _ = ax.hist(df1.values, color='#95b92a', edgecolor='black', zorder=2)
+            ax.set_title(f"Histogram of {source_1}")
+            ax.set_ylabel("Frequency")
+            ax.grid(True, alpha=0.3, zorder=0)            
 
             # Calculate the bin centers
             bin_center_1 = (bins_1[:-1] + np.diff(bins_1) / 2)
 
             x_values_to_fit_1 = np.linspace(bins_1[0], bins_1[-1], 1000)
-            param_1, _ = curve_fit(gaussian, bin_center_1, counts_1)
-            axs["Hist1"].plot(x_values_to_fit_1, gaussian(x_values_to_fit_1, *param_1), color='#a03130', lw=1)
+            param_1, _ = curve_fit(gaussian, bin_center_1, counts_1, p0=(10, 10, 10))
+            ax.plot(x_values_to_fit_1, gaussian(x_values_to_fit_1, *param_1), color='#a03130', lw=1, zorder=5)
 
 
             # Histogram of second dataset
-            counts_2, bins_2, _ = axs["Hist2"].hist(df2.values, color='#95b92a', edgecolor='black')
-            axs["Hist2"].set_title(f"Histogram of {source_2}")
+            ax = axs["Hist2"]
+            counts_2, bins_2, _ = ax.hist(df2.values, color='#95b92a', edgecolor='black', zorder=2)
+            ax.set_title(f"Histogram of {source_2}")
+            ax.grid(True, alpha=0.3, zorder=0)
 
             # Calculate the bin centers
             bin_center_2 = (bins_2[:-1] + np.diff(bins_2) / 2)
 
             x_values_to_fit_2 = np.linspace(bins_2[0], bins_2[-1], 1000)
             param_2, _ = curve_fit(gaussian, bin_center_2, counts_2, p0=(10, 10, 10))
-            axs["Hist2"].plot(x_values_to_fit_2, gaussian(x_values_to_fit_2, *param_2), color='#a03130', lw=1)
-            print(param_2)
-
-
-
+            ax.plot(x_values_to_fit_2, gaussian(x_values_to_fit_2, *param_2), color='#a03130', lw=1, zorder=5)
 
             # Boxplot of both datasets
-            sns.boxplot(data=df_combined.values, ax=axs["Boxplot"], palette=['#a1d111', '#a1d111'], linecolor='black', showcaps=False, linewidth=0.3, width=0.3)
-            axs["Boxplot"].set_title(f"Boxplots of {source_1} and {source_2}")
-            axs["Boxplot"].set_xticks([0, 1])
-            axs["Boxplot"].set_xticklabels([f"{source_1}", f"{source_2}"])
-            axs["Boxplot"].set_ylabel("Data")
+            ax = axs["Boxplot"]
+            sns.boxplot(data=df_combined.values, ax=ax, palette=['#a1d111', '#a1d111'], linecolor='black', showcaps=False, linewidth=0.3, width=0.3, flierprops={"marker": "x"})
+            ax.set_title(f"Boxplots of {source_1} and {source_2}")
+            ax.set_xticks([0, 1])
+            ax.set_xticklabels([f"{source_1}", f"{source_2}"])
+            ax.set_ylabel("Data")
 
             # Add the means to the boxplot and draw a line between them
-            axs["Boxplot"].plot([0, 1], [sample_1_mean.iloc[0], sample_2_mean.iloc[0]], color='black', lw=0.5, marker='+', label='Mean')
-            legend = axs["Boxplot"].legend()
+            ax.plot([0, 1], [results['data1_stats']['mean'].iloc[0], results['data2_stats']['mean'].iloc[0]], color='black', lw=0.5, marker='+', label='Mean')
+            ax.grid(True, alpha=0.3)
+            legend = ax.legend()
             for text in legend.get_texts():
                 text.set_fontsize('x-small')
             for line in legend.get_lines():
@@ -637,7 +723,128 @@ class TwoTtest:
 
             pdf.savefig(fig)
             plt.close(fig)
-
+    
         pdf_io.seek(0)
         plt.close('all')
         return pdf_io
+
+
+def _calculate_statistics(data1, data2, p, alpha=0.05):
+    # Calculate descriptive statistics
+    confidence_level = 1 - alpha
+    std_err_1 = data1.std(ddof=1) / np.sqrt(len(data1))
+    deg_f_1 = len(data1) - 1
+    stats1 = {
+        'sample_size': len(data1),
+        'mean': data1.mean(),
+        'median': data1.median(),
+        'std_dev': data1.std(ddof=1),
+        'std_err': std_err_1,
+        'range': data1.max()-data1.min(),
+        'confidence_interval': stats.t.interval(confidence_level, deg_f_1, loc=data1.mean(), scale=std_err_1)
+    }
+
+    std_err_2 = data2.std(ddof=1) / np.sqrt(len(data1))
+    deg_f_2 = len(data2) - 1
+    stats2 = {
+        'sample_size': len(data2),
+        'mean': data2.mean(),
+        'median': data2.median(),
+        'std_dev': data2.std(ddof=1),
+        'std_err': std_err_2,
+        'range': data2.max()-data2.min(),
+        'confidence_interval': stats.t.interval(confidence_level, deg_f_2, loc=data2.mean(), scale=std_err_2)
+    }
+
+    # Perform 2-sample t-test
+    t_statistic, p_value = stats.ttest_ind(data1, data2, equal_var=False)
+    degrees_of_freedom = len(data1) + len(data2) - 2
+
+    # Calculate observed difference of means
+    observed_difference = np.mean(data1) - np.mean(data2)
+
+    observed_difference_ci = stats.t.interval(
+        1-alpha,
+        df=len(data1) + len(data2) - 2,
+        loc=observed_difference,
+        scale=np.sqrt(stats.sem(data1, axis=0)**2 + stats.sem(data2, axis=0)**2)
+    )
+
+    # Calculate detectable difference for each power level
+    power_levels = [0.6, 0.7, 0.8, 0.9]
+    detectable_differences = {}
+    for power in power_levels:
+        effect_size = stats.norm.ppf(1 - alpha / 2) + stats.norm.ppf(power)
+        # Extract numpy arrays from pandas DataFrames
+        data1_values = data1.values.flatten()
+        data2_values = data2.values.flatten()
+        pooled_std = np.sqrt((data1_values.std(ddof=1) ** 2 + data2_values.std(ddof=1) ** 2) / 2)
+        detectable_difference = effect_size * pooled_std * np.sqrt(2 / len(data1_values))
+        detectable_differences[f'Power {int(power * 100)}%'] = detectable_difference
+
+    # Calculate required sample size to detect difference p at each power level
+    required_sample_sizes = {}
+    power_analysis = {"Detection Chance": None, "Sample Size": len(data1)}
+    
+    if p is not None:
+        # Calculate the chance of detecting the difference p with current sample size
+        # Extract numpy arrays from pandas DataFrames
+        data1_values = data1.values.flatten()
+        data2_values = data2.values.flatten()
+        pooled_std = np.sqrt((data1_values.std(ddof=1) ** 2 + data2_values.std(ddof=1) ** 2) / 2)
+        effect_size = abs(p) / pooled_std
+        
+        # Calculate the power (chance of detection) for the given difference p
+        try:
+            detection_power = TTestIndPower().solve_power(
+                effect_size=effect_size,
+                nobs1=len(data1),
+                alpha=alpha,
+                power=None,
+                ratio=1,
+                alternative='two-sided'
+            )
+            power_analysis["Detection Chance"] = round(detection_power * 100)
+        except Exception as e:
+            # Handle the case where power calculation fails
+            import warnings
+            warnings.warn(f"Power calculation failed: {str(e)}. Setting detection chance to >99%.")
+            power_analysis["Detection Chance"] = 99  # Set to a high value since p-value is much smaller than alpha
+        
+        # Calculate required sample sizes for different power levels
+        for power in power_levels:
+            try:
+                with warnings.catch_warnings():
+                    warnings.filterwarnings('error')  # Convert warnings to exceptions
+                    sample_size = TTestIndPower().solve_power(
+                        effect_size=effect_size,
+                        nobs1=None,
+                        alpha=alpha,
+                        power=power,
+                        ratio=1,
+                        alternative='two-sided'
+                    )
+                    required_sample_sizes[f'Power {int(power * 100)}%'] = sample_size
+            except Warning as w:
+                # If we get a convergence warning, set a minimum reasonable sample size
+                required_sample_sizes[f'Power {int(power * 100)}%'] = 2  # Minimum reasonable value
+            except Exception as e:
+                # For other exceptions, use a default fallback
+                required_sample_sizes[f'Power {int(power * 100)}%'] = 2  # Minimum reasonable value
+
+
+    # Combine results
+    results = {
+        'data1_stats': stats1,
+        'data2_stats': stats2,
+        't_statistic': t_statistic,
+        'p_value': p_value,
+        'degrees_of_freedom': degrees_of_freedom,
+        'observed_difference': observed_difference,
+        'observed_difference_interval': observed_difference_ci,
+        'detectable_difference': detectable_differences,
+        'required_sample_sizes': required_sample_sizes,
+        'power_analysis': power_analysis
+    }
+
+    return results

@@ -4,7 +4,7 @@ import seaborn as sns
 from pydantic import BaseModel, Field
 from typing import List, Dict
 from api.schemas import BusinessLogicException
-from api.charts.constants import FIGURE_SIZE_DEFAULT, TITLE_FONT_SIZE, COLORS, MARKERS
+from api.charts.constants import FIGURE_SIZE_A4_PORTRAIT, TITLE_FONT_SIZE, COLOR_PALETTE, MARKERS
 
 
 class Individual4Config(BaseModel):
@@ -49,8 +49,10 @@ class Individual4:
         })
 
         # Define size of figure and style
-        sns.set(rc={'figure.figsize': FIGURE_SIZE_DEFAULT})
-        sns.set(style="whitegrid")
+        sns.set_theme(rc={'figure.figsize': FIGURE_SIZE_A4_PORTRAIT})
+        sns.set_theme(style="whitegrid")
+
+        plt.subplots_adjust(top=0.85, bottom=0.4, left=0.1, right=0.9)
 
         palette = self.get_color_palette(len(df['category'].unique()))
 
@@ -78,7 +80,7 @@ class Individual4:
         sp.set_title(title, fontsize=TITLE_FONT_SIZE, pad=20)
 
         # Adjust layout
-        plt.tight_layout(pad=1.5)
+        # plt.tight_layout(pad=1.5)
 
         self.figure = plt.gcf()
         plt.close('all')
@@ -86,4 +88,4 @@ class Individual4:
 
     def get_color_palette(self, n_colors):
         """Get a subset of colors based on the number needed."""
-        return [COLORS[i % len(COLORS)] for i in range(n_colors)]
+        return [COLOR_PALETTE[i % len(COLOR_PALETTE)] for i in range(n_colors)]

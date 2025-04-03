@@ -4,7 +4,7 @@ import numpy as np
 from pydantic import BaseModel, Field
 from typing import List, Dict
 from api.schemas import BusinessLogicException
-from api.charts.constants import FIGURE_SIZE_DEFAULT, TITLE_FONT_SIZE
+from api.charts.constants import FIGURE_SIZE_A4_PORTRAIT, TITLE_FONT_SIZE, COLOR_PALETTE
 
 
 class Piechart2Config(BaseModel):
@@ -50,7 +50,7 @@ class Piechart2:
         num_rows = (num_datasets + num_columns - 1) // num_columns  # Ceiling division
 
         # Create figure and subplots
-        self.figure, axes = plt.subplots(num_rows, num_columns, figsize=FIGURE_SIZE_DEFAULT)
+        self.figure, axes = plt.subplots(num_rows, num_columns, figsize=FIGURE_SIZE_A4_PORTRAIT)
 
         # Convert axes to 2D array if it's 1D or single subplot
         if num_datasets == 1:
@@ -72,7 +72,7 @@ class Piechart2:
                     labels=data_counts.index,
                     autopct='%1.1f%%',
                     startangle=90,
-                    colors=plt.cm.Paired.colors
+                    colors=COLOR_PALETTE
                 )
                 axes_flat[idx].set_title(column_name)
 

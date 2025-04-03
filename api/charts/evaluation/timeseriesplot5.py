@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 from pydantic import BaseModel, Field
 from typing import List, Dict
 from api.schemas import BusinessLogicException
-from api.charts.constants import FIGURE_SIZE_DEFAULT, TITLE_FONT_SIZE, COLORS, MARKERS
+from api.charts.constants import FIGURE_SIZE_A4_PORTRAIT, TITLE_FONT_SIZE, COLOR_PALETTE, MARKERS
 
 
 class Timeseriesplot5Config(BaseModel):
@@ -46,21 +46,21 @@ class Timeseriesplot5:
         num_datasets = len(df.columns)
         num_rows = num_datasets // 2 + num_datasets % 2
         columns = df.columns.tolist()
-        colors = COLORS[:num_datasets]
+        colors = COLOR_PALETTE[:num_datasets]
 
-        self.figure, axes = plt.subplots(num_rows, num_columns, figsize=FIGURE_SIZE_DEFAULT)
+        self.figure, axes = plt.subplots(num_rows, num_columns, figsize=FIGURE_SIZE_A4_PORTRAIT)
         axes = axes.flatten()
 
         for idx, column in enumerate(columns):
             axes[idx].plot(df[column], marker=MARKERS[0], color=colors[idx])
             axes[idx].set_title(column)
-            axes[idx].grid(True)
+            axes[idx].grid(True, alpha=0.3)
 
         # Remove empty subplots
         for idx in range(num_datasets, len(axes)):
             self.figure.delaxes(axes[idx])
 
         plt.suptitle(title, fontsize=TITLE_FONT_SIZE)
-        plt.tight_layout()
+        plt.tight_layout(pad=2.0)
         plt.close('all')
         return self.figure

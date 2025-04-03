@@ -7,6 +7,11 @@ from matplotlib.backends.backend_pdf import PdfPages
 from scipy import stats
 from scipy.stats import normaltest, probplot
 from statsmodels.graphics.gofplots import qqplot
+from ...constants import TABLE_EDGE_COLOR, TABLE_BG_COLOR_GREY
+from ....utils.pdf_utils import add_header_or_footer_to_a4_portrait
+
+header_image_path = 'assets/img/Header.png'
+footer_image_path = 'assets/img/Footer.png'
 
 from api.schemas import BusinessLogicException
 
@@ -128,47 +133,70 @@ def I_MR_chart_transformed(data, title, target=0, subgroup_size=1, LSL=None, USL
                 ["I", "I"],
                 ["MR", "MR"],
                 ["Normality", "Normality Test"]],
-                figsize=(11.69, 8.27))  # A4 size in inches for landscape
+                figsize=(8.27, 11.69), dpi=300)  # A4 size in inches for landscape
 
             # Increase the space between the plots
             plt.tight_layout()
             plt.subplots_adjust(left=0.1, right=0.9, top=0.9, bottom=0.1, hspace=0.8, wspace=0.5)
-            plt.suptitle(f"{title}", fontsize=16, y=0.96)
+            # plt.suptitle(f"{title}", fontsize=16, y=0.96)
+
+            header_ax = add_header_or_footer_to_a4_portrait(fig, header_image_path, position='header')
+            footer_ax = add_header_or_footer_to_a4_portrait(fig, footer_image_path, position='footer', page_number=1, total_pages=2)
 
             # Plot I chart
-            axs["I"].plot(data["value_transformed"], linestyle="-", marker="o", color="black")
-            axs["I"].axhline(CL_bar, color="green", label="Mean")
-            axs["I"].axhline(I_UCL, color="#A50021", label="UCL")
-            axs["I"].axhline(I_LCL, color="#A50021", label="LCL")
+            axs["I"].plot(data["value_transformed"], marker="o", color="black", lw=0.5)
+            axs["I"].axhline(CL_bar, color="grey", label="Mean", linestyle='dashed', alpha=0.5)
+            axs["I"].axhline(I_UCL, color="#a03130", label="UCL", lw=0.5)
+            axs["I"].axhline(I_LCL, color="#a03130", label="LCL", lw=0.5)
+
+            # Mark points outside control limits with a square marker
+            out_of_control = (data["value_transformed"] > I_UCL) | (data["value_transformed"] < I_LCL)
+            axs["I"].scatter(data.index[out_of_control], data["value_transformed"][out_of_control], 
+                             color='red', marker='s', label="Out of Control")
+            
             axs["I"].set_title("I Chart (Transformed)")
             axs["I"].set_ylabel("Individual Value")
             axs["I"].grid(True)
 
             # Plot MR chart
-            axs["MR"].plot(data["MR"], linestyle="-", marker="o", color="black")
-            axs["MR"].axhline(MR_bar, color="green", label="Mean")
-            axs["MR"].axhline(MR_UCL, color="#A50021", label="UCL")
-            axs["MR"].axhline(MR_LCL, color="#A50021", label="LCL")
+            axs["MR"].plot(data["MR"], marker="o", color="black", lw=0.5)
+            axs["MR"].axhline(MR_bar, color="grey", label="Mean", linestyle='dashed', alpha=0.5)
+            axs["MR"].axhline(MR_UCL, color="#A50021", label="UCL", lw=0.5)
+            axs["MR"].axhline(MR_LCL, color="#A50021", label="LCL", lw=0.5)
+
+            # Mark points outside control limits with a square marker
+            out_of_control_mr = (data["MR"] > MR_UCL) | (data["MR"] < MR_LCL)
+            axs["MR"].plot(data.index[out_of_control_mr], data["MR"][out_of_control_mr], 
+                              color='red', marker='s', label="Out of Control")
+            
             axs["MR"].set_title("MR Chart (Transformed)")
             axs["MR"].set_ylabel("Moving Range")
             axs["MR"].grid(True)
 
             # Normality Plot
             probplot(data["value_transformed"], dist="norm", plot=axs["Normality"])
+            axs["Normality"].lines[0].set_color('#95b92a')  # Change the color of the data points
+            axs["Normality"].lines[1].set_color('black')  # Change the color of the best-fit line
             axs["Normality"].set_title(f"Normality Plot (λ = {round(lambda_value, 2)})")
+            axs["Normality"].grid(True, alpha=0.3)
 
             # Normality Test Table
             _, p_value_normaltest = stats.normaltest(data["value_transformed"])
             normality_pass = "Pass" if p_value_normaltest > 0.05 else "Fail"
             table_data = [["Normality Test Result", normality_pass],
                           ["p-value", f"{p_value_normaltest:.4f}"]]
-            table = axs["Normality Test"].table(cellText=table_data, cellLoc='left', loc='center')
+            table = axs["Normality Test"].table(cellText=table_data, cellLoc='center', loc='center')
             table.auto_set_font_size(False)
-            table.set_fontsize(10)
+            table.set_fontsize(8)
             for key, cell in table.get_celld().items():
                 if key[1] == 0:  # key[1] corresponds to the column index
                     cell.set_text_props(fontweight='bold')
                 cell.set_height(0.18)
+                if key[0] == 0:  # key[0] corresponds to the row index
+                    cell.set_facecolor(TABLE_BG_COLOR_GREY)
+            for cell in table._cells.values():
+                cell.set_edgecolor(TABLE_EDGE_COLOR)
+                cell.set_linewidth(0.5)
             axs["Normality Test"].set_title("Normality Test (Transformed)")
             axs["Normality Test"].axis('tight')
             axs["Normality Test"].axis('off')
@@ -181,37 +209,44 @@ def I_MR_chart_transformed(data, title, target=0, subgroup_size=1, LSL=None, USL
             plt.close(fig)
 
             fig, axs = plt.subplot_mosaic([
-                ["Normal", "Process Table"],
-                ["Transformed", "Capability Table"]],
-                figsize=(11.69, 8.27))  # A4 size in inches for landscape
-            plt.tight_layout()
-            plt.subplots_adjust(left=0.1, right=0.9, top=0.9, bottom=0.1, hspace=0.6, wspace=0.1)
+                ["Normal", "Transformed"],
+                ["Process Table", "Capability Table"]],
+                figsize=(8.27, 11.69), dpi=300)  # A4 size in inches for landscape
+            plt.tight_layout(pad=2.0)
+            plt.subplots_adjust(left=0.1, right=0.9, top=0.85, bottom=0.1, hspace=0.4, wspace=0.3)
+
+            header_ax = add_header_or_footer_to_a4_portrait(fig, header_image_path, position='header')
+            footer_ax = add_header_or_footer_to_a4_portrait(fig, footer_image_path, position='footer', page_number=2, total_pages=2)
 
             # Plot Normality Plot (Q-Q plot) in the "Normal" section of the mosaic
-            sns.histplot(data["value"], kde=True, ax=axs["Normal"], bins=30, color="#7DA7D9", edgecolor="black",
-                         stat="density")
+            sns.histplot(data["value"], ax=axs["Normal"], bins=30, color="#95b92a", edgecolor="black",
+                         stat="density", alpha=1)
+            sns.kdeplot(data["value"], ax=axs["Normal"], color="#a03130", lw=1.0)
 
             # Add vertical lines for target, LSL, and USL
-            axs["Normal"].axvline(target, linestyle="--", color="green")
+            axs["Normal"].axvline(target, linestyle="--", color="grey")
             if LSL is not None:
-                axs["Normal"].axvline(LSL, linestyle="--", color="#A50021")
+                axs["Normal"].axvline(LSL, linestyle="--", color="#a03130")
             if USL is not None:
-                axs["Normal"].axvline(USL, linestyle="--", color="#A50021")
+                axs["Normal"].axvline(USL, linestyle="--", color="#a03130")
 
             label_xpad = (max(data["value"]) - min(data["value"])) * 0.03
-            label_ypad = (axs["Normal"].get_ylim()[1]) * 0.01
+            label_ypad = (axs["Normal"].get_ylim()[1]) * 0.04
             # Add annotations for Target, LSL, and USL
-            axs["Normal"].annotate("Target", xy=(target + label_xpad, 0 + label_ypad), color="green")
+            axs["Normal"].annotate("Target", xy=(target + label_xpad, axs["Normal"].get_ylim()[1] - label_ypad), color="grey")
             if LSL is not None:
-                axs["Normal"].annotate("LSL", xy=(LSL + label_xpad, 0 + label_ypad), color="#A50021")
+                axs["Normal"].annotate("LSL", xy=(LSL + label_xpad, axs["Normal"].get_ylim()[1] - label_ypad), color="#a03130")
             if USL is not None:
-                axs["Normal"].annotate("USL", xy=(USL - (label_xpad * 7), 0 + label_ypad), color="#A50021")
+                axs["Normal"].annotate("USL", xy=(USL - (label_xpad * 7), axs["Normal"].get_ylim()[1] - label_ypad), color="#a03130")
+
+            # Set the x limits for the "Normal" plot
+            axs["Normal"].set_xlim(min(data["value"]) - label_xpad * 2, max(data["value"]) + label_xpad * 2)
 
             # Set the title and labels for the "Normal" plot
             axs["Normal"].set_title("Capability Histogram", pad=20)
             axs["Normal"].set_xlabel("")
             axs["Normal"].set_ylabel("")
-            axs["Normal"].grid(color="lightgray", linestyle="--", linewidth=0.5)
+            axs["Normal"].grid(True, alpha=0.3)
 
             # Transform LSL and USL
             LSL_transformed = None
@@ -222,18 +257,20 @@ def I_MR_chart_transformed(data, title, target=0, subgroup_size=1, LSL=None, USL
                 USL_transformed = (USL ** lambda_value - 1) / lambda_value if lambda_value != 0 else np.log(USL)
 
             # Plot for Transformed Data
-            sns.histplot(data["value_transformed"], kde=True, ax=axs["Transformed"], bins=15, color="#7DA7D9",
-                         edgecolor="black", stat="density")
+            sns.histplot(data["value_transformed"], ax=axs["Transformed"], bins=15, color="#95b92a",
+                         edgecolor="black", stat="density", alpha=1.0)
+            sns.kdeplot(data["value_transformed"], ax=axs["Transformed"], color="#a03130", lw=1.0)
+
             if LSL_transformed is not None:
-                axs["Transformed"].axvline(LSL_transformed, linestyle="--", color="#A50021")
+                axs["Transformed"].axvline(LSL_transformed, linestyle="--", color="#a03130")
             if USL_transformed is not None:
-                axs["Transformed"].axvline(USL_transformed, linestyle="--", color="#A50021")
+                axs["Transformed"].axvline(USL_transformed, linestyle="--", color="#a03130")
 
             # Add annotations for transformed LSL and USL
             if LSL_transformed is not None:
-                axs["Transformed"].annotate("LSL", xy=(LSL_transformed - 0.5, 0), color="#A50021")
+                axs["Transformed"].annotate("LSL", xy=(LSL_transformed - 0.5, axs["Transformed"].get_ylim()[1] * 0.965), color="#a03130")
             if USL_transformed is not None:
-                axs["Transformed"].annotate("USL", xy=(USL_transformed - 0.5, 0), color="#A50021")
+                axs["Transformed"].annotate("USL", xy=(USL_transformed - 0.5, axs["Transformed"].get_ylim()[1] * 0.965), color="#a03130")
 
             # Set the title and labels for the "Transformed" plot
             axs["Transformed"].set_title("Transformed Data", pad=20)
@@ -294,6 +331,16 @@ def I_MR_chart_transformed(data, title, target=0, subgroup_size=1, LSL=None, USL
                 colWidths=[0.2, 0.25],
                 bbox=[0.55, 0.5, 0.5, 0.5]
             )
+
+            # Set edge color for process_characterization_table
+            for cell in process_characterization_table.get_celld().values():
+                cell.set_edgecolor(TABLE_EDGE_COLOR)
+            process_characterization_table.auto_set_font_size(False)
+            process_characterization_table.set_fontsize(8)
+
+            # Set the top-left cell background color to TABLE_BG_COLOR_GREY
+            process_characterization_table[(0, 0)].set_facecolor(TABLE_BG_COLOR_GREY)
+
             axs["Process Table"].axis('off')  # Hide the axis for the table
             process_characterization_table.scale(1, 1)  # Scale the table to fit the subplot
             axs["Process Table"].set_title("Process Characterization", pad=20)
@@ -308,6 +355,15 @@ def I_MR_chart_transformed(data, title, target=0, subgroup_size=1, LSL=None, USL
                 colWidths=[0.2, 0.25],
                 bbox=[0.55, 0.5, 0.5, 0.5]
             )
+
+            # Set edge color for process_capability_table
+            for cell in process_capability_table.get_celld().values():
+                cell.set_edgecolor(TABLE_EDGE_COLOR)
+            process_capability_table.auto_set_font_size(False)
+            process_capability_table.set_fontsize(8)
+
+            process_capability_table[(0, 0)].set_facecolor(TABLE_BG_COLOR_GREY)   
+
             axs["Capability Table"].axis('off')  # Hide the axis for the table
             axs["Capability Table"].set_title("Process Capability", pad=20)
 

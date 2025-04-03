@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 from pydantic import BaseModel, Field
 from typing import List, Dict
 from api.schemas import BusinessLogicException
-from api.charts.constants import TITLE_FONT_SIZE
+from api.charts.constants import TITLE_FONT_SIZE, FIGURE_SIZE_A4_PORTRAIT
 
 
 class Matrixplot1Config(BaseModel):
@@ -43,17 +43,30 @@ class Matrixplot1:
         df = pd.DataFrame(self.data.values)
 
         # Set style
-        sns.set(style="whitegrid")
+        sns.set_theme(style="whitegrid")
 
         # Create scatterplot matrix
-        pair_plot = sns.pairplot(df, diag_kind="hist", height=1.8, aspect=1.8)
+        pair_plot = sns.pairplot(df, 
+                                 diag_kind="hist", 
+                                 height=1.8, 
+                                 aspect=1.8, 
+                                 plot_kws={'color': '#95b92a'},
+                                 diag_kws={'color': '#95b92a', 'edgecolor': 'black'},
+                                 )
+
+        pair_plot.figure.set_size_inches(FIGURE_SIZE_A4_PORTRAIT)  # A4 portrait dimensions in inches
 
         # Add title
-        pair_plot.fig.suptitle(title, fontsize=TITLE_FONT_SIZE)
+        pair_plot.figure.suptitle(title, fontsize=TITLE_FONT_SIZE)
 
         # Adjust layout
-        plt.subplots_adjust(top=0.9)
+        plt.subplots_adjust(top=0.9, bottom=0.1, left=0.1, right=0.9)
 
-        self.figure = pair_plot.fig
+        # Add grid
+        for ax in pair_plot.axes.flatten():
+            ax.grid(True, alpha=0.3)
+
+        # Save figure
+        self.figure = pair_plot.figure
         plt.close('all')
         return self.figure

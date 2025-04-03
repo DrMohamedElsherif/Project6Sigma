@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 from pydantic import BaseModel, Field
 from typing import List, Dict
 from api.schemas import BusinessLogicException
-from api.charts.constants import FIGURE_SIZE_DEFAULT, TITLE_FONT_SIZE, MARKERS
+from api.charts.constants import FIGURE_SIZE_A4_PORTRAIT, TITLE_FONT_SIZE, MARKERS, COLOR_PALETTE
 
 
 class Timeseriesplot3Config(BaseModel):
@@ -50,15 +50,15 @@ class Timeseriesplot3:
         self.figure, axes = plt.subplots(
             ncols=len(unique_groups),
             sharey=True,
-            figsize=FIGURE_SIZE_DEFAULT
+            figsize=FIGURE_SIZE_A4_PORTRAIT
         )
 
         for i, (k, g) in enumerate(df.groupby('groups')):
-            g['values'].plot(ax=axes[i], marker=MARKERS[0])
+            g['values'].plot(ax=axes[i], marker=MARKERS[0], color=COLOR_PALETTE[i*2])
             axes[i].set_title(k)
-            axes[i].grid()
+            axes[i].grid(True, alpha=0.3)
 
         plt.suptitle(title, fontsize=TITLE_FONT_SIZE, y=0.98)
-        plt.tight_layout()
+        plt.subplots_adjust(top=0.85, bottom=0.4, left=0.1, right=0.9)
         plt.close('all')
         return self.figure

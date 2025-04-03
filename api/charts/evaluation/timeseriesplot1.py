@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 from pydantic import BaseModel, Field
 from typing import List, Dict
 from api.schemas import BusinessLogicException
-from api.charts.constants import FIGURE_SIZE_DEFAULT, TITLE_FONT_SIZE, COLOR_BLUE
+from api.charts.constants import FIGURE_SIZE_A4_PORTRAIT, TITLE_FONT_SIZE, COLOR_BLUE
 
 
 class Timeseriesplot1Config(BaseModel):
@@ -44,9 +44,10 @@ class Timeseriesplot1:
         y = df.iloc[:, 0]
         x = range(1, df.iloc[:, 0].count() + 1)
 
-        self.figure = plt.figure(figsize=FIGURE_SIZE_DEFAULT)
-        plt.plot(x, y, linestyle='-', marker='o', color=COLOR_BLUE)
+        self.figure = plt.figure(figsize=FIGURE_SIZE_A4_PORTRAIT)
+        plt.plot(x, y, color='black', marker="o", lw=0.5)
         plt.title(title, fontsize=TITLE_FONT_SIZE, pad=20)
+        plt.subplots_adjust(top=0.85, bottom=0.4, left=0.1, right=0.9)
         plt.grid(True, which='both')
         plt.close('all')
         return self.figure

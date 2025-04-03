@@ -3,7 +3,8 @@ import matplotlib.pyplot as plt
 from pydantic import BaseModel, Field
 from typing import List, Dict, Optional
 from api.schemas import BusinessLogicException
-from api.charts.constants import FIGURE_SIZE_DEFAULT, TITLE_FONT_SIZE, COLOR_BLACK, COLOR_BLUE
+from api.charts.constants import FIGURE_SIZE_A4_PORTRAIT, TITLE_FONT_SIZE, COLOR_BLACK, COLOR_BLUE
+import seaborn as sns
 
 
 class Boxplot5Config(BaseModel):
@@ -50,28 +51,45 @@ class Boxplot5:
             count = len(unique_categories)
 
             self.figure, axes = plt.subplots(
-                1, count, figsize=FIGURE_SIZE_DEFAULT, sharex=True, sharey=True)
+                1, count, figsize=FIGURE_SIZE_A4_PORTRAIT, sharex=True, sharey=True)
 
             for i, (category, data) in enumerate(df.join(categories_df).groupby(categories_df.columns[0])):
                 ax = axes[i]
-                data.boxplot(rot=45, color=COLOR_BLACK, patch_artist=True,
-                             boxprops=dict(facecolor=COLOR_BLUE), ax=ax)
+                sns.boxplot(
+                    data=data,
+                    ax=ax,
+                    color="#a1d111",
+                    linewidth=1,
+                    width=0.3,
+                    flierprops={"marker": "x"},
+                    showcaps=False,
+                    boxprops={"edgecolor": "black"},
+                    whiskerprops={"color": "black"},
+                    capprops={"color": "black"}
+                )
                 ax.set_xlabel(unique_categories[i])
 
             self.figure.suptitle(title, fontsize=TITLE_FONT_SIZE, y=0.99)
             plt.tight_layout()
 
         else:
-            self.figure = plt.figure(figsize=FIGURE_SIZE_DEFAULT)
+            self.figure = plt.figure(figsize=FIGURE_SIZE_A4_PORTRAIT)
             ax = self.figure.add_subplot(111)
 
-            df.boxplot(
-                color=COLOR_BLACK,
-                patch_artist=True,
-                boxprops=dict(facecolor=COLOR_BLUE),
-                ax=ax
+            sns.boxplot(
+                data=df,
+                ax=ax,
+                color="#a1d111",
+                linewidth=1,
+                showcaps=False,
+                flierprops={"marker": "x"},
+                width=0.3,
+                boxprops=dict(edgecolor='black')
             )
 
             ax.set_title(title, fontsize=TITLE_FONT_SIZE, pad=20)
+
+        plt.grid(True, alpha=0.3)
+        plt.subplots_adjust(top=0.85, bottom=0.4, left=0.1, right=0.9)
         plt.close('all')
         return self.figure
