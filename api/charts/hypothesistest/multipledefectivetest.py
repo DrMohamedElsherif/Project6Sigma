@@ -53,19 +53,19 @@ class MultipleDefectiveTest:
             if variant == "Summarized data":
                 if self.config.sample_names is None or self.config.sample_size is None or self.config.defective_count is None:
                     raise BusinessLogicException(
-                        error_code="error_validation",
+                        error_code="error_defective_summarized",
                         field="configuration_parameters",
                         details={
-                            "message": "For 'Summarized data' variant, sample_names, sample_size, and defective_count are required."
+                            "message": "For 'Summarized data' variant, both 'sample_size' and 'defective_count' are required"
                         }
                     )
                 # Check that arrays have matching lengths
                 if len(self.config.sample_names) != len(self.config.sample_size) or len(self.config.sample_size) != len(self.config.defective_count):
                     raise BusinessLogicException(
-                        error_code="error_validation",
+                        error_code="error_sample_length",
                         field="configuration_parameters",
                         details={
-                            "message": "sample_names, sample_size, and defective_count must have the same length."
+                            "message": f"Must have the same length: {len(self.config.sample_names)}, {len(self.config.sample_size)}, {len(self.config.defective_count)}"
                         }
                     )
                     
@@ -73,53 +73,44 @@ class MultipleDefectiveTest:
             elif variant == "All data in one column":
                 if self.config.sample_column is None or self.config.defective_name is None:
                     raise BusinessLogicException(
-                        error_code="error_validation",
+                        error_code="error_defective_column",
                         field="configuration_parameters",
                         details={
-                            "message": "For 'All data in one column' variant, sample_column and defective_name are required."
+                            "message": "For 'Datas in column' variant, 'sample_column', 'defective_name', and 'data.values' are required"
                         }
                     )
                 if self.data is None or self.data.values is None:
                     raise BusinessLogicException(
-                        error_code="error_validation",
+                        error_code="error_missing_field",
                         field="data",
-                        details={"message": "Data values are required for 'All data in one column' variant."}
+                        details={"message": f"Missing required field: {self.data}"}
                     )
                 # Check if the specified columns exist in the data
                 if self.config.sample_column not in self.data.values:
                     raise BusinessLogicException(
-                        error_code="error_validation",
+                        error_code="error_missing_field",
                         field="sample_column",
-                        details={"message": f"Column '{self.config.sample_column}' not found in data."}
-                    )
-                
-                # Need at least one more column for the values
-                value_columns = [col for col in self.data.values.keys() if col != self.config.sample_column]
-                if not value_columns:
-                    raise BusinessLogicException(
-                        error_code="error_validation",
-                        field="data.values",
-                        details={"message": "At least one value column is required in addition to the sample_column."}
+                        details={"message": f"Missing require field: {self.config.sample_column}"}
                     )
                 
             # Validation for "Each data in its own column" format
             else:  # "Each data in its own column"
                 if self.config.defective_name is None:
                     raise BusinessLogicException(
-                        error_code="error_validation",
+                        error_code="error_missing_field",
                         field="defective_name",
-                        details={"message": "defective_name is required for 'Each data in its own column' variant."}
+                        details={"message": f"Missing required field: {self.config.defective_name}"}
                     )
                 if self.data is None or self.data.values is None:
                     raise BusinessLogicException(
-                        error_code="error_validation",
+                        error_code="error_missing_field",
                         field="data",
-                        details={"message": "Data values are required for 'Each data in its own column' variant."}
+                        details={"message": f"Missing require field: {self.data.values}"}
                     )
                 # Need to ensure we have at least 2 columns
                 if len(self.data.values) < 2:
                     raise BusinessLogicException(
-                        error_code="error_validation",
+                        error_code="error_defective_data",
                         field="data.values",
                         details={"message": "At least 2 data columns are required."}
                     )
@@ -243,9 +234,10 @@ class MultipleDefectiveTest:
                 ["Comparison Chart", "Pie Charts"]],    # Chance and Detectable Difference
                 figsize=(8.27, 11.69), dpi=300)  # A4 size in inches
             #fig.subplots_adjust(hspace=0.4)  # Increase hspace to add more space between charts
-            # fig.suptitle(title, fontsize=16, weight='bold', y=0.94)
-            header_ax = add_header_or_footer_to_a4_portrait(fig, header_image_path, position='header')
-            footer_ax = add_header_or_footer_to_a4_portrait(fig, footer_image_path, position='footer', page_number=1, total_pages=1)
+            fig.suptitle(title, fontsize=14, y=0.92, ha='left', x=0.1)
+            
+            add_header_or_footer_to_a4_portrait(fig, header_image_path, position='header')
+            add_header_or_footer_to_a4_portrait(fig, footer_image_path, position='footer', page_number=1, total_pages=1)
 
             # Define the colors + fontsize
             grey = "#e7e6e6"

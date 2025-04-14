@@ -91,9 +91,10 @@ class MSA1Chart:
 
         # Plot Run chart
         self.figure, axs = plt.subplots(2, 1, figsize=(FIGURE_SIZE_A4_PORTRAIT), dpi=300)
+        self.figure.suptitle(title, fontsize=14, y=0.92, ha='left', x=0.1)
 
-        header_ax = add_header_or_footer_to_a4_portrait(self.figure, header_image_path, position='header')
-        footer_ax = add_header_or_footer_to_a4_portrait(self.figure, footer_image_path, position='footer', page_number=1, total_pages=1)
+        add_header_or_footer_to_a4_portrait(self.figure, header_image_path, position='header')
+        add_header_or_footer_to_a4_portrait(self.figure, footer_image_path, position='footer', page_number=1, total_pages=1)
             
 
         # Plot in the first row
@@ -108,6 +109,8 @@ class MSA1Chart:
         axs[0].set_ylabel("Individual Value")
         axs[0].grid(True, alpha=0.3, zorder=0)
         axs[0].legend(loc='upper right', framealpha=1)
+        axs[0].tick_params(axis='x', labelsize=8)
+        axs[0].tick_params(axis='y', labelsize=8)
 
         # Calculate statistics
         mean_X = np.mean(data)
@@ -217,7 +220,7 @@ class MSA1Chart:
 
             tables.append(table)
 
-        plt.subplots_adjust(hspace=0.3, top=0.9, bottom=0.1, left=0.15, right=0.85)
+        plt.subplots_adjust(hspace=0.3, top=0.85, bottom=0.15, left=0.2, right=0.8)
         plt.close('all')
 
         return self.figure

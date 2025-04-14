@@ -82,10 +82,10 @@ def U_chart(data, title, acceptable_DPU=0, subgroup_size=1):
 
         plt.tight_layout()
         plt.subplots_adjust(left=0.1, right=0.9, top=0.85, bottom=0.15, hspace=0.2, wspace=0.5)
-        # plt.suptitle(f"{title}", fontsize=16, y=0.96)
+        fig.suptitle(title, fontsize=14, y=0.92, ha='left', x=0.1)
 
-        header_ax = add_header_or_footer_to_a4_portrait(fig, header_image_path, position='header')
-        footer_ax = add_header_or_footer_to_a4_portrait(fig, footer_image_path, position='footer', page_number=1, total_pages=2)
+        add_header_or_footer_to_a4_portrait(fig, header_image_path, position='header')
+        add_header_or_footer_to_a4_portrait(fig, footer_image_path, position='footer', page_number=1, total_pages=2)
 
         # Plot U chart
         axs["U"].plot(data["u"], color='black', marker='o', lw=0.5, zorder=3)

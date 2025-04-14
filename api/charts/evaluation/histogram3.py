@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 from pydantic import BaseModel, Field
 from typing import List, Dict
 from api.schemas import BusinessLogicException
-from api.charts.constants import COLOR_BLACK, TITLE_FONT_SIZE, COLOR_BLUE
+from api.charts.constants import COLOR_BLACK, TITLE_FONT_SIZE, FIGURE_SIZE_A4_PORTRAIT
 
 
 class Histogram3Config(BaseModel):
@@ -51,7 +51,7 @@ class Histogram3:
 
         # Initialize the subplots
         self.figure, axes = plt.subplots(num_rows, num_cols, figsize=(
-            11.69, num_rows * 5), sharey='row', squeeze=False)
+            FIGURE_SIZE_A4_PORTRAIT), sharey='row', squeeze=False)
 
         # Enable grid lines
         for ax_row in axes:

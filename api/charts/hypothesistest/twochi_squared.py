@@ -38,11 +38,23 @@ class TwoChiSquaredConfig(BaseModel):
         if variant == "Summarized data":
             # Check required fields for this variant
             if not values.categories:
-                raise ValueError("Categories are required for 'Summarized data' variant")
+                raise BusinessLogicException(
+                    error_code="error_missing_field",
+                    field="categories",
+                    details={"message": "Missing required field: categories"}
+                )
             if not values.outcomes:
-                raise ValueError("Outcomes are required for 'Summarized data' variant")
+                raise BusinessLogicException(
+                    error_code="error_missing_field",
+                    field="outcomes",
+                    details={"message": "Missing required field: outcomes"}
+                )
             if not values.observed_count:
-                raise ValueError("Observed counts are required for 'Summarized data' variant")
+                raise BusinessLogicException(
+                    error_code="error_missing_field",
+                    field="observed_count",
+                    details={"message": "Missing required field: observed_count"}
+                )
                 
             # Validate observed_count dimensions match categories and outcomes
             observed = values.observed_count
@@ -50,7 +62,11 @@ class TwoChiSquaredConfig(BaseModel):
             outcomes = values.outcomes
             
             if len(observed) != len(categories):
-                raise ValueError(f"Number of rows in observed_count ({len(observed)}) must match number of categories ({len(categories)})")
+                raise BusinessLogicException(
+                    error_code="error_row_category_mismatch",
+                    field="observed_count",
+                    details={"message": "Number of rows in observed_count must match number of categories"}
+                )
             
             for i, row in enumerate(observed):
                 if len(row) != len(outcomes):
@@ -150,10 +166,10 @@ class TwoChiSquared:
                 ["Comparison Bar", "Difference Bar"]],    # Chance and Detectable Difference
                 figsize=(8.27, 11.69), dpi=300)  # A4 size in inches
             #fig.subplots_adjust(hspace=0.4)  # Increase hspace to add more space between charts
-            #fig.suptitle(title, fontsize=16, weight='bold', y=0.94)
+            fig.suptitle(title, fontsize=14, y=0.92, ha='left', x=0.1)
 
-            header_ax = add_header_or_footer_to_a4_portrait(fig, header_image_path, position='header')
-            footer_ax = add_header_or_footer_to_a4_portrait(fig, footer_image_path, position='footer', page_number=1, total_pages=1)
+            add_header_or_footer_to_a4_portrait(fig, header_image_path, position='header')
+            add_header_or_footer_to_a4_portrait(fig, footer_image_path, position='footer', page_number=1, total_pages=1)
 
 
             # Define the colors + fontsize

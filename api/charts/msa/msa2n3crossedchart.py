@@ -234,11 +234,11 @@ class MSA2n3CrossedChart:
         with PdfPages(pdf_io) as pdf:
             # NEW PDF PAGE - Value by Part, Value by Operator, Part * Operator Interaction
             fig, axes = plt.subplots(3, 1, figsize=(FIGURE_SIZE_A4_PORTRAIT), dpi=300)  # A4 size in inches
-            fig.subplots_adjust(hspace=0.4)  # Increase hspace to add more space between charts
-            # fig.suptitle(title, fontsize=16, weight='bold', y=0.94)
+            fig.subplots_adjust(hspace=0.4, left=0.15, right=0.85)  # Increase hspace to add more space between charts
+            fig.suptitle(title, fontsize=14, y=0.92, ha='left', x=0.1)
 
-            header_ax = add_header_or_footer_to_a4_portrait(fig, header_image_path, position='header')
-            footer_ax = add_header_or_footer_to_a4_portrait(fig, footer_image_path, position='footer', page_number=1, total_pages=4)
+            add_header_or_footer_to_a4_portrait(fig, header_image_path, position='header')
+            add_header_or_footer_to_a4_portrait(fig, footer_image_path, position='footer', page_number=1, total_pages=4)
       
 
             # Plot Value by Part Scatter Plot
@@ -256,7 +256,7 @@ class MSA2n3CrossedChart:
             # NEW PDF PAGE - X-bar and R Charts for all Operators side by side
             # NEW PDF PAGE - X-bar and R Charts for all Operators in single charts
             fig, (ax_xbar, ax_r) = plt.subplots(2, 1, figsize=(FIGURE_SIZE_A4_PORTRAIT), dpi=300)
-            fig.subplots_adjust(hspace=0.35, top=0.85)
+            fig.subplots_adjust(hspace=0.35, top=0.85, left=0.15, right=0.85) 
             # fig.suptitle(f"{title}\nX-bar and R Charts by {label}", fontsize=16, weight='bold', y=0.95)
 
             header_ax = add_header_or_footer_to_a4_portrait(fig, header_image_path, position='header')
@@ -359,14 +359,12 @@ class MSA2n3CrossedChart:
 
             # NEW PDF PAGE - Two-way ANOVA
             fig, ax = plt.subplots(1, 1, figsize=(FIGURE_SIZE_A4_PORTRAIT), dpi=300)  # A4 size in portrait
-            fig.subplots_adjust(bottom=0.20, top=0.85)  # Increase bottom space and headspace
             header_ax = add_header_or_footer_to_a4_portrait(fig, header_image_path, position='header')
             footer_ax = add_header_or_footer_to_a4_portrait(fig, footer_image_path, position='footer', page_number=4, total_pages=4)
 
             # Perform two-way ANOVA with and without interaction and plot the results
             self._perform_two_way_anova(data, label, operators_count, parts_count,
                                         replicates_per_part, ax, pdf)
-
             pdf.savefig(fig)
             plt.close(fig)
 
@@ -598,7 +596,7 @@ class MSA2n3CrossedChart:
             ax.set_xlabel("")
             ax.grid(True, alpha=0.3, zorder=0)
             ax.set_xticklabels(ax.get_xticklabels(), rotation=45)
-            plt.subplots_adjust(top=0.85, bottom=0.4, left=0.1, right=0.9)
+            plt.subplots_adjust(top=0.85, bottom=0.4, left=0.15, right=0.85)
 
         return (model_2way_interaction_results, model_2way_no_interaction_results, gage_rr_var_comp_no_interaction_df,
                 gage_evaluation_df)

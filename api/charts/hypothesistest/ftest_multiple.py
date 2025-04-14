@@ -37,11 +37,15 @@ class FtestMultipleDataSeparate(BaseModel):
     def check_datasets_count_and_finite(cls, v):
         # Ensure 3 to 6 datasets
         if not 3 <= len(v) <= 6:
-            raise ValueError("Number of datasets must be between 3 and 6.")
+            raise BusinessLogicException(
+                error_code="error_datasets_number",
+                field="datasets",
+                details={"message": "Number of datasets must be between 3 and 6"}
+            )
         # Check for NaN or infinite values
         for name, data_list in v.items():
             if any(not np.isfinite(x) for x in data_list):
-                raise ValueError(f"Dataset '{name}' contains NaN or infinite values.")
+                raise ValueError(f"Dataset '{name}' contains NaN or infinite values")
         return v
 
 class FtestMultipleDataCombined(BaseModel):
@@ -61,14 +65,22 @@ class FtestMultipleDataCombined(BaseModel):
         # Get the values field from the data being validated
         values_data = info.data.get('values', [])
         if len(groups) != len(values_data):
-            raise ValueError("Length of 'groups' must match length of 'values'.")
+            raise BusinessLogicException(
+                error_code="error_column_length",
+                field="values",
+                details={"message": "Values and groups must have the same length"}
+            )
         return groups
 
     @field_validator('groups')
     def check_group_count(cls, groups):
         distinct_groups = set(groups)
         if not 3 <= len(distinct_groups) <= 6:
-            raise ValueError("Number of distinct groups must be between 3 and 6 for FtestMultiple.")
+            raise BusinessLogicException(
+                error_code="error_group_number",
+                field="groups",
+                details={"message": "Number of groups must be between 3 and 6"}
+            )
         return groups
 
     @field_validator('values')
@@ -105,9 +117,9 @@ class FtestMultiple:
             num_datasets = len(self.data.values)
             if num_datasets < 2 or num_datasets > 6:
                 raise BusinessLogicException(
-                    error_code="error_validation",
+                    error_code="error_datasets_number",
                     field="values",
-                    details={"message": "Number of datasets must be between 2 and 6"}
+                    details={"message": "Number of datasets must be between 3 and 6"}
                 )
             
         except Exception as e:
@@ -116,19 +128,6 @@ class FtestMultiple:
                 field=str(e),
                 details={"message": f"Invalid or missing field: {str(e)}"}
             )
-    
-    def _convert_combined_to_separate(self, combined: FtestMultipleDataCombined) -> FtestMultipleDataSeparate:
-        """
-        Convert the combined format (one 'values' array and one 'groups' array)
-        into the separate format (dictionary of named datasets).
-        """
-        group_map = {}
-        for value, grp in zip(combined.values, combined.groups):
-            if grp not in group_map:
-                group_map[grp] = []
-            group_map[grp].append(value)
-
-        return FtestMultipleDataSeparate(values=group_map)
         
     def process(self):
         title = self.config.title
@@ -147,10 +146,10 @@ class FtestMultiple:
                 ["StDev Comparison", "StDev Differ"]],    # Chance and Detectable Difference
                 figsize=(8.27, 11.69), dpi=300)  # A4 size in inches
             # fig.subplots_adjust(hspace=0.4)  # Increase hspace to add more space between charts
-            # fig.suptitle(title, fontsize=16, weight='bold', y=0.94)
+            fig.suptitle(title, fontsize=14, y=0.92, ha='left', x=0.1)
 
-            header_ax = add_header_or_footer_to_a4_portrait(fig, header_image_path, position='header')
-            footer_ax = add_header_or_footer_to_a4_portrait(fig, footer_image_path, position='footer', page_number=1, total_pages=3)
+            add_header_or_footer_to_a4_portrait(fig, header_image_path, position='header')
+            add_header_or_footer_to_a4_portrait(fig, footer_image_path, position='footer', page_number=1, total_pages=3)
 
 
             # Define the colors + font size
@@ -159,10 +158,6 @@ class FtestMultiple:
             green_table = "#9cc563"
             lightgreen_table = "#d6ed5f"
             font_size=7
-
-
-
-
 
             # F-Test Results
             ax = axs["Ftest Results"]
@@ -405,8 +400,8 @@ class FtestMultiple:
             # fig.subplots_adjust(hspace=0.4)  # Increase hspace to add more space between charts
             # fig.suptitle(title, fontsize=16, weight='bold', y=0.94)
 
-            header_ax = add_header_or_footer_to_a4_portrait(fig, header_image_path, position='header')
-            footer_ax = add_header_or_footer_to_a4_portrait(fig, footer_image_path, position='footer', page_number=2, total_pages=3)
+            add_header_or_footer_to_a4_portrait(fig, header_image_path, position='header')
+            add_header_or_footer_to_a4_portrait(fig, footer_image_path, position='footer', page_number=2, total_pages=3)
 
 
             # First find global min and max across all datasets
@@ -464,8 +459,8 @@ class FtestMultiple:
             # fig.subplots_adjust(hspace=0.8)  # Increase hspace to add more space between charts
             # fig.suptitle(title, fontsize=16, weight='bold', y=0.94)
 
-            header_ax = add_header_or_footer_to_a4_portrait(fig, header_image_path, position='header')
-            footer_ax = add_header_or_footer_to_a4_portrait(fig, footer_image_path, position='footer', page_number=3, total_pages=3)
+            add_header_or_footer_to_a4_portrait(fig, header_image_path, position='header')
+            add_header_or_footer_to_a4_portrait(fig, footer_image_path, position='footer', page_number=3, total_pages=3)
 
 
             # Boxplots
@@ -530,3 +525,16 @@ class FtestMultiple:
         pdf_io.seek(0)
         plt.close('all')
         return pdf_io
+    
+    def _convert_combined_to_separate(self, combined: FtestMultipleDataCombined) -> FtestMultipleDataSeparate:
+        """
+        Convert the combined format (one 'values' array and one 'groups' array)
+        into the separate format (dictionary of named datasets).
+        """
+        group_map = {}
+        for value, grp in zip(combined.values, combined.groups):
+            if grp not in group_map:
+                group_map[grp] = []
+            group_map[grp].append(value)
+
+        return FtestMultipleDataSeparate(values=group_map)

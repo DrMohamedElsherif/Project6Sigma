@@ -160,10 +160,10 @@ class Ftest:
                 ["Chance", "Detectable"]],    # Chance and Detectable Difference
                 figsize=(8.27, 11.69), dpi=300)  # A4 size in inches
             # fig.subplots_adjust(hspace=0.4)  # Increase hspace to add more space between charts
-            # fig.suptitle(title, fontsize=16, weight='bold', y=0.94)
+            fig.suptitle(title, fontsize=14, y=0.92, ha='left', x=0.1)
 
-            header_ax = add_header_or_footer_to_a4_portrait(fig, header_image_path, position='header')
-            footer_ax = add_header_or_footer_to_a4_portrait(fig, footer_image_path, position='footer', page_number=1, total_pages=2)
+            add_header_or_footer_to_a4_portrait(fig, header_image_path, position='header')
+            add_header_or_footer_to_a4_portrait(fig, footer_image_path, position='footer', page_number=1, total_pages=2)
 
 
             # Define the colors + font size
@@ -680,8 +680,8 @@ class Ftest:
             fig.subplots_adjust(hspace=0.8)  # Increase hspace to add more space between charts
             # fig.suptitle(title, fontsize=16, weight='bold', y=0.94)
 
-            header_ax = add_header_or_footer_to_a4_portrait(fig, header_image_path, position='header')
-            footer_ax = add_header_or_footer_to_a4_portrait(fig, footer_image_path, position='footer', page_number=2, total_pages=2)
+            add_header_or_footer_to_a4_portrait(fig, header_image_path, position='header')
+            add_header_or_footer_to_a4_portrait(fig, footer_image_path, position='footer', page_number=2, total_pages=2)
 
 
             # Histogram
@@ -707,12 +707,12 @@ class Ftest:
 
             # Errorbar
             ax = axs["Errorbar"]
-            ax.errorbar(x=sample_1_std, y=1, xerr=[[sample_1_std - lower_chi], [upper_chi - sample_1_std]], fmt='o', color='#0054a7', capsize=5)
-            ax.vlines(target_sigma, 0.5, 1.5, color='#67b57a', linestyles='dashed', label=f"Target: {target_sigma}")
+            ax.errorbar(x=sample_1_std, y=1, xerr=[[sample_1_std - lower_chi], [upper_chi - sample_1_std]], fmt='o', color='#95b92a', capsize=3, markersize=3)
+            ax.vlines(target_sigma, 0.5, 1.5, colors='grey', linestyles='dashed', alpha=0.7, label=f"Target: {target_sigma}")
             ax.set_title("90% CI for the Standard Deviation", loc='center')
             ax.set_ylim(0.75, 1.25)
             ax.set_yticks([])
-            ax.grid(True, axis='x', zorder=0, alpha=0.7)
+            ax.grid(True, axis='x', zorder=0, alpha=0.3)
             legend = ax.legend()
             for text in legend.get_texts():
                 text.set_fontsize('x-small')

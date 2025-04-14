@@ -25,13 +25,6 @@ class ChiSquaredConfig(BaseModel):
     outcomes: Optional[List[str]] = None
     expected_percent: Optional[List[float]] = None
     observed_count: Optional[List[int]] = None
-    
-    @field_validator('alphalevel')
-    def validate_alphalevel(cls, v):
-        common_values = [0.01, 0.05, 0.1]
-        if v not in common_values:
-            raise ValueError(f"alphalevel should typically be one of {common_values}")
-        return v
 
 class ChiSquaredData(BaseModel):
     values: Optional[Dict[str, List[Union[str, float, int]]]] = Field(None)
@@ -44,7 +37,11 @@ class ChiSquaredData(BaseModel):
         required_keys = ["Outcomes", "expected_percent", "sample_count"]
         for key in required_keys:
             if key not in v:
-                raise ValueError(f"Missing required key in values: {key}")
+                raise BusinessLogicException(
+                    error_code="error_missing_field",
+                    field=key,
+                    details={"message": f"Missing required field: {key}"}
+                )
         return v
 
 class ChiSquaredRequest(BaseModel):
@@ -68,37 +65,65 @@ class ChiSquared:
             # For "Summarized data" variant
             if variant == "Summarized data":
                 if self.config.outcomes is None or self.config.expected_percent is None or self.config.observed_count is None:
-                    raise ValueError("For 'Summarized data' variant, outcomes, expected_percent, and observed_count must be provided")
+                    raise BusinessLogicException(
+                        error_code="error_chi_summarized",
+                        field="outcomes, expected_percent, observed_count",
+                        details={"message": "For 'Summarized data' variant, outcomes, expected_percent, and observed_count must be provided"}
+                    )
                 
                 # Validate matching list lengths
                 if len(self.config.outcomes) != len(self.config.expected_percent) or len(self.config.outcomes) != len(self.config.observed_count):
-                    raise ValueError("outcomes, expected_percent, and observed_count must have the same length")
+                    raise BusinessLogicException(
+                        error_code="error_sample_length",
+                        field="outcomes, expected_percent, observed_count",
+                        details={"message": f"Must have the same length: {self.config.outcomes}, {self.config.expected_percent}, {self.config.observed_count}"}
+                    )
                 
                 # Validate percentages sum to 1
                 if abs(sum(self.config.expected_percent) - 1.0) > 0.001:
-                    raise ValueError("expected_percent values must sum to approximately 1.0")
+                    raise BusinessLogicException(
+                        error_code="error_expected_percent",
+                        field="expected_percent",
+                        details={"message": "Expected percent must sum to approximately 100%"}
+                    )
                     
             # For "Data in columns" variant
             elif variant == "Data in columns":
                 if self.data is None or self.data.values is None:
-                    raise ValueError("For 'Data in columns' variant, data.values must be provided")
+                    raise BusinessLogicException(
+                        error_code="error_missing_field",
+                        field="data",
+                        details={"message": f"Missing required field: {self.data}"}
+                    )
                 
                 # Verify required keys exist in values
                 required_keys = ["Outcomes", "expected_percent", "sample_count"]
                 for key in required_keys:
                     if key not in self.data.values:
-                        raise ValueError(f"Missing required key in data.values: {key}")
+                        raise BusinessLogicException(
+                            error_code="error_missing_field",
+                            field=key,
+                            details={"message": f"Missing required field: {key}"}
+                        )
                 
                 # Validate that sample_count contains valid categories from Outcomes
                 outcomes = set(self.data.values["Outcomes"])
                 sample_count = self.data.values["sample_count"]
                 invalid_values = [value for value in sample_count if value not in outcomes]
                 if invalid_values:
-                    raise ValueError(f"Found invalid categories in sample_count: {set(invalid_values)}")
+                    raise BusinessLogicException(
+                        error_code="error_invalid_categories",
+                        field="sample_count",
+                        details={"message": f"Invalid categories in sample_count: {set(invalid_values)}"}
+                    )
                     
                 # Validate percentages sum to 1
                 if abs(sum(self.data.values["expected_percent"]) - 1.0) > 0.001:
-                    raise ValueError("expected_percent values must sum to approximately 1.0")
+                    raise BusinessLogicException(
+                        error_code="error_expected_percent",
+                        field="expected_percent",
+                        details={"message": "Expected percent must sum to approximately 100%"}
+                    )
             
             else:
                 raise ValueError("variant must be either 'Summarized data' or 'Data in columns'")
@@ -201,10 +226,10 @@ class ChiSquared:
                 ["Comparison Bar", "empty"]],    # Chance and Detectable Difference
                 figsize=(8.27, 11.69), dpi=300)  # A4 size in inches
             #fig.subplots_adjust(hspace=0.4)  # Increase hspace to add more space between charts
-            #fig.suptitle(title, fontsize=16, weight='bold', y=0.94)
+            fig.suptitle(title, fontsize=14, y=0.92, ha='left', x=0.1)
 
-            header_ax = add_header_or_footer_to_a4_portrait(fig, header_image_path, position='header')
-            footer_ax = add_header_or_footer_to_a4_portrait(fig, footer_image_path, position='footer', page_number=1, total_pages=1)
+            add_header_or_footer_to_a4_portrait(fig, header_image_path, position='header')
+            add_header_or_footer_to_a4_portrait(fig, footer_image_path, position='footer', page_number=1, total_pages=1)
 
 
             # Define the colors + fontsize

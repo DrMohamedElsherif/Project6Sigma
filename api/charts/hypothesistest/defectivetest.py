@@ -59,19 +59,19 @@ class Defectivetest:
             if self.config.variant == "Summarized data":
                 if self.config.sample_size is None or self.config.defective_count is None:
                     raise BusinessLogicException(
-                        error_code="error_validation",
+                        error_code="error_defective_summarized",
                         field="configuration_parameters",
                         details={
-                            "message": "For 'Summarized data' variant, both 'sample_size' and 'defective_count' (or 'defective/event') are required."
+                            "message": "For 'Summarized data' variant, both 'sample_size' and 'defective_count' are required"
                         }
                     )
             elif self.config.variant == "Datas in column":
                 if self.config.defective_name is None or self.data is None or self.data.values is None:
                     raise BusinessLogicException(
-                        error_code="error_validation",
+                        error_code="error_defective_column",
                         field="configuration_parameters",
                         details={
-                            "message": "For 'Datas in column' variant, 'sample_column', 'defective_name', and 'data.values' are required."
+                            "message": "For 'Datas in column' variant, 'sample_column', 'defective_name', and 'data.values' are required"
                         }
                     )
 
@@ -220,10 +220,10 @@ class Defectivetest:
                 ["Errorbar", "Histogram"]],    # Chance and Detectable Difference
                 figsize=(8.27, 11.69), dpi=300)  # A4 size in inches
             #fig.subplots_adjust(hspace=0.4)  # Increase hspace to add more space between charts
-            # fig.suptitle(title, fontsize=16, weight='bold', y=0.94)
+            fig.suptitle(title, fontsize=14, y=0.92, ha='left', x=0.1)
 
-            header_ax = add_header_or_footer_to_a4_portrait(fig, header_image_path, position='header')
-            footer_ax = add_header_or_footer_to_a4_portrait(fig, footer_image_path, position='footer', page_number=1, total_pages=1)
+            add_header_or_footer_to_a4_portrait(fig, header_image_path, position='header')
+            add_header_or_footer_to_a4_portrait(fig, footer_image_path, position='footer', page_number=1, total_pages=1)
 
             # Define the colors + fontsize
             grey = "#e7e6e6"

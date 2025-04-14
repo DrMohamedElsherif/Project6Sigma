@@ -30,18 +30,12 @@ class OneWayAnovaDataSeparate(BaseModel):
         # Check the number of datasets
         num_datasets = len(v)
         if num_datasets < 2 or num_datasets > 6:
-            raise ValueError("Number of datasets must be between 2 and 6")
-        
-        # Check for empty datasets
-        for group, values in v.items():
-            if len(values) < 5:
-                raise ValueError(f"Group '{group}' has less than 5 samples")
-                
-        # Check for NaN or infinite values
-        for group, values in v.items():
-            if any(not np.isfinite(x) for x in values):
-                raise ValueError(f"Group '{group}' contains NaN or infinite values")
-                
+            raise BusinessLogicException(
+                error_code="error_datasets_number",
+                field="datasets",
+                details={"message": "Number of datasets must be between 3 and 6"}                
+            )
+
         return v
 
 # New combined data format
@@ -56,12 +50,20 @@ class OneWayAnovaDataCombined(BaseModel):
             return v
             
         if len(v) != len(info.data['values']):
-            raise ValueError("Values and groups must have the same length")
+            raise BusinessLogicException(
+                error_code="error_column_length",
+                field="groups",
+                details={"message": "Values and groups must have the same length"}                
+            )
         
         # Check the unique group count
         unique_groups = set(v)
         if len(unique_groups) < 2 or len(unique_groups) > 6:
-            raise ValueError("Number of groups must be between 2 and 6")
+            raise BusinessLogicException(
+                error_code="error_datasets_number",
+                field="datasets",
+                details={"message": "Number of datasets must be between 3 and 6"}                
+            )
         
         # Count samples per group to ensure minimum samples
         group_counts = {}
@@ -189,11 +191,11 @@ class OneWayAnova:
                     figsize=(8.27, 11.69), dpi=300)  # A4 size in inches
                 # fig.subplots_adjust(hspace=0.4)  # Increase hspace to add more space between charts
 
-            #fig.suptitle(title, fontsize=16, weight='bold', y=0.94)
+            fig.suptitle(title, fontsize=14, y=0.92, ha='left', x=0.1)
 
 
-            header_ax = add_header_or_footer_to_a4_portrait(fig, header_image_path, position='header')
-            footer_ax = add_header_or_footer_to_a4_portrait(fig, footer_image_path, position='footer', page_number=1, total_pages=3)
+            add_header_or_footer_to_a4_portrait(fig, header_image_path, position='header')
+            add_header_or_footer_to_a4_portrait(fig, footer_image_path, position='footer', page_number=1, total_pages=3)
 
 
             # Define the colors + font size
@@ -493,8 +495,8 @@ class OneWayAnova:
             # fig.suptitle(title, fontsize=16, weight='bold', y=0.94)
 
 
-            header_ax = add_header_or_footer_to_a4_portrait(fig, header_image_path, position='header')
-            footer_ax = add_header_or_footer_to_a4_portrait(fig, footer_image_path, position='footer', page_number=2, total_pages=3)
+            add_header_or_footer_to_a4_portrait(fig, header_image_path, position='header')
+            add_header_or_footer_to_a4_portrait(fig, footer_image_path, position='footer', page_number=2, total_pages=3)
 
 
             # Track global min and max values across all datasets
@@ -770,8 +772,8 @@ class OneWayAnova:
             # fig.suptitle(title, fontsize=16, weight='bold', y=0.94)
 
 
-            header_ax = add_header_or_footer_to_a4_portrait(fig, header_image_path, position='header')
-            footer_ax = add_header_or_footer_to_a4_portrait(fig, footer_image_path, position='footer', page_number=3, total_pages=3)
+            add_header_or_footer_to_a4_portrait(fig, header_image_path, position='header')
+            add_header_or_footer_to_a4_portrait(fig, footer_image_path, position='footer', page_number=3, total_pages=3)
 
 
             # Boxplots

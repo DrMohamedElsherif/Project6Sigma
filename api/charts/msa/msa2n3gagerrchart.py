@@ -240,10 +240,11 @@ class MSA2n3GagerrChart:
             # Create a single figure with subplots grid and high DPI
             fig, axes = plt.subplots(n_rows, n_cols, figsize=FIGURE_SIZE_A4_PORTRAIT, dpi=300, sharey=True)
             fig.subplots_adjust(top=0.85, bottom=0.2, hspace=0.4, wspace=0.3)
+            fig.suptitle(title, fontsize=14, y=0.92, ha='left', x=0.1)
             
             # Add header and footer to this figure
-            header_ax = add_header_or_footer_to_a4_portrait(fig, header_image_path, position='header')
-            footer_ax = add_header_or_footer_to_a4_portrait(fig, footer_image_path, position='footer', page_number=1, total_pages=1)
+            add_header_or_footer_to_a4_portrait(fig, header_image_path, position='header')
+            add_header_or_footer_to_a4_portrait(fig, footer_image_path, position='footer', page_number=1, total_pages=1)
             
             
             # Flatten axes array for easier iteration

@@ -38,7 +38,11 @@ class TwoFtestDataSeparate(BaseModel):
     @field_validator('values')
     def check_two_groups_only(cls, v):
         if len(v.keys()) != 2:
-            raise ValueError("Exactly two datasets are required for a 2-sample F-Test.")
+            raise BusinessLogicException(
+                error_code="error_data_size",
+                field="values",
+                details={"message": "Exactly two data series are required"}
+            )
         # Check each dataset for finite values
         for group, arr in v.items():
             if any(not np.isfinite(x) for x in arr):
@@ -61,14 +65,22 @@ class TwoFtestDataCombined(BaseModel):
         if 'values' not in values:
             return groups
         if len(groups) != len(values['values']):
-            raise ValueError("Length of 'groups' must match length of 'values'.")
+            raise BusinessLogicException(
+                error_code="error_column_length",
+                field="values",
+                details={"message": "Values and groups must have the same length"}
+            )
         return groups
 
     @field_validator('groups')
     def check_two_distinct_groups(cls, groups):
         distinct_groups = set(groups)
         if len(distinct_groups) != 2:
-            raise ValueError("Exactly two distinct group labels are required for a 2-sample F-Test.")
+            raise BusinessLogicException(
+                error_code="error_group_identifiers",
+                field="groups",
+                details={"message": "Exactly two different group identifiers are required"}
+            )
         return groups
 
     @field_validator('values')
@@ -189,10 +201,10 @@ class TwoFtest:
                 ["Chance", "Detectable"]],    # Chance and Detectable Difference
                 figsize=(8.27, 11.69), dpi=300)  # A4 size in inches
             #fig.subplots_adjust(hspace=0.4)  # Increase hspace to add more space between charts
-            # fig.suptitle(title, fontsize=16, weight='bold', y=0.94)
+            fig.suptitle(title, fontsize=14, y=0.92, ha='left', x=0.1)
 
-            header_ax = add_header_or_footer_to_a4_portrait(fig, header_image_path, position='header')
-            footer_ax = add_header_or_footer_to_a4_portrait(fig, footer_image_path, position='footer', page_number=1, total_pages=2)
+            add_header_or_footer_to_a4_portrait(fig, header_image_path, position='header')
+            add_header_or_footer_to_a4_portrait(fig, footer_image_path, position='footer', page_number=1, total_pages=2)
 
             # Define the colors + font size
             edgecolor = "#7c7c7c"
@@ -679,8 +691,8 @@ class TwoFtest:
             fig.subplots_adjust(hspace=0.8)  # Increase hspace to add more space between charts
             # fig.suptitle(title, fontsize=16, weight='bold', y=0.94)
 
-            header_ax = add_header_or_footer_to_a4_portrait(fig, header_image_path, position='header')
-            footer_ax = add_header_or_footer_to_a4_portrait(fig, footer_image_path, position='footer', page_number=2, total_pages=2)
+            add_header_or_footer_to_a4_portrait(fig, header_image_path, position='header')
+            add_header_or_footer_to_a4_portrait(fig, footer_image_path, position='footer', page_number=2, total_pages=2)
 
 
             # Plot for the Histograms

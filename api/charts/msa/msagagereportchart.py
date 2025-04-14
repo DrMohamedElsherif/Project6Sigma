@@ -191,8 +191,8 @@ class MsaGageReportChart:
         fig, axs = plt.subplots(2, 1, figsize=(8.27, 11.69))  # A4 size in inches
 
         # Adjust layout: larger margins and more space between plots
-        fig.subplots_adjust(left=0.15, right=0.85, top=0.9, bottom=0.1, hspace=0.4)
-        # fig.suptitle(title, fontsize=16, weight="bold", y=0.93)
+        fig.subplots_adjust(left=0.15, right=0.85, top=0.85, bottom=0.1, hspace=0.3)
+        fig.suptitle(title, fontsize=14, y=0.92, ha='left', x=0.1)
         header_ax = add_header_or_footer_to_a4_portrait(fig, header_image_path, position='header')
         footer_ax = add_header_or_footer_to_a4_portrait(fig, footer_image_path, position='footer', page_number=1, total_pages=1)
 

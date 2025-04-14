@@ -228,10 +228,10 @@ class MSA2n3NestedChart:
 
         with PdfPages(pdf_io) as pdf:
             fig, axes = plt.subplots(2, 1, figsize=(FIGURE_SIZE_A4_PORTRAIT), dpi=300)  # A4 size in inches
-            fig.subplots_adjust(hspace=0.4)  # Increase hspace to add more space between charts
-            # fig.suptitle(title, fontsize=16, weight='bold', y=0.94)
-            header_ax = add_header_or_footer_to_a4_portrait(fig, header_image_path, position='header')
-            footer_ax = add_header_or_footer_to_a4_portrait(fig, footer_image_path, position='footer', page_number=1, total_pages=3)
+            fig.subplots_adjust(top=0.85, left=0.15, right=0.85, hspace=0.4)  # Increase hspace to add more space between charts
+            fig.suptitle(title, fontsize=14, y=0.92, ha='left', x=0.1)
+            add_header_or_footer_to_a4_portrait(fig, header_image_path, position='header')
+            add_header_or_footer_to_a4_portrait(fig, footer_image_path, position='footer', page_number=1, total_pages=3)
  
             # Plot Value by Part Scatter Plot
             self._plot_value_by_part(data, data_grouped_by_part, axes[0])
@@ -281,7 +281,7 @@ class MSA2n3NestedChart:
 
             # NEW PDF PAGE - X-bar and R Charts for all Operators in single charts
             fig, (ax_xbar, ax_r) = plt.subplots(2, 1, figsize=(FIGURE_SIZE_A4_PORTRAIT), dpi=300)  # A4 size in landscape
-            fig.subplots_adjust(hspace=0.35, top=0.85)
+            fig.subplots_adjust(hspace=0.35, top=0.85, left=0.15, right=0.85)
             # fig.suptitle(f"{title}\nX-bar and R Charts by {label}", fontsize=16, weight='bold', y=0.95)
             header_ax = add_header_or_footer_to_a4_portrait(fig, header_image_path, position='header')
             footer_ax = add_header_or_footer_to_a4_portrait(fig, footer_image_path, position='footer', page_number=2, total_pages=3)
@@ -294,9 +294,9 @@ class MSA2n3NestedChart:
 
             # NEW PDF PAGE - Tables
             fig, axes = plt.subplots(4, 1, figsize=(FIGURE_SIZE_A4_PORTRAIT), dpi=300)  # A4 size in inches
-            fig.subplots_adjust(hspace=0.5)
-            header_ax = add_header_or_footer_to_a4_portrait(fig, header_image_path, position='header')
-            footer_ax = add_header_or_footer_to_a4_portrait(fig, footer_image_path, position='footer', page_number=3, total_pages=3)
+            fig.subplots_adjust(left=0.15, right=0.85, hspace=0.5)
+            add_header_or_footer_to_a4_portrait(fig, header_image_path, position='header')
+            add_header_or_footer_to_a4_portrait(fig, footer_image_path, position='footer', page_number=3, total_pages=3)
 
             desired_height = 0.15
             font_size = 8

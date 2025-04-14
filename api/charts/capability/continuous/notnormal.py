@@ -136,12 +136,12 @@ def I_MR_chart_transformed(data, title, target=0, subgroup_size=1, LSL=None, USL
                 figsize=(8.27, 11.69), dpi=300)  # A4 size in inches for landscape
 
             # Increase the space between the plots
-            plt.tight_layout()
-            plt.subplots_adjust(left=0.1, right=0.9, top=0.9, bottom=0.1, hspace=0.8, wspace=0.5)
-            # plt.suptitle(f"{title}", fontsize=16, y=0.96)
+            # plt.tight_layout()
+            # plt.subplots_adjust(left=0.15, right=0.85, top=0.85, bottom=0.1, hspace=0.8, wspace=0.5)
+            fig.suptitle(title, fontsize=14, y=0.92, ha='left', x=0.1)
 
-            header_ax = add_header_or_footer_to_a4_portrait(fig, header_image_path, position='header')
-            footer_ax = add_header_or_footer_to_a4_portrait(fig, footer_image_path, position='footer', page_number=1, total_pages=2)
+            add_header_or_footer_to_a4_portrait(fig, header_image_path, position='header')
+            add_header_or_footer_to_a4_portrait(fig, footer_image_path, position='footer', page_number=1, total_pages=2)
 
             # Plot I chart
             axs["I"].plot(data["value_transformed"], marker="o", color="black", lw=0.5)
@@ -203,7 +203,7 @@ def I_MR_chart_transformed(data, title, target=0, subgroup_size=1, LSL=None, USL
 
             # Adjust layout to add padding around the content
             plt.tight_layout()
-            plt.subplots_adjust(left=0.1, right=0.9, top=0.9, bottom=0.1, hspace=0.6, wspace=0.1)
+            plt.subplots_adjust(left=0.1, right=0.9, top=0.85, bottom=0.1, hspace=0.6, wspace=0.1)
 
             pdf.savefig(fig)
             plt.close(fig)

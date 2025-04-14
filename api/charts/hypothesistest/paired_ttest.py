@@ -30,16 +30,20 @@ class PairedTtestDataSeparate(BaseModel):
     @field_validator('values')
     def check_exactly_two_series_with_equal_length(cls, v):
         if len(v) != 2:
-            raise ValueError("Exactly two data series are required for a paired t-test")
+            raise BusinessLogicException(
+                error_code="error_data_size",
+                field="values",
+                details={"message": "Exactly two data series are required"}
+            )
         
         # Get keys and check lengths
         keys = list(v.keys())
         if len(v[keys[0]]) != len(v[keys[1]]):
-            raise ValueError("Both series must have the same length for paired analysis")
-        
-        # Check minimum sample size
-        if len(v[keys[0]]) < 5:
-            raise ValueError(f"At least 5 pairs are required for statistical validity")
+            raise BusinessLogicException(
+                error_code="error_data_length_paired",
+                field="values",
+                details={"message": "Both series must have the same length for paired analysis"}
+            )
             
         # Check for NaNs or infinites
         for series_name, data in v.items():
@@ -59,11 +63,19 @@ class PairedTtestDataCombined(BaseModel):
             return v
             
         if len(v) != len(values['values']):
-            raise ValueError("Values and groups must have the same length")
+            raise BusinessLogicException(
+                error_code="error_column_length",
+                field="groups",
+                details={"message": "Values and groups must have the same length"}
+            )
             
         unique_groups = set(v)
         if len(unique_groups) != 2:
-            raise ValueError("Exactly two different group identifiers are required")
+            raise BusinessLogicException(
+                error_code="error_group_identifiers",
+                field="groups",
+                details={"message": "Exactly two different group identifiers are required"}
+            )
             
         # Count samples per group to ensure equal counts
         group_counts = {}
@@ -73,11 +85,11 @@ class PairedTtestDataCombined(BaseModel):
         # Get the unique group names
         groups = list(group_counts.keys())
         if len(groups) == 2 and group_counts[groups[0]] != group_counts[groups[1]]:
-            raise ValueError(f"Both groups must have the same number of samples: {groups[0]}={group_counts[groups[0]]}, {groups[1]}={group_counts[groups[1]]}")
-        
-        # Check minimum sample size
-        if min(group_counts.values()) < 5:
-            raise ValueError(f"At least 5 samples per group are required for statistical validity")
+            raise BusinessLogicException(
+                error_code="error_data_length_paired",
+                field="groups",
+                details={"message": "Both series must have the same length for paired analysis"}
+            )
             
         return v
     
@@ -232,10 +244,10 @@ class PairedTtest:
                 ["Chance", "Detectable"]],    # Chance and Detectable Difference
                 figsize=(8.27, 11.69), dpi=300)  # A4 size in inches
             # fig.subplots_adjust(hspace=0.4)  # Increase hspace to add more space between charts
-            # fig.suptitle(title, fontsize=16, weight='bold', y=0.94)
+            fig.suptitle(title, fontsize=14, y=0.92, ha='left', x=0.1)		
 
-            header_ax = add_header_or_footer_to_a4_portrait(fig, header_image_path, position='header')
-            footer_ax = add_header_or_footer_to_a4_portrait(fig, footer_image_path, position='footer', page_number=1, total_pages=2)
+            add_header_or_footer_to_a4_portrait(fig, header_image_path, position='header')
+            add_header_or_footer_to_a4_portrait(fig, footer_image_path, position='footer', page_number=1, total_pages=2)
 
             # Define the colors + font size
             edgecolor = "#7c7c7c"

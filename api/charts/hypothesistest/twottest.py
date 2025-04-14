@@ -34,23 +34,12 @@ class TwoTtestDataSeparate(BaseModel):
     @field_validator('values')
     def check_exactly_two_series(cls, v):
         if len(v) != 2:
-            raise ValueError("Exactly two data series are required for a two-sample t-test")
-        
-        for series_name, data in v.items():
-            if len(data) < 5:  # Statistical minimum for meaningful t-test
-                raise ValueError(f"Series '{series_name}' has fewer than 5 samples")
-            
-            if any(not np.isfinite(x) for x in data):
-                raise ValueError(f"Series '{series_name}' contains NaN or infinite values")
-        
-        # Check if variances are very different (optional warning)
-        keys = list(v.keys())
-        var1 = np.var(v[keys[0]], ddof=1)
-        var2 = np.var(v[keys[1]], ddof=1)
-        variance_ratio = var1 / var2
-        if variance_ratio > 4 or variance_ratio < 0.25:
-            print(f"Warning: Sample variances differ by a factor of {variance_ratio:.2f}. Results may be affected.")
-            
+            raise BusinessLogicException(
+                error_code="error_validation",
+                field="values",
+                details={"message": "Exactly two data series are required"}
+            )
+
         return v
 
 # Alternative data format with values in a single column
@@ -62,27 +51,25 @@ class TwoTtestDataCombined(BaseModel):
     def check_exactly_two_groups(cls, v, values):
         unique_groups = set(v)
         if len(unique_groups) != 2:
-            raise ValueError("Exactly two different group identifiers are required")
+            raise BusinessLogicException(
+                error_code="error_validation",
+                field="groups",
+                details={"message": "Exactly two different group identifiers are required"}
+            )
         
         # Check if we have the data values too
         if 'values' in values and len(values['values']) != len(v):
-            raise ValueError("Values and groups must have the same length")
+            raise BusinessLogicException(
+                error_code="error_data_length_mismatch",
+                field="values",
+                details={"message": "Data lengths do not match the expected number inputs"}
+            )
             
         # Count samples per group
         group_counts = {}
         for group in v:
             group_counts[group] = group_counts.get(group, 0) + 1
-            
-        for group, count in group_counts.items():
-            if count < 5:  # Statistical minimum for meaningful t-test
-                raise ValueError(f"Group '{group}' has fewer than 5 samples")
         
-        return v
-    
-    @field_validator('values')
-    def check_valid_numbers(cls, v):
-        if any(not np.isfinite(x) for x in v):
-            raise ValueError("Data contains NaN or infinite values")
         return v
 
 # Union type to accept either format
@@ -164,31 +151,6 @@ class TwoTtest:
                 field=str(e),
                 details={"message": f"Invalid or missing field: {str(e)}"}
             )
-    
-    def _convert_combined_to_separate(self, combined_data):
-        """
-        Convert data from combined format (single column with group identifiers)
-        to separate format (dictionary with group names as keys).
-        
-        Args:
-            combined_data: Dictionary with 'values' (list) and 'groups' (list) keys
-            
-        Returns:
-            Dictionary with group names as keys and lists of values as values
-        """
-        values = combined_data['values']
-        groups = combined_data['groups']
-        
-        # Create dictionary of separate data series
-        separate_data = {}
-        unique_groups = set(groups)
-        
-        for group in unique_groups:
-            # Extract values for this group
-            group_values = [values[i] for i in range(len(values)) if groups[i] == group]
-            separate_data[group] = group_values
-        
-        return separate_data
 
     def process(self):
         title = self.config.title
@@ -236,10 +198,10 @@ class TwoTtest:
                 ["Chance", "Detectable"]],    # Chance and Detectable Difference
                 figsize=(8.27, 11.69), dpi=300)  # A4 size in inches
             # fig.subplots_adjust(hspace=0.4)  # Increase hspace to add more space between charts
-            # fig.suptitle(title, fontsize=16, weight='bold', y=0.94)
+            fig.suptitle(title, fontsize=14, y=0.92, ha='left', x=0.1)		
 
-            header_ax = add_header_or_footer_to_a4_portrait(fig, header_image_path, position='header')
-            footer_ax = add_header_or_footer_to_a4_portrait(fig, footer_image_path, position='footer', page_number=1, total_pages=2)
+            add_header_or_footer_to_a4_portrait(fig, header_image_path, position='header')
+            add_header_or_footer_to_a4_portrait(fig, footer_image_path, position='footer', page_number=1, total_pages=2)
 
             # Define the colors + font size
             edgecolor = "#7c7c7c"
@@ -669,8 +631,8 @@ class TwoTtest:
             #fig.subplots_adjust(hspace=0.4)  # Increase hspace to add more space between charts
             # fig.suptitle(title, fontsize=16, weight='bold', y=0.94)
 
-            header_ax = add_header_or_footer_to_a4_portrait(fig, header_image_path, position='header')
-            footer_ax = add_header_or_footer_to_a4_portrait(fig, footer_image_path, position='footer', page_number=2, total_pages=2)
+            add_header_or_footer_to_a4_portrait(fig, header_image_path, position='header')
+            add_header_or_footer_to_a4_portrait(fig, footer_image_path, position='footer', page_number=2, total_pages=2)
 
             # Define gaussian function for fits
             def gaussian(x, a, mu, sigma):
@@ -727,6 +689,31 @@ class TwoTtest:
         pdf_io.seek(0)
         plt.close('all')
         return pdf_io
+    
+def _convert_combined_to_separate(self, combined_data):
+        """
+        Convert data from combined format (single column with group identifiers)
+        to separate format (dictionary with group names as keys).
+        
+        Args:
+            combined_data: Dictionary with 'values' (list) and 'groups' (list) keys
+            
+        Returns:
+            Dictionary with group names as keys and lists of values as values
+        """
+        values = combined_data['values']
+        groups = combined_data['groups']
+        
+        # Create dictionary of separate data series
+        separate_data = {}
+        unique_groups = set(groups)
+        
+        for group in unique_groups:
+            # Extract values for this group
+            group_values = [values[i] for i in range(len(values)) if groups[i] == group]
+            separate_data[group] = group_values
+        
+        return separate_data
 
 
 def _calculate_statistics(data1, data2, p, alpha=0.05):

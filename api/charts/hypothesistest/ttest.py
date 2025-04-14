@@ -125,9 +125,9 @@ class Ttest:
                 ["TS1", "TS1"],         # Time Series Plots for each dataset
                 ["Chance", "Detectable"]],    # Chance and Detectable Difference
                 figsize=(8.27, 11.69),  dpi=300)  # A4 size in inches
-            # fig.suptitle(title, fontsize=16, weight='bold', y=0.94)
-            header_ax = add_header_or_footer_to_a4_portrait(fig, header_image_path, position='header')
-            footer_ax = add_header_or_footer_to_a4_portrait(fig, footer_image_path, position='footer', page_number=1, total_pages=2)
+            fig.suptitle(title, fontsize=14, y=0.92, ha='left', x=0.1)
+            add_header_or_footer_to_a4_portrait(fig, header_image_path, position='header')
+            add_header_or_footer_to_a4_portrait(fig, footer_image_path, position='footer', page_number=1, total_pages=2)
             
 
 
@@ -300,7 +300,7 @@ class Ttest:
             ax = axes["TS1"]
             ax.plot(df, color='black', marker="o", lw=0.5)
             ax.set_title("Data Time Series", loc='left')
-            ax.hlines(results['mean'], 0, len(df), colors='grey', linestyles='dashed', label=f"Target mu: {target_mu}", alpha=0.7)
+            ax.hlines(results['mean'], 0, len(df), colors='grey', linestyles='dashed', label=f"Target mu: {target_mu}", alpha=0.7, lw=0.5)
             ax.text(0.1, 0.1, source, transform=ax.transAxes, fontsize=7, verticalalignment='top', horizontalalignment='center')
             
             # Highlight outliers

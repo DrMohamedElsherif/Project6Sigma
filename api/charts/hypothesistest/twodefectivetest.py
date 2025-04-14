@@ -34,7 +34,11 @@ class TwoDefectiveTestConfig(BaseModel):
     @field_validator('sample_size', 'defective_count')
     def validate_list_length(cls, v, values):
         if v is not None and len(v) != 2:
-            raise ValueError(f"Must contain exactly 2 values")
+            raise BusinessLogicException(
+                error_code="error_data_size",
+                field="values",
+                details={"message": "Exactly two data series are required"}
+            )
         return v
 
 class TwoDefectiveTestData(BaseModel):
@@ -62,10 +66,10 @@ class TwoDefectivetest:
             if variant == "Summarized data":
                 if self.config.sample_size is None or self.config.defective_count is None:
                     raise BusinessLogicException(
-                        error_code="error_validation",
+                        error_code="error_defective_summarized",
                         field="configuration_parameters",
                         details={
-                            "message": "For 'Summarized data' variant, sample_size and defective_count are required."
+                            "message": "For 'Summarized data' variant, both 'sample_size' and 'defective_count' are required"
                         }
                     )
                 # Set default sample names if not provided
@@ -76,10 +80,10 @@ class TwoDefectivetest:
             elif variant == "All data in one column":
                 if self.config.sample_columns is None or len(self.config.sample_columns) != 2 or self.config.defective_name is None:
                     raise BusinessLogicException(
-                        error_code="error_validation",
+                        error_code="error_defective_column",
                         field="configuration_parameters",
                         details={
-                            "message": "For 'All data in one column' variant, sample_columns (with 2 columns) and defective_name are required."
+                            "message": "For 'Datas in column' variant, 'sample_column', 'defective_name', and 'data.values' are required"
                         }
                     )
                 if self.data is None or self.data.values is None:
@@ -92,43 +96,10 @@ class TwoDefectivetest:
                 for column in self.config.sample_columns:
                     if column not in self.data.values:
                         raise BusinessLogicException(
-                            error_code="error_validation",
+                            error_code="error_missing_field",
                             field=f"sample_columns.{column}",
-                            details={"message": f"Column '{column}' not found in data."}
+                            details={"message": f"Missing required field: {column}"}
                         )
-                
-            # Validation for "Each data in its own column" format
-            else:  # "Each data in its own column"
-                if self.config.defective_name is None:
-                    raise BusinessLogicException(
-                        error_code="error_validation",
-                        field="defective_name",
-                        details={"message": "defective_name is required for 'Each data in its own column' variant."}
-                    )
-                if self.data is None or self.data.values is None:
-                    raise BusinessLogicException(
-                        error_code="error_validation",
-                        field="data",
-                        details={"message": "Data values are required for 'Each data in its own column' variant."}
-                    )
-                # If sample_columns is not provided, use the keys from data.values
-                if self.config.sample_columns is None:
-                    if len(self.data.values) != 2:
-                        raise BusinessLogicException(
-                            error_code="error_validation",
-                            field="data.values",
-                            details={"message": "Exactly 2 data columns are required."}
-                        )
-                    self.config.sample_columns = list(self.data.values.keys())
-                else:
-                    # Check if the specified columns exist in the data
-                    for column in self.config.sample_columns:
-                        if column not in self.data.values:
-                            raise BusinessLogicException(
-                                error_code="error_validation",
-                                field=f"sample_columns.{column}",
-                                details={"message": f"Column '{column}' not found in data."}
-                            )
             
         except Exception as e:
             raise BusinessLogicException(
@@ -166,14 +137,7 @@ class TwoDefectivetest:
             samples = list(self.data.values[sample_column])
             
             # Find unique sample names
-            unique_samples = list(set(samples))
-            if len(unique_samples) != 2:
-                raise BusinessLogicException(
-                    error_code="error_validation",
-                    field="sample_column",
-                    details={"message": f"Expected exactly 2 unique sample values, got {len(unique_samples)}."}
-                )
-            
+            unique_samples = list(set(samples))            
             source_1 = unique_samples[0]
             source_2 = unique_samples[1]
             
@@ -307,10 +271,10 @@ class TwoDefectivetest:
                 ["Errorbar", "Defect Rate Distribution"]],    # Chance and Detectable Difference
                 figsize=(8.27, 11.69), dpi=300)  # A4 size in inches
             #fig.subplots_adjust(hspace=0.4)  # Increase hspace to add more space between charts
-            # fig.suptitle(title, fontsize=16, weight='bold', y=0.94)
+            fig.suptitle(title, fontsize=14, y=0.92, ha='left', x=0.1)
 
-            header_ax = add_header_or_footer_to_a4_portrait(fig, header_image_path, position='header')
-            footer_ax = add_header_or_footer_to_a4_portrait(fig, footer_image_path, position='footer', page_number=1, total_pages=1)
+            add_header_or_footer_to_a4_portrait(fig, header_image_path, position='header')
+            add_header_or_footer_to_a4_portrait(fig, footer_image_path, position='footer', page_number=1, total_pages=1)
 
             # Define the colors + fontsize
             grey = "#e7e6e6"

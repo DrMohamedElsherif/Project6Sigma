@@ -75,6 +75,8 @@ class Interval3:
             height=5
         )
 
+        sp.figure.set_size_inches(FIGURE_SIZE_A4_PORTRAIT)
+
         def custom_pointplot(x, y, data, **kwargs):
             # Get the number of unique categories in the current subplot
             current_cats = data[x].unique()
@@ -105,7 +107,7 @@ class Interval3:
 
         # Set title and adjust layout
         sp.figure.suptitle(title, fontsize=TITLE_FONT_SIZE)
-        plt.subplots_adjust(top=0.9)
+        plt.subplots_adjust(top=0.9, left=0.1, right=0.9, bottom=0.1)
 
         # Add grid to all subplots
         for ax in sp.axes.flat:
