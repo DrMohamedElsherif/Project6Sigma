@@ -4,7 +4,7 @@ import numpy as np
 from pydantic import BaseModel, Field
 from typing import List, Dict
 from api.schemas import BusinessLogicException
-from api.charts.constants import FIGURE_SIZE_DEFAULT, TITLE_FONT_SIZE, TITLE_PADDING
+from api.charts.constants import FIGURE_SIZE_A4_PORTRAIT, TITLE_FONT_SIZE, TITLE_PADDING, COLOR_PALETTE
 
 
 class Interval4Config(BaseModel):
@@ -43,7 +43,7 @@ class Interval4:
         df = pd.DataFrame(self.data.values)
 
         # Define size of figure
-        self.figure = plt.figure(figsize=FIGURE_SIZE_DEFAULT)
+        self.figure = plt.figure(figsize=FIGURE_SIZE_A4_PORTRAIT)
         ax = self.figure.add_subplot(111)
 
         # Loop over columns and generate plots
@@ -55,22 +55,27 @@ class Interval4:
 
             # Plot data with error bars
             ax.errorbar(
-                x=index,
-                y=mean,
-                yerr=confidence_interval,
-                fmt='o',
-                capsize=15,
-                label=column
+            x=index,
+            y=mean,
+            yerr=confidence_interval,
+            fmt='o',
+            capsize=15,
+            label=column,
+            color=COLOR_PALETTE[index % len(COLOR_PALETTE)]
             )
 
-            # Add labels and formatting
-            ax.set_ylabel('Values')
-            ax.set_xticks([])  # Hide x-axis labels
-            ax.set_title(title, fontsize=TITLE_FONT_SIZE, pad=TITLE_PADDING)
-            ax.legend(loc='best')
-            ax.grid(True)  # Corrected grid parameter
+        # Add labels and formatting
+        ax.set_ylabel('Values')
+        ax.set_xticks([])  # Hide x-axis labels
+        ax.set_title(title, fontsize=TITLE_FONT_SIZE, pad=TITLE_PADDING)
+        ax.legend(loc='best')
+        ax.grid(True, alpha=0.3)  # Corrected grid parameter
+
+        # Add padding left and right
+        ax.set_xlim(-0.5, len(df.columns) - 0.5)
 
         # Adjust layout
-        plt.tight_layout()
+        # plt.tight_layout()
+        plt.subplots_adjust(top=0.85, bottom=0.4, left=0.1, right=0.9)
         plt.close('all')
         return self.figure

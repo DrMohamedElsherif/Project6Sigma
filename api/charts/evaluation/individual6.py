@@ -53,10 +53,10 @@ class Individual6:
         num_rows = (num_plots + num_cols - 1) // num_cols
 
         # Set style
-        sns.set(style="whitegrid")
+        sns.set_theme(style="whitegrid")
 
         # Create figure and subplots
-        fig, axes = plt.subplots(num_rows, num_cols, figsize=(15, num_rows * 5))
+        fig, axes = plt.subplots(num_rows, num_cols, figsize=(8.27, max(8.27, num_rows * 4.5)))
 
         # Flatten the axes array if necessary
         axes = axes.flatten() if isinstance(axes, np.ndarray) else [axes]
@@ -65,11 +65,12 @@ class Individual6:
         for index, column in enumerate(df.columns):
             ax = axes[index]
             sp = sns.stripplot(
-                y=df[column],
-                marker='o',
-                size=10,
-                jitter=False,
-                ax=ax
+            y=df[column],
+            marker='o',
+            size=10,
+            jitter=False,
+            ax=ax,
+            color='#95a92b'
             )
             ax.grid(True, which='both', axis='both')
             ax.set_title(column)

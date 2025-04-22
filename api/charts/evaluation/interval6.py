@@ -4,7 +4,7 @@ import numpy as np
 from pydantic import BaseModel, Field
 from typing import List, Dict
 from api.schemas import BusinessLogicException
-from api.charts.constants import FIGURE_SIZE_DEFAULT, TITLE_FONT_SIZE
+from api.charts.constants import FIGURE_SIZE_A4_PORTRAIT, TITLE_FONT_SIZE
 
 
 class Interval6Config(BaseModel):
@@ -48,8 +48,9 @@ class Interval6:
         num_rows = (num_plots + num_cols - 1) // num_cols
 
         # Create figure
-        self.figure = plt.figure(figsize=FIGURE_SIZE_DEFAULT)
+        self.figure = plt.figure(figsize=FIGURE_SIZE_A4_PORTRAIT)
         plt.suptitle(title, fontsize=TITLE_FONT_SIZE, y=0.95)
+        plt.subplots_adjust(top=0.85, bottom=0.1, left=0.1, right=0.9)
 
         # Create subplots for each column
         for index, column in enumerate(df.columns):
@@ -67,7 +68,8 @@ class Interval6:
                 y=mean,
                 yerr=confidence_interval,
                 fmt='o',
-                capsize=15
+                capsize=15,
+                color='black',
             )
 
             # Customize subplot
@@ -75,6 +77,6 @@ class Interval6:
             ax.set_xticks([])
             ax.grid(True)
 
-        plt.tight_layout()
+        #plt.tight_layout()
         plt.close('all')
         return self.figure

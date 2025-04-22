@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from pydantic import BaseModel, Field
 
-from api.charts.constants import FIGURE_SIZE_DEFAULT
+from api.charts.constants import FIGURE_SIZE_A4_PORTRAIT
 from api.schemas import BusinessLogicException
 
 
@@ -92,23 +92,25 @@ class Schart:
         s_lcl = B3 * s_mean
 
         # Create plots
-        self.figure, (ax1, ax2) = plt.subplots(2, figsize=FIGURE_SIZE_DEFAULT)
+        self.figure, (ax1, ax2) = plt.subplots(2, figsize=FIGURE_SIZE_A4_PORTRAIT)
 
         # X-bar chart
-        ax1.plot(x_bars, linestyle='-', marker='o', color='blue')
+        ax1.plot(x_bars, color='black', marker='o', lw=0.5)
         ax1.axhline(x_ucl, color='red', linestyle='dashed', label=f'UCL={round(x_ucl, 3)}')
-        ax1.axhline(x_mean, color='green', label=f'X={round(x_mean, 3)}')
+        ax1.axhline(x_mean, color='grey', label=f'X={round(x_mean, 3)}', linestyle='dashed', alpha=0.7)
         ax1.axhline(x_lcl, color='red', linestyle='dashed', label=f'LCL={round(x_lcl, 3)}')
         ax1.set_title(self.config.title, fontsize=28, pad=20)
         ax1.set(ylabel='Sample Mean')
+        ax1.grid(True, alpha=0.3)
         ax1.legend(loc='upper right', framealpha=1)
 
         # S chart
-        ax2.plot(stdevs, linestyle='-', marker='o', color='blue')
+        ax2.plot(stdevs, color='black', marker='o', lw=0.5)
         ax2.axhline(s_ucl, color='red', linestyle='dashed', label=f'UCL={round(s_ucl, 3)}')
-        ax2.axhline(s_mean, color='green', label=f'S={round(s_mean, 3)}')
+        ax2.axhline(s_mean, color='grey', label=f'S={round(s_mean, 3)}', linestyle='dashed', alpha=0.7)
         ax2.axhline(s_lcl, color='red', linestyle='dashed', label=f'LCL={round(s_lcl, 3)}')
         ax2.set(xlabel='Sample', ylabel='Standard Deviation')
+        ax2.grid(True, alpha=0.3)
         ax2.legend(loc='upper right', framealpha=1)
 
         # Check control limits

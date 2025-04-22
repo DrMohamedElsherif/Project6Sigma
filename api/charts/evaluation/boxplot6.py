@@ -3,7 +3,8 @@ import matplotlib.pyplot as plt
 from pydantic import BaseModel, Field
 from typing import List, Dict
 from api.schemas import BusinessLogicException
-from api.charts.constants import COLOR_BLUE, FIGURE_SIZE_DEFAULT, COLOR_BLACK, TITLE_FONT_SIZE
+from api.charts.constants import COLOR_BLUE, FIGURE_SIZE_A4_PORTRAIT, COLOR_BLACK, TITLE_FONT_SIZE
+import seaborn as sns
 
 
 class Boxplot6Config(BaseModel):
@@ -51,20 +52,23 @@ class Boxplot6:
         # Find the number of rows needed
         num_rows = num_datasets // 2 + num_datasets % 2
 
-        self.figure = plt.figure(figsize=FIGURE_SIZE_DEFAULT)
+        self.figure = plt.figure(figsize=FIGURE_SIZE_A4_PORTRAIT)
 
         # Create subplot for each column
         for idx, column in enumerate(df.columns, 1):
             ax = self.figure.add_subplot(num_rows, num_columns, idx)
-            df.boxplot(
-                column=column,
-                color=COLOR_BLACK,
-                patch_artist=True,
-                grid=True,
-                boxprops=dict(facecolor=COLOR_BLUE),
-                ax=ax
+            sns.boxplot(
+                data=df[column],
+                color="#a1d111",
+                linewidth=1,
+                flierprops={"marker": "x"},
+                showcaps=False,
+                width=0.3,
+                ax=ax,
+                boxprops=dict(edgecolor='black')
             )
             ax.set_title(column)
+            ax.grid(True, alpha=0.3)
 
         # Set main title for plot
         plt.suptitle(title, fontsize=TITLE_FONT_SIZE)

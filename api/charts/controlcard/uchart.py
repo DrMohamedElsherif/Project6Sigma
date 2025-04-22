@@ -5,7 +5,7 @@ import statistics
 from pydantic import BaseModel, Field
 from typing import List, Optional
 from api.schemas import BusinessLogicException
-from api.charts.constants import FIGURE_SIZE_DEFAULT
+from api.charts.constants import FIGURE_SIZE_A4_PORTRAIT
 
 
 class UchartConfig(BaseModel):
@@ -79,17 +79,19 @@ class Uchart:
         oeg = u_mean + 3 * std_dev
         ueg = u_mean - 3 * std_dev
 
-        self.figure = plt.figure(figsize=FIGURE_SIZE_DEFAULT)
-        plt.plot(data['u'], linestyle='-', marker='o', color='blue')
+        self.figure = plt.figure(figsize=FIGURE_SIZE_A4_PORTRAIT)
+        plt.subplots_adjust(top=0.85, bottom=0.4, left=0.1, right=0.9)
+        plt.plot(data['u'], color='black', marker='o', lw=0.5)
         plt.step(x=range(len(data)), y=oeg, color='red', linestyle='dashed',
                  label=f'OEG={round(float(oeg[0]), 3)}')
-        plt.axhline(u_mean, color='green', label=f'U={round(u_mean, 3)}')
+        plt.axhline(u_mean, color='grey', label=f'U={round(u_mean, 3)}', linestyle='dashed', alpha=0.7)
         plt.step(x=range(len(data)), y=ueg, color='red', linestyle='dashed',
                  label=f'UEG={round(float(ueg[0]), 3)}')
 
         plt.title(self.config.title, fontsize=28, pad=20)
         plt.xlabel('Sample')
         plt.ylabel('Defects Per Unit')
+        plt.grid(True, alpha=0.3)
         plt.legend(loc='upper right', framealpha=1)
 
         violations = []

@@ -5,7 +5,7 @@ import math
 from pydantic import BaseModel, Field
 from typing import List, Dict, Optional
 from api.schemas import BusinessLogicException
-from api.charts.constants import FIGURE_SIZE_DEFAULT, TITLE_FONT_SIZE, TITLE_PADDING
+from api.charts.constants import FIGURE_SIZE_A4_PORTRAIT, TITLE_FONT_SIZE, TITLE_PADDING, COLOR_PALETTE
 
 
 class Interval5Config(BaseModel):
@@ -63,7 +63,7 @@ class Interval5:
             n_rows = math.ceil(n_subplots / n_cols)
 
             # Create subplots
-            self.figure, axes = plt.subplots(n_rows, n_cols, figsize=(15, n_rows * 5))
+            self.figure, axes = plt.subplots(n_rows, n_cols, figsize=(8.27, (n_rows / 2) * 11.69))
             axes = axes.reshape(-1)
 
             # Generate plots for each column
@@ -83,16 +83,18 @@ class Interval5:
                         yerr=confidence_interval,
                         fmt='o',
                         capsize=15,
-                        label=group
+                        label=group,
+                        color=COLOR_PALETTE[j % len(COLOR_PALETTE)]  # Use color palette
                     )
 
                 # Customize plot
                 ax.set_xticks(range(len(grouped_data)))
                 ax.set_xticklabels(grouped_data.groups.keys())
+                ax.set_xlim(-0.5, len(grouped_data) - 0.5)  # Add padding to the edges
                 ax.set_ylabel('Values')
                 ax.set_title(column)
                 ax.legend(loc='best')
-                ax.grid(True)
+                ax.grid(True, alpha=0.3)
 
             # Hide extra subplots
             for i in range(n_subplots, len(axes)):
@@ -103,7 +105,7 @@ class Interval5:
 
         else:
             # Create single figure without grouping
-            self.figure = plt.figure(figsize=FIGURE_SIZE_DEFAULT)
+            self.figure = plt.figure(figsize=FIGURE_SIZE_A4_PORTRAIT)
             ax = self.figure.add_subplot(111)
 
             # Generate plots for each column
@@ -118,14 +120,15 @@ class Interval5:
                     yerr=confidence_interval,
                     fmt='o',
                     capsize=15,
-                    label=column
+                    label=column,
+                    color=COLOR_PALETTE[index % len(COLOR_PALETTE)]  # Use color palette
                 )
 
                 ax.set_ylabel('Values')
                 ax.set_xticks([])
                 ax.set_title(title, fontsize=TITLE_FONT_SIZE, pad=TITLE_PADDING)
                 ax.legend(loc='best')
-                ax.grid(True)
+                ax.grid(True, alpha=0.3)
 
         plt.tight_layout()
         plt.close('all')

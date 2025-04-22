@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 from pydantic import BaseModel, Field
 from typing import List, Dict
 from api.schemas import BusinessLogicException
-from api.charts.constants import FIGURE_SIZE_DEFAULT, COLOR_BLUE, TITLE_FONT_SIZE, TITLE_FONT_SIZE_SMALL, TITLE_PADDING
+from api.charts.constants import FIGURE_SIZE_A4_PORTRAIT, COLOR_BLUE, TITLE_FONT_SIZE, TITLE_FONT_SIZE_SMALL, TITLE_PADDING
 
 
 class Interval1Config(BaseModel):
@@ -54,7 +54,7 @@ class Interval1:
         confidence_interval = 1.96 * stddev / np.sqrt(len(data))
 
         # Create figure
-        plt.figure(figsize=FIGURE_SIZE_DEFAULT)
+        plt.figure(figsize=FIGURE_SIZE_A4_PORTRAIT)
 
         # Plot error bar
         plt.errorbar(
@@ -63,7 +63,7 @@ class Interval1:
             yerr=confidence_interval,
             fmt='o',
             capsize=15,
-            color=COLOR_BLUE
+            color='black',
         )
 
         # Set labels and title
@@ -81,7 +81,9 @@ class Interval1:
         plt.xticks([])
 
         # Enable grid
-        plt.grid(True, which='both')
+        plt.grid(True, which='both', alpha=0.3)
+
+        plt.subplots_adjust(top=0.85, bottom=0.4, left=0.1, right=0.9)
 
         self.figure = plt.gcf()
         plt.close('all')

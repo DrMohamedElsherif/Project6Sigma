@@ -4,6 +4,7 @@ from .capability.capability_router import router as capability_router
 from .evaluation.evaluation_router import router as evaluation_router
 from .msa.msa_router import router as msa_router
 from .controlcard.controlcard_router import router as controlcard_router
+from .hypothesistest.hypothesistest_router import router as hypothesistest_router
 
 router = APIRouter()
 
@@ -32,3 +33,8 @@ router.include_router(
     tags=["charts-evaluation"]
 )
 
+router.include_router(
+    hypothesistest_router,
+    prefix="/hypothesistest",
+    tags=["charts-hypothesistest"]
+)

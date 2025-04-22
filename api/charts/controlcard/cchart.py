@@ -5,7 +5,7 @@ import statistics
 from pydantic import BaseModel, Field
 from typing import List
 
-from api.charts.constants import FIGURE_SIZE_DEFAULT
+from api.charts.constants import FIGURE_SIZE_A4_PORTRAIT
 from api.schemas import BusinessLogicException
 
 
@@ -69,9 +69,11 @@ class Cchart:
             'group_size': list(np.array(group_size))
         })
 
-        self.figure = plt.figure(figsize=FIGURE_SIZE_DEFAULT)
+        self.figure = plt.figure(figsize=FIGURE_SIZE_A4_PORTRAIT)
 
-        plt.plot(c['defects'], linestyle='-', marker='o', color='blue')
+        plt.subplots_adjust(top=0.85, bottom=0.4, left=0.1, right=0.9)
+
+        plt.plot(c['defects'], color='black', marker='o', lw=0.5)
 
         C = statistics.mean(c['defects'])
         OEG = C + 3 * np.sqrt(C)
@@ -79,13 +81,14 @@ class Cchart:
 
         plt.axhline(OEG, color='red', linestyle='dashed',
                     label=f'OEG={round(OEG, 2)}')
-        plt.axhline(C, color='green', label=f'C={round(C, 1)}')
+        plt.axhline(C, color='grey', label=f'C={round(C, 1)}', linestyle='dashed', alpha=0.7)
         plt.axhline(UEG, color='red', linestyle='dashed',
                     label=f'UEG={round(UEG, 2)}')
         plt.title(title, fontsize=28, pad=20)
         plt.xlabel('Sample')
         plt.ylabel('Defect Count')
         plt.legend(loc='upper right', framealpha=1)
+        plt.grid(True, alpha=0.3)
 
         control = True
         for i, group in enumerate(c['defects']):

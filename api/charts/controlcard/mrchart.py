@@ -5,7 +5,7 @@ import statistics
 from pydantic import BaseModel, Field
 from typing import List
 
-from api.charts.constants import FIGURE_SIZE_DEFAULT
+from api.charts.constants import FIGURE_SIZE_A4_PORTRAIT
 from api.schemas import BusinessLogicException
 
 
@@ -81,23 +81,25 @@ class Mrchart:
         mr_lcl = D3 * mr_mean
 
         # Create subplots
-        self.figure, (ax1, ax2) = plt.subplots(2, figsize=FIGURE_SIZE_DEFAULT, sharex=True)
+        self.figure, (ax1, ax2) = plt.subplots(2, figsize=FIGURE_SIZE_A4_PORTRAIT, sharex=True)
 
         # Individual Values chart
-        ax1.plot(data['x'], linestyle='-', marker='o', color='blue')
-        ax1.axhline(x_ucl, color='red', linestyle='dashed', label=f'UCL={round(x_ucl, 3)}')
-        ax1.axhline(x_mean, color='green', label=f'X={round(x_mean, 3)}')
+        ax1.plot(data['x'], color='black', marker='o', lw=0.5)
+        ax1.axhline(x_ucl, color='red', linestyle='dashed', label=f'UCL={round(x_ucl, 3)}' )
+        ax1.axhline(x_mean, color='grey', label=f'X={round(x_mean, 3)}', linestyle='dashed', alpha=0.7)
         ax1.axhline(x_lcl, color='red', linestyle='dashed', label=f'LCL={round(x_lcl, 3)}')
         ax1.set_title(self.config.title, fontsize=28, pad=20)
         ax1.set(ylabel='Individual Value')
+        ax1.grid(True, alpha=0.3)
         ax1.legend(loc='upper right', framealpha=1)
 
         # Moving Range chart
-        ax2.plot(data['mR'], linestyle='-', marker='o', color='blue')
+        ax2.plot(data['mR'], color='black', marker='o', lw=0.5)
         ax2.axhline(mr_ucl, color='red', linestyle='dashed', label=f'UCL={round(mr_ucl, 3)}')
-        ax2.axhline(mr_mean, color='green', label=f'MR={round(mr_mean, 3)}')
+        ax2.axhline(mr_mean, color='grey', label=f'MR={round(mr_mean, 3)}', linestyle='dashed', alpha=0.7)
         ax2.axhline(mr_lcl, color='red', linestyle='dashed', label=f'LCL={round(mr_lcl, 3)}')
         ax2.set(xlabel='Observation', ylabel='Moving Range')
+        ax2.grid(True, alpha=0.3)
         ax2.legend(loc='upper right', framealpha=1)
 
         # Check control limits

@@ -5,7 +5,11 @@ import scipy.stats
 from pydantic import BaseModel, Field, ValidationError
 from typing import List, Optional, Dict, Any
 from api.schemas import BusinessLogicException
-from ..constants import FIGURE_SIZE_DEFAULT
+from ..constants import FIGURE_SIZE_A4_PORTRAIT, TABLE_EDGE_COLOR
+from ...utils.pdf_utils import add_header_or_footer_to_a4_portrait
+
+header_image_path = 'assets/img/Header.png'
+footer_image_path = 'assets/img/Footer.png'
 
 
 class MSA1Config(BaseModel):
@@ -86,21 +90,27 @@ class MSA1Chart:
         above_UCL = [i for i in range(len(data)) if data[i] > UCL]
 
         # Plot Run chart
-        self.figure, axs = plt.subplots(2, 1, figsize=(FIGURE_SIZE_DEFAULT[0], FIGURE_SIZE_DEFAULT[1] * 0.8),
-                                        gridspec_kw={'height_ratios': [3, 1]})
+        self.figure, axs = plt.subplots(2, 1, figsize=(FIGURE_SIZE_A4_PORTRAIT), dpi=300)
+        self.figure.suptitle(title, fontsize=14, y=0.92, ha='left', x=0.1)
+
+        add_header_or_footer_to_a4_portrait(self.figure, header_image_path, position='header')
+        add_header_or_footer_to_a4_portrait(self.figure, footer_image_path, position='footer', page_number=1, total_pages=1)
+            
 
         # Plot in the first row
-        axs[0].plot(data, linestyle="-", marker="o", color="black")
-        axs[0].plot(below_LCL, [data[i] for i in below_LCL], linestyle="", marker="s", color="red")
-        axs[0].plot(above_UCL, [data[i] for i in above_UCL], linestyle="", marker="s", color="red")
-        axs[0].axhline(reference, color="green", label="Reference")
-        axs[0].axhline(UCL, color="#A50021", label="UCL")
-        axs[0].axhline(LCL, color="#A50021", label="LCL")
-        axs[0].axhline(np.median(data), color="blue", linestyle="--", label="Median")
-        axs[0].set_title(title, fontsize=28, pad=20)
+        axs[0].plot(data, color='black', marker="o", lw=0.5, zorder=3)
+        axs[0].plot(below_LCL, [data[i] for i in below_LCL], linestyle="", marker="s", color="red", zorder=5)
+        axs[0].plot(above_UCL, [data[i] for i in above_UCL], linestyle="", marker="s", color="red", zorder=5)
+        axs[0].axhline(reference, color="grey", label="Reference", linestyle="dashed")
+        axs[0].axhline(UCL, color="#a03130", label="UCL")
+        axs[0].axhline(LCL, color="#a03130", label="LCL")
+        axs[0].axhline(np.median(data), color="#95b92a", linestyle="--", label="Median")
         axs[0].set_xlabel("Observation")
         axs[0].set_ylabel("Individual Value")
+        axs[0].grid(True, alpha=0.3, zorder=0)
         axs[0].legend(loc='upper right', framealpha=1)
+        axs[0].tick_params(axis='x', labelsize=8)
+        axs[0].tick_params(axis='y', labelsize=8)
 
         # Calculate statistics
         mean_X = np.mean(data)
@@ -151,10 +161,16 @@ class MSA1Chart:
         # Turn off axes for the tables
         axs[1].axis("off")
 
-        # Create three subplots for tables
+        # Create a new gridspec for two rows and two columns for the tables
         gs = axs[1].get_gridspec()
-        subgs = gs[1].subgridspec(1, 3)
-        ax_tables = [self.figure.add_subplot(subgs[0, i]) for i in range(3)]
+        subgs = gs[1].subgridspec(2, 2)  # 2 rows, 2 columns
+
+        # Add subplots for the tables
+        ax_tables = [
+            self.figure.add_subplot(subgs[0, 0]),  # Top-left
+            self.figure.add_subplot(subgs[0, 1]),  # Top-right
+            self.figure.add_subplot(subgs[1, 0])   # Bottom-left
+        ]
 
         # Turn off axes for all table subplots
         for ax in ax_tables:
@@ -193,14 +209,18 @@ class MSA1Chart:
         tables = []
         for idx, df in enumerate(tables_data):
             table = ax_tables[idx].table(cellText=df.values, colLabels=None,
-                                         cellLoc="left", loc="left", edges="closed", bbox=[0, 0, 1, 1])
+                         cellLoc="left", loc="center", edges="closed", bbox=[0, 0, 1, 1])
             table.auto_set_font_size(False)
-            table.set_fontsize(10)
+            table.set_fontsize(8)
             table.scale(1, 1.5)
+
+            # Set edge color for the table
+            for key, cell in table.get_celld().items():
+                cell.set_edgecolor(TABLE_EDGE_COLOR)
+
             tables.append(table)
 
-        plt.subplots_adjust(hspace=1.5, top=0.85, bottom=0.15, left=0.15, right=0.85)
-        plt.tight_layout(pad=4.0)
+        plt.subplots_adjust(hspace=0.3, top=0.85, bottom=0.15, left=0.2, right=0.8)
         plt.close('all')
 
         return self.figure

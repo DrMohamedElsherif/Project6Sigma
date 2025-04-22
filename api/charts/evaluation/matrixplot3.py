@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 from pydantic import BaseModel, Field
 from typing import List, Dict
 from api.schemas import BusinessLogicException
-from api.charts.constants import TITLE_FONT_SIZE
+from api.charts.constants import TITLE_FONT_SIZE, FIGURE_SIZE_A4_PORTRAIT
 
 
 class Matrixplot3Config(BaseModel):
@@ -56,15 +56,17 @@ class Matrixplot3:
             y_vars=self.data.y_vars,
             x_vars=self.data.x_vars,
             height=1.8,
-            aspect=1.8
+            aspect=1.8,
+            plot_kws={'color': '#95b92a'},
         )
 
         # Add title
-        pair_plot.fig.suptitle(title, fontsize=TITLE_FONT_SIZE)
+        pair_plot.figure.suptitle(title, fontsize=TITLE_FONT_SIZE)
 
         # Adjust layout
-        plt.subplots_adjust(top=0.9)
+        plt.subplots_adjust(top=0.9, bottom=0.1, left=0.1, right=0.9)
+        pair_plot.figure.set_size_inches(FIGURE_SIZE_A4_PORTRAIT)
 
-        self.figure = pair_plot.fig
+        self.figure = pair_plot.figure
         plt.close('all')
         return self.figure

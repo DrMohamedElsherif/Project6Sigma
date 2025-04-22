@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 from pydantic import BaseModel, Field
 from typing import List, Dict
 from api.schemas import BusinessLogicException
-from api.charts.constants import FIGURE_SIZE_DEFAULT, TITLE_FONT_SIZE, COLORS, MARKERS, LINES
+from api.charts.constants import FIGURE_SIZE_A4_PORTRAIT, TITLE_FONT_SIZE, COLOR_PALETTE, MARKERS, LINES
 
 
 class Timeseriesplot4Config(BaseModel):
@@ -42,7 +42,7 @@ class Timeseriesplot4:
         title = self.config.title
         df = pd.DataFrame(self.data.values)
 
-        self.figure = plt.figure(figsize=FIGURE_SIZE_DEFAULT)
+        self.figure = plt.figure(figsize=FIGURE_SIZE_A4_PORTRAIT)
 
         for index, column in enumerate(df):
             y = df[column]
@@ -53,13 +53,14 @@ class Timeseriesplot4:
                 y,
                 linestyle=LINES[index],
                 marker=MARKERS[index],
-                color=COLORS[index],
+                color=COLOR_PALETTE[index*2],
                 label=column
             )
 
         plt.legend(loc='best')
         plt.title(title, fontsize=TITLE_FONT_SIZE, pad=20)
-        plt.grid(True, which='both')
+        plt.grid(True, which='both', alpha=0.3)
+        plt.subplots_adjust(top=0.85, bottom=0.4, left=0.1, right=0.9)
         plt.xlabel('Index')
         plt.ylabel('Data')
         plt.close('all')

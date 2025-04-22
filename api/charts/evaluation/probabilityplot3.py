@@ -5,7 +5,7 @@ import numpy as np
 from pydantic import BaseModel, Field
 from typing import List, Dict
 from api.schemas import BusinessLogicException
-from api.charts.constants import FIGURE_SIZE_DEFAULT, TITLE_FONT_SIZE, TITLE_PADDING, COLORS, MARKERS
+from api.charts.constants import FIGURE_SIZE_A4_PORTRAIT, TITLE_FONT_SIZE, TITLE_PADDING, COLOR_PALETTE, MARKERS
 
 
 class Probabilityplot3Config(BaseModel):
@@ -47,7 +47,7 @@ class Probabilityplot3:
         num_columns = 2
         num_rows = (df.shape[1] + num_columns - 1) // num_columns
 
-        self.figure, axes = plt.subplots(num_rows, num_columns, figsize=(15, 6.5 * num_rows))
+        self.figure, axes = plt.subplots(num_rows, num_columns, figsize=FIGURE_SIZE_A4_PORTRAIT)
 
         if num_rows > 1:
             axes = axes.flatten()
@@ -62,25 +62,25 @@ class Probabilityplot3:
             result = stats.anderson(data)
             ad_stat = result.statistic
             p_value = result.significance_level[np.where(
-                result.statistic < result.critical_values)[0][-1]]
+            result.statistic < result.critical_values)[0][-1]]
 
             params = stats.norm.fit(data)
             probplot = stats.probplot(data, plot=None)
 
             ax.scatter(probplot[0][0], probplot[0][1],
-                       color=COLORS[index], marker=MARKERS[index], zorder=3)
+                   color=COLOR_PALETTE[index], marker=MARKERS[index], zorder=3)
 
             regression = np.polyfit(probplot[0][0], probplot[0][1], 1)
             se = np.sqrt(np.mean((probplot[0][1] - np.polyval(regression, probplot[0][0])) ** 2))
             conf_interval = stats.t.interval(0.95, len(probplot[0][1]) - 2,
-                                             loc=np.polyval(regression, probplot[0][0]),
-                                             scale=se)
+                             loc=np.polyval(regression, probplot[0][0]),
+                             scale=se)
 
             ax.plot(probplot[0][0], np.polyval(regression, probplot[0][0]),
-                    color=COLORS[index], zorder=3)
+                color=COLOR_PALETTE[index], zorder=3)
             ax.fill_between(probplot[0][0], conf_interval[0], conf_interval[1],
-                            color=COLORS[index], alpha=0.2,
-                            label=f'{column} Confidence Interval (95%)')
+                    color=COLOR_PALETTE[index], alpha=0.2,
+                    label=f'{column} Confidence Interval (95%)')
 
             ax.set_ylabel('Theoretical Quantiles')
             if index >= (num_rows - 1) * num_columns:
@@ -90,13 +90,13 @@ class Probabilityplot3:
 
             text = f"Mean: {mean}\nStDev: {stdev}\nN: {n}\nAD: {ad_stat}\nP-Value: {p_value:.3f}"
             ax.annotate(text, xy=(0, -0.1), xycoords='axes fraction',
-                        fontsize=10, va='top')
+                fontsize=10, va='top')
             ax.set_xticks([])
 
         if len(df.columns) < num_rows * num_columns:
             for i in range(len(df.columns), num_rows * num_columns):
                 self.figure.delaxes(axes[i])
 
-        self.figure.tight_layout()
+        self.figure.tight_layout(pad=2.0)  # Add padding between plots and edges
         plt.close('all')
         return self.figure

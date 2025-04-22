@@ -1,9 +1,10 @@
 import pandas as pd
 import matplotlib.pyplot as plt
+import seaborn as sns
 from pydantic import BaseModel, Field
 from typing import List, Dict
 from api.schemas import BusinessLogicException
-from api.charts.constants import COLOR_BLUE, FIGURE_SIZE_DEFAULT, COLOR_BLACK, TITLE_FONT_SIZE
+from api.charts.constants import COLOR_BLUE, FIGURE_SIZE_A4_PORTRAIT, COLOR_BLACK, TITLE_FONT_SIZE
 
 
 class Boxplot2Config(BaseModel):
@@ -42,17 +43,22 @@ class Boxplot2:
         title = self.config.title
         df = pd.DataFrame(self.data.values)
 
-        self.figure = plt.figure(figsize=FIGURE_SIZE_DEFAULT)
+        self.figure = plt.figure(figsize=FIGURE_SIZE_A4_PORTRAIT)
+
+        plt.subplots_adjust(top=0.85, bottom=0.4, left=0.1, right=0.9)
+
         ax = self.figure.add_subplot(111)
 
-        df.boxplot(
-            column=df.columns.tolist(),
-            color=COLOR_BLACK,
-            patch_artist=True,
-            grid=True,
-            boxprops=dict(facecolor=COLOR_BLUE),
-            ax=ax
+        sns.boxplot(
+            data=df,
+            color='#a1d111',
+            linecolor='black',
+            linewidth=1,
+            flierprops={'marker': 'x'},
+            width=0.3,
         )
+        
         ax.set_title(title, fontsize=TITLE_FONT_SIZE, pad=20)
+        ax.grid(True, alpha=0.3)
         plt.close('all')
         return self.figure

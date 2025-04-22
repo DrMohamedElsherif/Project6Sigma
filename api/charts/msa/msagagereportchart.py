@@ -7,6 +7,10 @@ import io
 from pydantic import BaseModel, Field
 from typing import List, Optional
 from api.schemas import BusinessLogicException
+from ...utils.pdf_utils import add_header_or_footer_to_a4_portrait
+
+header_image_path = 'assets/img/Header.png'
+footer_image_path = 'assets/img/Footer.png'
 
 
 class MSAGageReportConfig(BaseModel):
@@ -187,18 +191,20 @@ class MsaGageReportChart:
         fig, axs = plt.subplots(2, 1, figsize=(8.27, 11.69))  # A4 size in inches
 
         # Adjust layout: larger margins and more space between plots
-        fig.subplots_adjust(left=0.15, right=0.85, top=0.85, bottom=0.1, hspace=0.4)
-        fig.suptitle(title, fontsize=16, weight="bold", y=0.93)
+        fig.subplots_adjust(left=0.15, right=0.85, top=0.85, bottom=0.1, hspace=0.3)
+        fig.suptitle(title, fontsize=14, y=0.92, ha='left', x=0.1)
+        header_ax = add_header_or_footer_to_a4_portrait(fig, header_image_path, position='header')
+        footer_ax = add_header_or_footer_to_a4_portrait(fig, footer_image_path, position='footer', page_number=1, total_pages=1)
 
         # First plot
-        axs[0].scatter(data["Known-Value"], data["Percent Pass"], label="Data")
-        axs[0].plot(x, y, color='red', label='Fitted Sigmoid')
+        axs[0].scatter(data["Known-Value"], data["Percent Pass"], label="Data", zorder=5, color='grey')
+        axs[0].plot(x, y, color='#95b92a', label='Fitted Sigmoid', zorder=3)
         axs[0].set_title("Probability of Acceptance per Reference Value of Measured Part", pad=5)  # Reduced padding
-        axs[0].annotate(f" {limit_text}", xy=(control_limit, 0), color="#A50021")
-        axs[0].axvline(x=control_limit, c="#971817", linestyle="--")
+        axs[0].annotate(f" {limit_text}", xy=(control_limit, 0), color="#a03130")
+        axs[0].axvline(x=control_limit, c="#a03130", linestyle="--")
         axs[0].set_xlabel("Reference Value of Measured Part")
         axs[0].set_ylabel("Probability of Acceptance")
-        axs[0].grid(color="lightgrey")
+        axs[0].grid(True, alpha=0.3, zorder=0)
         axs[0].legend()
 
         data["Sigmoid Probability Pass"] = fsigmoid(data["Known-Value"], *popt)
@@ -210,11 +216,11 @@ class MsaGageReportChart:
         l_limit_estimate = result.x if result.success else None
 
         # Second plot
-        probscale.probplot(data=data["Known-Value"], probax="y", plottype="prob", bestfit=True, ax=axs[1])
+        probscale.probplot(data=data["Known-Value"], probax="y", plottype="prob", bestfit=True, ax=axs[1], line_kws={'color': '#95b92a'}, scatter_kws={'color': 'grey'})
         axs[1].set_title("Attribute Gage Report (Analytic) for Acceptances")
         axs[1].set_xlabel("Reference Value of Measured Part")
         axs[1].set_ylabel("Percent of Acceptance")
-        axs[1].grid(color="lightgrey")
+        axs[1].grid(True, alpha=0.3, zorder=0)
 
         # Save the figure to the BytesIO object
         fig.savefig(img_buffer, format='pdf')

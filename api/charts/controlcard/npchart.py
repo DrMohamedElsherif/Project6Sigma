@@ -5,7 +5,7 @@ import statistics
 from pydantic import BaseModel, Field
 from typing import List, Optional
 from api.schemas import BusinessLogicException
-from api.charts.constants import FIGURE_SIZE_DEFAULT
+from api.charts.constants import FIGURE_SIZE_A4_PORTRAIT
 
 
 class NPchartConfig(BaseModel):
@@ -80,15 +80,17 @@ class Npchart:
         oeg = np_mean + 3 * std_dev
         ueg = np_mean - 3 * std_dev
 
-        self.figure = plt.figure(figsize=FIGURE_SIZE_DEFAULT)
-        plt.plot(data['np'], linestyle='-', marker='o', color='blue')
+        self.figure = plt.figure(figsize=FIGURE_SIZE_A4_PORTRAIT)
+        plt.subplots_adjust(top=0.85, bottom=0.4, left=0.1, right=0.9)
+        plt.plot(data['np'], color='black', marker='o', lw=0.5)
         plt.axhline(oeg, color='red', linestyle='dashed', label=f'OEG={round(oeg, 2)}')
-        plt.axhline(np_mean, color='green', label=f'np={round(np_mean, 2)}')
+        plt.axhline(np_mean, color='grey', label=f'np={round(np_mean, 2)}', linestyle='dashed', alpha=0.7)
         plt.axhline(ueg, color='red', linestyle='dashed', label=f'UEG={round(ueg, 2)}')
 
         plt.title(self.config.title, fontsize=28, pad=20)
         plt.xlabel('Sample')
         plt.ylabel('Sample Count')
+        plt.grid(True, alpha=0.3)
         plt.legend(loc='upper right', framealpha=1)
 
         violations = data['np'][(data['np'] > oeg) | (data['np'] < ueg)].index

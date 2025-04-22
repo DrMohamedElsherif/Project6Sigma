@@ -6,7 +6,7 @@ from math import exp
 from pydantic import BaseModel, Field
 from typing import List, Dict
 from api.schemas import BusinessLogicException
-from api.charts.constants import FIGURE_SIZE_DEFAULT, TITLE_FONT_SIZE, TITLE_PADDING
+from api.charts.constants import FIGURE_SIZE_A4_PORTRAIT, TITLE_FONT_SIZE, TITLE_PADDING
 
 
 class Probabilityplot1Config(BaseModel):
@@ -91,24 +91,24 @@ class Probabilityplot1:
                                          scale=se)
 
         # Create figure
-        self.figure = plt.figure(figsize=FIGURE_SIZE_DEFAULT)
+        self.figure = plt.figure(figsize=FIGURE_SIZE_A4_PORTRAIT)
 
         # Plot data points and confidence intervals
-        plt.scatter(probplot[0][0], probplot[0][1], color='blue', zorder=3)
+        plt.scatter(probplot[0][0], probplot[0][1], color='black', zorder=3)
         plt.fill_between(probplot[0][0], conf_interval[0], conf_interval[1],
-                         color='red', alpha=0.2, label='CI (95%)')
+                         color='#95b92a', alpha=0.2, label='CI (95%)')
 
         # Set labels and title
         plt.ylabel('Ordered Values')
         plt.title(title, fontsize=TITLE_FONT_SIZE, pad=TITLE_PADDING)
-        plt.grid(zorder=-1)
+        plt.grid(zorder=-1, alpha=0.3)
 
         # Add statistics annotation
         text = f"Mean: {round(mean, 3)}\nStDev: {round(stdev, 3)}\nN: {n}\nAD: {round(ad_stat, 3)}\nZ: {round(z, 3)}\nP-Value: {round(p_value, 3)}\n"
         plt.annotate(text, (0, 0), (0, -30), xycoords='axes fraction',
                      textcoords='offset points', va='top', fontsize=12)
 
-        plt.tight_layout()
+        plt.subplots_adjust(top=0.85, bottom=0.4, left=0.1, right=0.9)
         plt.xticks([])
         plt.close('all')
         return self.figure
