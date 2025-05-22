@@ -231,8 +231,8 @@ class OneWayAnova:
             bg_colors = [
                 [grey, grey, grey, grey, grey, grey],
                 ["#ffffff", "#ffffff", lightgreen_table, "#ffffff", "#ffffff", "#ffffff"],
-                ["#ffffff", "#ffffff", green_table, "#ffffff", "#ffffff", green_table],
-                ["#ffffff", "#ffffff", "#ffffff", "#ffffff", "#ffffff", green_table],
+                ["#ffffff", "#ffffff", green_table, "#ffffff", "#ffffff", difference_color],
+                ["#ffffff", "#ffffff", "#ffffff", "#ffffff", "#ffffff", difference_color],
                 ["#ffffff", "#ffffff", "#ffffff", "#ffffff", "#ffffff", "#ffffff"],
                 ["#ffffff", "#ffffff", "#ffffff", grey, grey, grey],
                 ["#ffffff", "#ffffff", "#ffffff", "#ffffff", "#ffffff", "#ffffff"],

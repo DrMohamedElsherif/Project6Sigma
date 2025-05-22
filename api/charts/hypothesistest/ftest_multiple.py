@@ -252,7 +252,11 @@ class FtestMultiple:
             # Descriptive Statistics table
             ax = axs["Descriptive Statistics"]
             ax.axis('off')
-            ax.set_title("Descriptive Statistics", loc="left", pad=-50, y=1.02)
+
+            n_samples = len(keys)
+            y = 1.02 if n_samples <= 3 else 1.05 if n_samples == 4 else 1.08 if n_samples == 5 else 1.11
+
+            ax.set_title("Descriptive Statistics", loc="left", pad=-50, y=y)
 
             stats_summary = {
                 key: {
@@ -270,12 +274,23 @@ class FtestMultiple:
                 ["Quelle", "N", "Mean", "StDev", "95% CI for $\sigma$"],
                 *[list(stats_summary[key].values()) for key in keys]
             ]
+            # Dynamically adjust table height based on number of samples
+            # Default bbox: [0, 0.4, 0.6, 0.3]
+            if n_samples <= 3:
+                bbox = [0, 0.4, 0.6, 0.3]
+            elif n_samples == 4:
+                bbox = [0, 0.35, 0.6, 0.38]
+            elif n_samples == 5:
+                bbox = [0, 0.3, 0.6, 0.46]
+            else:  # 6 samples
+                bbox = [0, 0.25, 0.6, 0.54]
+
             descriptive_table = ax.table(
                 cellText=cellText,
                 colWidths=descriptive_table_widths,
                 cellLoc='center',
                 loc='upper left',
-                bbox=[0, 0.4, 0.6, 0.3]
+                bbox=bbox
             )
             # Set the font size for the table
             descriptive_table.auto_set_font_size(False)
@@ -330,7 +345,7 @@ class FtestMultiple:
             # StDev Difference Chart
             ax = axs["StDev Differ"]
             ax.axis('off')
-            ax.set_title("Which standard deviation differs?", loc='center', pad=-70, y=1.02, fontsize=10)
+            ax.set_title("Which standard deviation differs?", loc='center', pad=-70, y=y, fontsize=10)
 
             # Create table data
             table_data = []

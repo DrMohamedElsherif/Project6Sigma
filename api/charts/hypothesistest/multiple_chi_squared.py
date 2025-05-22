@@ -163,17 +163,10 @@ class MultipleChiSquared:
             ax = axes["Defective-Test Results"]
             ax.axis('off')
 
-            # Helper function to format outcomes with newlines
-            if len(outcomes) > 4:
-                outcomes_str = '\n'.join(['; '.join(outcomes[:4]), '; '.join(outcomes[4:])])
-            else:
-                outcomes_str = ', '.join(outcomes)
-
-            if len(categories) > 4:
-                categories_str = '\n'.join(['; '.join(categories[:4]), '; '.join(categories[4:])])
-            else:
-                categories_str = ', '.join(categories)
+            outcomes_str = split_categories(outcomes, max_line_length=43, max_per_line=4)
             
+            categories_str = split_categories(categories, max_line_length=43, max_per_line=4)
+
             table_data = [
                 ["Configuration", "", "Hypothesis", "", ""],
                 [variant_str, "", r"$\mathrm{H_{0}}:$ all $\mathrm{Cat_{i}}$ equal", "", "p-Value*"],
@@ -895,3 +888,22 @@ def _chi_square_test_general(observed_counts, expected_counts=None, alpha=0.05, 
     }
     
     return results
+
+def split_categories(categories, max_line_length=50, max_per_line=4):
+    lines = []
+    current_line = []
+    current_length = 0
+
+    for cat in categories:
+        cat_str = cat if not current_line else '; ' + cat
+        if (len(current_line) >= max_per_line or
+            current_length + len(cat_str) > max_line_length):
+            lines.append(''.join(current_line))
+            current_line = [cat]
+            current_length = len(cat)
+        else:
+            current_line.append('; ' + cat if current_line else cat)
+            current_length += len(cat_str)
+    if current_line:
+        lines.append(''.join(current_line))
+    return '\n'.join(lines)

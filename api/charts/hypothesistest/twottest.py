@@ -172,7 +172,7 @@ class TwoTtest:
             difference_string = f"The mean value from ”{source_1}” is not significantly\ndifferent from the mean value of ”{source_2}”"
             difference_color = "#d6ed5f"
         else:
-            difference_string = f"The mean value from ”{source_1}” is not significantly\ndifferent from the mean value of ”{source_2}”"
+            difference_string = f"The mean value from ”{source_1}” is  significantly\ndifferent from the mean value of ”{source_2}”"
             difference_color = "#9cc563"
 
         descriptive_statistics = pd.DataFrame({
@@ -582,7 +582,11 @@ class TwoTtest:
                 # If power was provided, show required sample sizes
                 ax.set_title(f"What sample size is required to detect a difference\nof {power}?", loc='center', pad=-70, y=1.02, fontsize=font_size)
                 power_column = ["60%", "70%", "80%", "90%"]
-                sample_sizes = [f"{results['required_sample_sizes'][f'Power {p}']:.0f}" for p in power_column]
+                sample_sizes = [
+                    f"{results['required_sample_sizes'][f'Power {p}']:.0f}" if isinstance(results['required_sample_sizes'][f'Power {p}'], (int, float))
+                    else results['required_sample_sizes'][f'Power {p}']
+                    for p in power_column
+                ]
                 table_data = list(zip(power_column, sample_sizes))
                 colLabels_difference = ["Power", "Sample Size"]
             else:
@@ -778,8 +782,9 @@ def _calculate_statistics(data1, data2, p, alpha=0.05):
         # Extract numpy arrays from pandas DataFrames
         data1_values = data1.values.flatten()
         data2_values = data2.values.flatten()
-        pooled_std = np.sqrt((data1_values.std(ddof=1) ** 2 + data2_values.std(ddof=1) ** 2) / 2)
-        effect_size = abs(p) / pooled_std
+        # pooled_std = np.sqrt((data1_values.std(ddof=1) ** 2 + data2_values.std(ddof=1) ** 2) / 2)
+        pooled_std = np.sqrt((data1.values.flatten().std(ddof=1) ** 2 + data2.values.flatten().std(ddof=1) ** 2) / 2)
+        effect_size_observed = abs(np.mean(data1) - np.mean(data2)) / pooled_std
         
         # Calculate the power (chance of detection) for the given difference p
         try:
@@ -799,25 +804,13 @@ def _calculate_statistics(data1, data2, p, alpha=0.05):
             power_analysis["Detection Chance"] = 99  # Set to a high value since p-value is much smaller than alpha
         
         # Calculate required sample sizes for different power levels
-        for power in power_levels:
-            try:
-                with warnings.catch_warnings():
-                    warnings.filterwarnings('error')  # Convert warnings to exceptions
-                    sample_size = TTestIndPower().solve_power(
-                        effect_size=effect_size,
-                        nobs1=None,
-                        alpha=alpha,
-                        power=power,
-                        ratio=1,
-                        alternative='two-sided'
-                    )
-                    required_sample_sizes[f'Power {int(power * 100)}%'] = sample_size
-            except Warning as w:
-                # If we get a convergence warning, set a minimum reasonable sample size
-                required_sample_sizes[f'Power {int(power * 100)}%'] = 2  # Minimum reasonable value
-            except Exception as e:
-                # For other exceptions, use a default fallback
-                required_sample_sizes[f'Power {int(power * 100)}%'] = 2  # Minimum reasonable value
+        required_sample_sizes = calculate_sample_size(
+            effect_size=abs(p),
+            std_dev1=data1.std(ddof=1).iloc[0],
+            std_dev2=data2.std(ddof=1).iloc[0],
+            alpha=alpha,
+            power_levels=power_levels
+        )
 
 
     # Combine results
@@ -835,3 +828,36 @@ def _calculate_statistics(data1, data2, p, alpha=0.05):
     }
 
     return results
+
+def calculate_sample_size(effect_size, std_dev1, std_dev2, alpha=0.05, power_levels=[0.6, 0.7, 0.8, 0.9]):
+    """
+    Calculate the required sample size for a two-sample t-test.
+    
+    Parameters:
+        effect_size (float): The minimum detectable difference between the two groups.
+        std_dev1 (float): Standard deviation of group 1.
+        std_dev2 (float): Standard deviation of group 2.
+        alpha (float): Significance level (default is 0.05 for a two-tailed test).
+        power_levels (list): List of desired power levels (default is [0.6, 0.7, 0.8, 0.9]).
+
+    Returns:
+        dict: A dictionary where keys are power levels and values are required sample sizes per group.
+    """
+    # Critical value for the significance level
+    z_alpha = stats.norm.ppf(1 - alpha / 2)
+
+    # Pre-compute sum of variances
+    variance_sum = std_dev1**2 + std_dev2**2
+
+    # Dictionary to store results
+    sample_sizes = {}
+
+    for power in power_levels:
+        # Critical value for the desired power
+        z_beta = stats.norm.ppf(power)
+        
+        # Sample size formula
+        n = (variance_sum * (z_alpha + z_beta)**2) / effect_size**2
+        sample_sizes[f'Power {int(power * 100)}%'] = int(round(n))  # Round to nearest integer
+    
+    return sample_sizes

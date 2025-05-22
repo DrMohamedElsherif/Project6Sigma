@@ -347,7 +347,7 @@ class Ttest:
                     ["", "", ""],
                     [f"{power_analysis['Detectable Difference 60%']:.6f}", "", f"{power_analysis['Detectable Difference 90%']:.6f}"],
                     ["Sample size", "Chance of Detecting a difference", ""],
-                    [f"{results['sample_size']}", "", f"{power_analysis['Detection Chance']}%"]
+                    [f"{results['sample_size']}", "", f"{power_analysis['Detection Chance']:.2f}%"]
                 ]
             else:
                 if results['observed_difference'] < power_analysis['Detectable Difference 60%']:

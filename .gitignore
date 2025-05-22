@@ -2,6 +2,7 @@
 static/*
 env/
 .env*
+.venv/
 
 ## OS X
 .DS_Store

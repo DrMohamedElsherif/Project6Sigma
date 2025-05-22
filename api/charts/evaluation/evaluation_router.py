@@ -276,3 +276,8 @@ async def generate_timeseriesplot4(request: dict):
 async def generate_timeseriesplot5(request: dict):
     from .timeseriesplot5 import Timeseriesplot5
     return await generate_chart(request, Timeseriesplot5, "error_processing")
+
+@router.post("/multi-variant")
+async def generate_multi_variant(request: dict):
+    from .multi_vari_chart import MultiVariChart
+    return await generate_chart(request, MultiVariChart, "error_processing", extension="pdf")
