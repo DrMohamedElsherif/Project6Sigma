@@ -10,6 +10,9 @@ class Settings:
         self.staticFilePath = os.environ.get("staticFilePath")
         self.staticUrl = os.environ.get("staticUrl")
         self.useFullPath = os.environ.get("useFullPath")
+        self.azureEndpoint = os.environ.get("AZURE_OPENAI_ENDPOINT")
+        self.azureApiKey = os.environ.get("AZURE_OPENAI_API_KEY")
+        self.azureModel = os.environ.get("AZURE_OPENAI_MODEL")
 
 
 @lru_cache()
