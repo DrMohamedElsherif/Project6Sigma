@@ -39,7 +39,9 @@ async def ai_analysis_endpoint(request: dict = Body(...)):
         step = request.get("step", "analysis")
         raw_data = request.get("raw_data", "")
         chart_url = request.get("chart_url")
-        
+
+        print(f"Received request for AI analysis: project={project}, step={step}, raw_data={raw_data}, chart_url={chart_url}")
+
         if not chart_url:
             raise BusinessLogicException(
                 error_code="MISSING_CHART_URL",
@@ -111,7 +113,6 @@ async def ai_analysis_endpoint(request: dict = Body(...)):
         return SuccessResponse(data={
             "analysis_pdf_url": pdf_url,
             "analysis_html_url": html_url,
-            "original_chart_url": chart_url,
             "project": project,
             "step": step
         })
