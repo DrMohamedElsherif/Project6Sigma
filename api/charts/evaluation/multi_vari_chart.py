@@ -142,7 +142,7 @@ class MultiVariChart:
             final_plot_fig.tight_layout(rect=[0.05, 0.22, 0.95, 0.88]) # rect=[left, bottom, right, top]
 
             # Save figure with a large bottom padding to make room for the legend
-            pdf.savefig(final_plot_fig, bbox_inches='tight', pad_inches=0.5)
+            pdf.savefig(final_plot_fig, bbox_inches=None)
             plt.close(final_plot_fig)
 
         pdf_io.seek(0)
