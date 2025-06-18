@@ -1,5 +1,4 @@
 import os
-import tempfile
 from fastapi import APIRouter, Body
 from api.schemas import SuccessResponse, BusinessLogicException
 from config import get_settings
@@ -7,7 +6,7 @@ from ..utils.ai_utils import (
     call_azure_openai, 
     build_ai_prompt, 
     convert_pdf_to_png,
-    determine_file_type,
+    determine_file_type_encrypted,
     get_local_path_from_url,
     save_ai_response_files,
     cleanup_temp_file,
@@ -40,8 +39,6 @@ async def ai_analysis_endpoint(request: dict = Body(...)):
         raw_data = request.get("raw_data", "")
         chart_url = request.get("chart_url")
 
-        print(f"Received request for AI analysis: project={project}, step={step}, raw_data={raw_data}, chart_url={chart_url}")
-
         if not chart_url:
             raise BusinessLogicException(
                 error_code="MISSING_CHART_URL",
@@ -49,7 +46,14 @@ async def ai_analysis_endpoint(request: dict = Body(...)):
             )
         
         # Step 1: Determine file type and prepare image
-        file_type = determine_file_type(chart_url)
+        key = settings.decryptKey
+        if not key:
+            raise BusinessLogicException(
+                error_code="MISSING_DECRYPT_KEY",
+                details={"message": "decryptKey is required for decryption"}
+            )
+        key_bytes = key.encode("utf-8")
+        file_type = determine_file_type_encrypted(chart_url, key_bytes)
         
         if file_type == 'unknown':
             raise BusinessLogicException(
@@ -68,7 +72,12 @@ async def ai_analysis_endpoint(request: dict = Body(...)):
         
         # Step 3: Prepare image for AI vision analysis
         if file_type == 'pdf':
-            # Convert PDF to PNG for AI analysis
+            # Ensure staticFilePath is set
+            if not settings.staticFilePath:
+                raise BusinessLogicException(
+                    error_code="MISSING_STATIC_FILE_PATH",
+                    details={"message": "staticFilePath is required for temporary file storage"}
+                )
             temp_dir = os.path.join(settings.staticFilePath, "tmp")
             os.makedirs(temp_dir, exist_ok=True)
             temp_png_path = convert_pdf_to_png(local_file_path, temp_dir)
@@ -112,7 +121,7 @@ async def ai_analysis_endpoint(request: dict = Body(...)):
         # Step 8: Return response with URLs
         return SuccessResponse(data={
             "analysis_pdf_url": pdf_url,
-            "analysis_html_url": html_url,
+            # "analysis_html_url": html_url,
             "project": project,
             "step": step
         })

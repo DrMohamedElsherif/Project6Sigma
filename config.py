@@ -13,6 +13,7 @@ class Settings:
         self.azureEndpoint = os.environ.get("AZURE_OPENAI_ENDPOINT")
         self.azureApiKey = os.environ.get("AZURE_OPENAI_API_KEY")
         self.azureModel = os.environ.get("AZURE_OPENAI_MODEL")
+        self.decryptKey = os.environ.get("DECRYPT_KEY")
 
 
 @lru_cache()

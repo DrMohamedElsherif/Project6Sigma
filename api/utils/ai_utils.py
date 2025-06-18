@@ -11,6 +11,10 @@ from PIL import Image
 from api.schemas import BusinessLogicException
 from config import get_settings
 import fitz  # PyMuPDF
+import mimetypes
+from Crypto.Cipher import AES
+from Crypto.Util.Padding import unpad
+import base64
 
 
 settings = get_settings()
@@ -240,27 +244,49 @@ def convert_pdf_to_png(pdf_path: str, output_dir: str) -> str:
             details={"message": f"Failed to convert PDF to PNG: {str(e)}"}
         )
 
-def determine_file_type(file_url: str) -> str:
+def decrypt_craft_encrypted_url(encrypted_b64: str, key: bytes) -> str:
     """
-    Determines the file type based on the URL extension.
-    
+    Decrypts an AES-encrypted, base64-encoded URL string.
+    """
+    encrypted = base64.b64decode(encrypted_b64)
+    iv = encrypted[:16]
+    ciphertext = encrypted[16:]
+    cipher = AES.new(key, AES.MODE_CBC, iv)
+    decrypted = unpad(cipher.decrypt(ciphertext), AES.block_size)
+    return decrypted.decode('utf-8')
+
+def determine_file_type_encrypted(encrypted_b64: str, key: bytes) -> str:
+    """
+    Determines the file type from an encrypted URL.
     Args:
-        file_url (str): URL or path to the file.
-        
+        encrypted_b64 (str): The encrypted, base64-encoded URL.
+        key (bytes): The AES key for decryption.
     Returns:
         str: File type ('pdf', 'png', 'jpg', 'jpeg', or 'unknown').
     """
-    if not file_url:
-        return 'unknown'
-        
-    extension = file_url.lower().split('.')[-1]
-    
-    if extension == 'pdf':
-        return 'pdf'
-    elif extension in ['png', 'jpg', 'jpeg']:
-        return extension
-    else:
-        return 'unknown'
+    try:
+        if encrypted_b64.startswith("http") or encrypted_b64.startswith("/"):
+            file_path = encrypted_b64
+        else:
+            file_path = decrypt_craft_encrypted_url(encrypted_b64, key)
+        # If file_path is a URL, parse out the path
+        if file_path.startswith("http"):
+            file_path = file_path.split("?")[0]
+        mime_type, _ = mimetypes.guess_type(file_path)
+        if mime_type:
+            if "pdf" in mime_type:
+                return "pdf"
+            elif "png" in mime_type:
+                return "png"
+            elif "jpeg" in mime_type or "jpg" in mime_type:
+                return "jpg"
+        # Fallback: use extension
+        ext = os.path.splitext(file_path)[1].lower()
+        if ext in [".pdf", ".png", ".jpg", ".jpeg"]:
+            return ext.lstrip(".")
+        return "unknown"
+    except Exception:
+        return "unknown"
 
 def get_local_path_from_url(file_url: str) -> str:
     """
@@ -624,7 +650,6 @@ def cleanup_temp_directory(temp_dir: str, max_age_hours: int = 24) -> None:
 def convert_image_to_base64(image_path: str) -> str:
     """
     Converts an image file to a base64 data URI.
-    Uses improved base64 conversion from png_to_b64.py.
     
     Args:
         image_path (str): Path to the image file.
