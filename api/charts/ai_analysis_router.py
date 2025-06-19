@@ -10,7 +10,8 @@ from ..utils.ai_utils import (
     get_local_path_from_url,
     save_ai_response_files,
     cleanup_temp_file,
-    convert_image_to_base64
+    convert_image_to_base64,
+    decrypt_craft_encrypted_url
 )
 
 router = APIRouter()
@@ -54,7 +55,13 @@ async def ai_analysis_endpoint(request: dict = Body(...)):
             )
         key_bytes = key.encode("utf-8")
         file_type = determine_file_type_encrypted(chart_url, key_bytes)
-        
+
+        # Decrypt chart_url if needed to get the real file path
+        if not (chart_url.startswith('http') or chart_url.startswith('/')):
+            chart_url_decrypted = decrypt_craft_encrypted_url(chart_url, key_bytes)
+        else:
+            chart_url_decrypted = chart_url
+
         if file_type == 'unknown':
             raise BusinessLogicException(
                 error_code="UNSUPPORTED_FILE_TYPE",
@@ -62,7 +69,7 @@ async def ai_analysis_endpoint(request: dict = Body(...)):
             )
         
         # Step 2: Convert file to local path and prepare for AI analysis
-        local_file_path = get_local_path_from_url(chart_url)
+        local_file_path = get_local_path_from_url(chart_url_decrypted)
         
         if not os.path.exists(local_file_path):
             raise BusinessLogicException(
