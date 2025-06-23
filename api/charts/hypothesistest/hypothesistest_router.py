@@ -5,7 +5,6 @@ from ...utils.file_utils import generate_chart
 router = APIRouter()
 
 
-# Boxplot endpoints
 @router.post("/ttest")
 async def generate_ttest(request: dict):
     from .ttest import Ttest
