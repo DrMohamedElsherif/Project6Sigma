@@ -20,11 +20,18 @@ async def ai_analysis_endpoint(request: dict = Body(...)):
     from .analysis import process_ai_analysis
     
     try:
-        # Extract relevant info from request
-        project = request.get("project")
-        step = request.get("step")
-        raw_data = request.get("raw_data", "")
-        chart_id = request.get("chart_id")
+        # Try to extract from raw_data (original format)
+        raw_data = request.get("raw_data")
+        if raw_data and isinstance(raw_data, dict):
+            project = raw_data.get("project")
+            step = raw_data.get("step")
+            chart_id = raw_data.get("chart_id")
+        else:
+            # Fallback: try to extract from root (alternative format)
+            project = request.get("project")
+            step = request.get("step")
+            chart_id = request.get("chart_id")
+            raw_data = request  # Use the whole request as raw_data for downstream logic
 
         if not project:
             raise BusinessLogicException(
