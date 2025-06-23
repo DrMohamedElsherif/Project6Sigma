@@ -83,6 +83,8 @@ async def ai_process_capture_endpoint(request: dict):
         project = request.get("project")
         step = request.get("step")
 
+        print(f"File Name: {file_name}, File Extension: {file_extension}, Project: {project}, Step: {step}")
+
         if not all([file_name, file_extension, project, step]):
             raise BusinessLogicException(
                 error_code="MISSING_PARAMETERS",
@@ -90,7 +92,6 @@ async def ai_process_capture_endpoint(request: dict):
             )
 
         result = await process_capture_logic(file_name, file_extension, project, step)
-        print(f"Result: {result}")
         return SuccessResponse(data=result)
 
     except BusinessLogicException:

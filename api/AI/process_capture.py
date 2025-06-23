@@ -10,6 +10,7 @@ from api.utils.ai_utils import (
     image_to_b64,
     get_local_path_from_url,
 )
+from api.AI.analysis import find_file_by_chart_id, determine_file_type_from_extension
 from config import get_settings
 
 settings = get_settings()
@@ -20,36 +21,25 @@ async def process_capture_logic(file_name: str, file_extension: str, project: st
     Finds the file in the static folder, converts to image if needed, 
     and extracts structured process information using AI.
     """
-    # Step 1: Find the file in static folder
-    file_path = os.path.join(settings.staticFilePath, project, step, file_name)
-    if not os.path.exists(file_path):
-        return {
-            "measureProcessCapture5": [{
-                "measureProcessCapture6": "",
-                "measureProcessCapture7": "",
-                "measureProcessCapture8": f"File not found: {file_path}",
-                "measureProcessCapture9": "",
-                "measureProcessCapture10": "",
-                "measureProcessCapture11": "",
-                "measureProcessCapture12": ""
-            }]
-        }
-
-    temp_dir = os.path.join(settings.staticFilePath, 'tmp')
-    os.makedirs(temp_dir, exist_ok=True)
-
     try:
+        # Use find_file_by_chart_id to robustly locate the file and extension
+        local_file_path, detected_extension = find_file_by_chart_id(project, step, file_name, settings.staticFilePath)
+        file_type = determine_file_type_from_extension(detected_extension)
+
+        temp_dir = os.path.join(settings.staticFilePath, 'tmp')
+        os.makedirs(temp_dir, exist_ok=True)
+
         # Step 2: If PDF, convert to PNG
-        if file_extension.lower() == 'pdf':
-            png_path = convert_pdf_to_png(file_path, temp_dir)
-        elif file_extension.lower() in ('png', 'jpg', 'jpeg'):
-            png_path = file_path
+        if file_type == 'pdf':
+            png_path = convert_pdf_to_png(local_file_path, temp_dir)
+        elif file_type == 'image':
+            png_path = local_file_path
         else:
             return {
                 "measureProcessCapture5": [{
                     "measureProcessCapture6": "",
                     "measureProcessCapture7": "",
-                    "measureProcessCapture8": f"Unsupported file type: {file_extension}",
+                    "measureProcessCapture8": f"Unsupported file type: {detected_extension}",
                     "measureProcessCapture9": "",
                     "measureProcessCapture10": "",
                     "measureProcessCapture11": "",
@@ -140,10 +130,9 @@ Analysiere das Bild und extrahiere die Prozessinformationen:
                     "measureProcessCapture12": ""
                 }]
             }
-
     finally:
         # Clean up temporary PNG if created
-        if file_extension.lower() == 'pdf' and 'png_path' in locals() and png_path != file_path:
+        if 'file_type' in locals() and file_type == 'pdf' and 'png_path' in locals() and png_path != local_file_path:
             try:
                 os.unlink(png_path)
             except Exception:
