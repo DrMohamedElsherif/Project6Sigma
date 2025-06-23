@@ -64,10 +64,15 @@ async def generate_chart(request: dict, chart_class, error_code, extension="png"
             project_id = "api_test"
             is_test = True
 
-        _, url = save_figure(fig, project_id, chart_generator.step, extension=extension, is_test=is_test,
+        save_path, url = save_figure(fig, project_id, chart_generator.step, extension=extension, is_test=is_test,
                              test_title=request.get("config").get("title"))
+        
+        # Extract chart_id from the filename (without extension)
+        filename = os.path.basename(save_path)
+        chart_id = os.path.splitext(filename)[0]
+
         return SuccessResponse(
-            data={"url": url}
+            data={"url": url, "chart_id": chart_id}
         )
     except Exception as e:
         if isinstance(e, BusinessLogicException):
