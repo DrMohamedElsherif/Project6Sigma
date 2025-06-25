@@ -15,13 +15,15 @@ from config import get_settings
 
 settings = get_settings()
 
-async def process_capture_logic(file_name: str, file_extension: str, project: str, step: str) -> Dict:
+async def process_capture_logic(file_name: str, project: str, step: str) -> Dict:
     """
     Processes a file (PDF/PNG/JPG) for AI process capture analysis.
     Finds the file in the static folder, converts to image if needed, 
     and extracts structured process information using AI.
     """
     try:
+        # Remove the file extension from the file name
+        file_name = file_name.rsplit('.', 1)[0] if '.' in file_name else file_name
         # Use find_file_by_chart_id to robustly locate the file and extension
         local_file_path, detected_extension = find_file_by_chart_id(project, step, file_name, settings.staticFilePath)
         file_type = determine_file_type_from_extension(detected_extension)
