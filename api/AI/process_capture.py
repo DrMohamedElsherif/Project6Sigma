@@ -1,7 +1,5 @@
 from typing import Dict
 import json
-import base64
-import tempfile
 import os
 import uuid
 import fitz  # PyMuPDF
@@ -9,11 +7,11 @@ from api.utils.ai_utils import (
     call_azure_openai,
     convert_image_to_base64,
     image_to_b64,
-    get_local_path_from_url,
     cleanup_temp_file,
 )
 from api.AI.analysis import find_file_by_chart_id, determine_file_type_from_extension
 from config import get_settings
+from api.schemas import BusinessLogicException
 
 settings = get_settings()
 
@@ -39,58 +37,35 @@ async def process_capture_logic(file_name: str, project: str, step: str) -> Dict
             try:
                 doc = fitz.open(local_file_path)
                 if len(doc) == 0:
-                    return {
-                        "measureProcessCapture5": [{
-                            "measureProcessCapture6": "",
-                            "measureProcessCapture7": "",
-                            "measureProcessCapture8": "No pages found in PDF file",
-                            "measureProcessCapture9": "",
-                            "measureProcessCapture10": "",
-                            "measureProcessCapture11": "",
-                            "measureProcessCapture12": ""
-                        }]
-                    }
-                
+                    raise BusinessLogicException(
+                        error_code="NO_PAGES_IN_PDF",
+                        details={"message": "No pages found in PDF file"}
+                    )
                 # Get first page and convert to PNG
                 page = doc[0]
                 mat = fitz.Matrix(300/72, 300/72)  # 300 DPI scaling
                 pix = page.get_pixmap(matrix=mat)
-                
                 # Save as temporary PNG
                 temp_png_filename = f"temp_process_capture_{uuid.uuid4()}.png"
                 png_path = os.path.join(temp_dir, temp_png_filename)
                 pix.save(png_path)
-                
                 # Cleanup PyMuPDF objects
                 doc.close()
                 pix = None
-                
+            except BusinessLogicException:
+                raise
             except Exception as pdf_error:
-                return {
-                    "measureProcessCapture5": [{
-                        "measureProcessCapture6": "",
-                        "measureProcessCapture7": "",
-                        "measureProcessCapture8": f"Failed to convert PDF to image: {str(pdf_error)}",
-                        "measureProcessCapture9": "",
-                        "measureProcessCapture10": "",
-                        "measureProcessCapture11": "",
-                        "measureProcessCapture12": ""
-                    }]
-                }
+                raise BusinessLogicException(
+                    error_code="PDF_TO_IMAGE_FAILED",
+                    details={"message": f"Failed to convert PDF to image: {str(pdf_error)}"}
+                )
         elif file_type == 'image':
             png_path = local_file_path
         else:
-            return {
-                "measureProcessCapture5": [{
-                    "measureProcessCapture6": "",
-                    "measureProcessCapture7": "",
-                    "measureProcessCapture8": f"Unsupported file type: {detected_extension}",
-                    "measureProcessCapture9": "",
-                    "measureProcessCapture10": "",
-                    "measureProcessCapture11": "",
-                    "measureProcessCapture12": ""
-                }]
-            }
+            raise BusinessLogicException(
+                error_code="UNSUPPORTED_FILE_TYPE",
+                details={"message": f"Unsupported file type: {detected_extension}"}
+            )
 
         # Step 3: Convert image to base64
         try:
@@ -140,41 +115,30 @@ Analysiere das Bild und extrahiere die Prozessinformationen:
             if cleaned_response.endswith('```'):
                 cleaned_response = cleaned_response[:-3]
             cleaned_response = cleaned_response.strip()
-            
             # Parse JSON
             parsed_response = json.loads(cleaned_response)
-            
             # Validate structure
             if "measureProcessCapture5" not in parsed_response:
                 raise ValueError("Missing measureProcessCapture5 key")
-            
             # Ensure all objects have required keys
             required_keys = [
                 "measureProcessCapture6", "measureProcessCapture7", "measureProcessCapture8",
                 "measureProcessCapture9", "measureProcessCapture10", "measureProcessCapture11", 
                 "measureProcessCapture12"
             ]
-            
             for process in parsed_response["measureProcessCapture5"]:
                 for key in required_keys:
                     if key not in process:
                         process[key] = ""
-            
             return parsed_response
-            
         except (json.JSONDecodeError, ValueError) as e:
-            # If JSON parsing fails, return a default structure
-            return {
-                "measureProcessCapture5": [{
-                    "measureProcessCapture6": "Prozessanalyse",
-                    "measureProcessCapture7": "",
-                    "measureProcessCapture8": f"AI-Antwort konnte nicht als JSON geparst werden: {str(e)}",
-                    "measureProcessCapture9": ai_response[:500] if ai_response else "",
-                    "measureProcessCapture10": "",
-                    "measureProcessCapture11": "",
-                    "measureProcessCapture12": ""
-                }]
-            }
+            raise BusinessLogicException(
+                error_code="AI_RESPONSE_PARSE_ERROR",
+                details={
+                    "message": f"AI-Antwort konnte nicht als JSON geparst werden: {str(e)}",
+                    "ai_response": ai_response[:500] if ai_response else ""
+                }
+            )
     finally:
         # Clean up temporary PNG if created
         if 'file_type' in locals() and file_type == 'pdf' and 'png_path' in locals() and png_path != local_file_path:
