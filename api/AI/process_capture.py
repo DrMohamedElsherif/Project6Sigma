@@ -3,12 +3,14 @@ import json
 import base64
 import tempfile
 import os
+import uuid
+import fitz  # PyMuPDF
 from api.utils.ai_utils import (
     call_azure_openai,
-    convert_pdf_to_png,
     convert_image_to_base64,
     image_to_b64,
     get_local_path_from_url,
+    cleanup_temp_file,
 )
 from api.AI.analysis import find_file_by_chart_id, determine_file_type_from_extension
 from config import get_settings
@@ -31,9 +33,50 @@ async def process_capture_logic(file_name: str, project: str, step: str) -> Dict
         temp_dir = os.path.join(settings.staticFilePath, 'tmp')
         os.makedirs(temp_dir, exist_ok=True)
 
-        # Step 2: If PDF, convert to PNG
+        # Step 2: If PDF, convert to PNG using PyMuPDF
         if file_type == 'pdf':
-            png_path = convert_pdf_to_png(local_file_path, temp_dir)
+            # Convert PDF to PNG using PyMuPDF for AI analysis
+            try:
+                doc = fitz.open(local_file_path)
+                if len(doc) == 0:
+                    return {
+                        "measureProcessCapture5": [{
+                            "measureProcessCapture6": "",
+                            "measureProcessCapture7": "",
+                            "measureProcessCapture8": "No pages found in PDF file",
+                            "measureProcessCapture9": "",
+                            "measureProcessCapture10": "",
+                            "measureProcessCapture11": "",
+                            "measureProcessCapture12": ""
+                        }]
+                    }
+                
+                # Get first page and convert to PNG
+                page = doc[0]
+                mat = fitz.Matrix(300/72, 300/72)  # 300 DPI scaling
+                pix = page.get_pixmap(matrix=mat)
+                
+                # Save as temporary PNG
+                temp_png_filename = f"temp_process_capture_{uuid.uuid4()}.png"
+                png_path = os.path.join(temp_dir, temp_png_filename)
+                pix.save(png_path)
+                
+                # Cleanup PyMuPDF objects
+                doc.close()
+                pix = None
+                
+            except Exception as pdf_error:
+                return {
+                    "measureProcessCapture5": [{
+                        "measureProcessCapture6": "",
+                        "measureProcessCapture7": "",
+                        "measureProcessCapture8": f"Failed to convert PDF to image: {str(pdf_error)}",
+                        "measureProcessCapture9": "",
+                        "measureProcessCapture10": "",
+                        "measureProcessCapture11": "",
+                        "measureProcessCapture12": ""
+                    }]
+                }
         elif file_type == 'image':
             png_path = local_file_path
         else:
@@ -135,7 +178,4 @@ Analysiere das Bild und extrahiere die Prozessinformationen:
     finally:
         # Clean up temporary PNG if created
         if 'file_type' in locals() and file_type == 'pdf' and 'png_path' in locals() and png_path != local_file_path:
-            try:
-                os.unlink(png_path)
-            except Exception:
-                pass
+            cleanup_temp_file(png_path)
