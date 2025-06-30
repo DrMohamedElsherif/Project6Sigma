@@ -6,7 +6,6 @@ import shutil
 from typing import Optional, Tuple
 from openai import AzureOpenAI
 from dotenv import load_dotenv
-from pdf2image import convert_from_path
 from PIL import Image
 from api.schemas import BusinessLogicException
 from config import get_settings
@@ -14,7 +13,6 @@ import fitz  # PyMuPDF
 import mimetypes
 from Crypto.Cipher import AES
 from Crypto.Util.Padding import unpad
-import base64
 
 
 settings = get_settings()
@@ -202,46 +200,40 @@ def build_ai_prompt(raw_data: str = "") -> str:
     final_prompt = f"{prompt_addition}\n\n{prompt}"
     return final_prompt
 
-def convert_pdf_to_png(pdf_path: str, output_dir: str) -> str:
+def convert_pdf_to_base64(pdf_path: str) -> str:
     """
-    Converts the first page of a PDF to PNG format.
+    Converts a PDF file directly to base64 data URI for AI analysis.
+    This eliminates the need for PDF to PNG conversion since the original PDF
+    will be appended to the final analysis report anyway.
     
     Args:
         pdf_path (str): Path to the PDF file.
-        output_dir (str): Directory to save the PNG file.
         
     Returns:
-        str: Path to the generated PNG file.
+        str: Base64 data URI string (e.g., "data:application/pdf;base64,...")
         
     Raises:
         BusinessLogicException: If PDF conversion fails.
     """
     try:
-        # Create output directory if it doesn't exist
-        os.makedirs(output_dir, exist_ok=True)
-        
-        # Convert first page of PDF to PNG
-        pages = convert_from_path(pdf_path, first_page=1, last_page=1, dpi=300)
-        
-        if not pages:
+        if not os.path.exists(pdf_path):
             raise BusinessLogicException(
-                error_code="PDF_CONVERSION_ERROR",
-                details={"message": "No pages found in PDF file."}
+                error_code="PDF_FILE_NOT_FOUND",
+                details={"message": f"PDF file not found: {pdf_path}"}
             )
         
-        # Generate unique filename
-        png_filename = f"temp_{uuid.uuid4()}.png"
-        png_path = os.path.join(output_dir, png_filename)
+        # Read PDF file and convert to base64
+        with open(pdf_path, "rb") as pdf_file:
+            pdf_data = pdf_file.read()
+            base64_data = base64.b64encode(pdf_data).decode('utf-8')
         
-        # Save the first page as PNG
-        pages[0].save(png_path, 'PNG')
-        
-        return png_path
+        # Return as data URI
+        return f"data:application/pdf;base64,{base64_data}"
         
     except Exception as e:
         raise BusinessLogicException(
             error_code="PDF_CONVERSION_ERROR",
-            details={"message": f"Failed to convert PDF to PNG: {str(e)}"}
+            details={"message": f"Failed to convert PDF to base64: {str(e)}"}
         )
 
 def decrypt_craft_encrypted_url(encrypted_b64: str, key: bytes) -> str:

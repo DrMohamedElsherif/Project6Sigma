@@ -73,24 +73,24 @@ async def ai_analysis_endpoint(request: dict = Body(...)):
 async def ai_process_capture_endpoint(request: dict):
     """
     AI Process Capture endpoint.
-    Expects: {"file_name": "...", "file_extension": "...", "project": "...", "step": "..."}
+    Expects: {"file_name": "...", "project": "...", "step": "..."}
     """
     from .process_capture import process_capture_logic
 
     try:
         file_name = request.get("file_name")
-        file_extension = request.get("file_extension")
         project = request.get("project")
         step = request.get("step")
 
-        if not all([file_name, file_extension, project, step]):
+        print(f"File Name: {file_name}, Project: {project}, Step: {step}")
+
+        if not all([file_name, project, step]):
             raise BusinessLogicException(
                 error_code="MISSING_PARAMETERS",
-                details={"message": "file_name, file_extension, project, and step are required"}
+                details={"message": "file_name, project, and step are required"}
             )
 
-        result = await process_capture_logic(file_name, file_extension, project, step)
-        print(f"Result: {result}")
+        result = await process_capture_logic(file_name, project, step)
         return SuccessResponse(data=result)
 
     except BusinessLogicException:
