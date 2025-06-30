@@ -1,10 +1,11 @@
 import os
+import uuid
 from typing import Tuple
+import fitz  # PyMuPDF
 from api.schemas import BusinessLogicException
 from config import get_settings
 from api.utils.ai_utils import (
     call_azure_openai,
-    convert_pdf_to_png,
     cleanup_temp_file,
     convert_image_to_base64,
     save_ai_response_files
@@ -212,7 +213,6 @@ async def process_ai_analysis(project: str, step: str, chart_id: str, raw_data: 
     Raises:
         BusinessLogicException: If processing fails.
     """
-    temp_png_path = None
     
     try:
         # Step 1: Find the chart file in static/{project}/{step}/{chart_id}.{ext}
@@ -233,18 +233,50 @@ async def process_ai_analysis(project: str, step: str, chart_id: str, raw_data: 
                 details={"message": f"Unsupported file type: {file_extension}. Supported: PDF, PNG, JPG, JPEG"}
             )
         
-        # Step 3: Prepare image for AI vision analysis
+        # Step 3: Prepare image/document for AI vision analysis
         if file_type == 'pdf':
+            # Azure OpenAI vision doesn't support PDF directly, so we need to convert to image
+            # but we'll still use the original PDF for the final report
             temp_dir = os.path.join(settings.staticFilePath, "tmp")
             os.makedirs(temp_dir, exist_ok=True)
-            temp_png_path = convert_pdf_to_png(local_file_path, temp_dir)
-            image_path_for_ai = temp_png_path
+            
+            # Convert PDF to image using PyMuPDF for AI analysis
+            try:
+                doc = fitz.open(local_file_path)
+                if len(doc) == 0:
+                    raise BusinessLogicException(
+                        error_code="PDF_CONVERSION_ERROR",
+                        details={"message": "No pages found in PDF file."}
+                    )
+                
+                # Get first page and convert to PNG
+                page = doc[0]
+                mat = fitz.Matrix(300/72, 300/72)  # 300 DPI scaling
+                pix = page.get_pixmap(matrix=mat)
+                
+                # Save as temporary PNG
+                temp_png_filename = f"temp_pdf_analysis_{uuid.uuid4()}.png"
+                temp_png_path = os.path.join(temp_dir, temp_png_filename)
+                pix.save(temp_png_path)
+                
+                # Cleanup PyMuPDF objects
+                doc.close()
+                pix = None
+                
+                # Convert PNG to base64 for AI analysis
+                chart_base64 = convert_image_to_base64(temp_png_path)
+                
+                # Clean up temp PNG file
+                cleanup_temp_file(temp_png_path)
+                
+            except Exception as pdf_error:
+                raise BusinessLogicException(
+                    error_code="PDF_TO_IMAGE_CONVERSION_ERROR",
+                    details={"message": f"Failed to convert PDF to image for AI analysis: {str(pdf_error)}"}
+                )
         else:
-            # Use image directly for AI analysis
-            image_path_for_ai = local_file_path
-
-        # Convert image to base64 for AI vision analysis
-        chart_base64 = convert_image_to_base64(image_path_for_ai)
+            # Convert image to base64 for AI analysis
+            chart_base64 = convert_image_to_base64(local_file_path)
         
         # Step 4: Build AI prompt (without embedding the chart)
         prompt = build_ai_analysis_prompt(raw_data=raw_data)
@@ -267,17 +299,9 @@ async def process_ai_analysis(project: str, step: str, chart_id: str, raw_data: 
             file_type=file_type
         )
         
-        # Step 7: Cleanup temporary files
-        if temp_png_path:
-            cleanup_temp_file(temp_png_path)
-        
         return pdf_url, html_url
         
     except Exception as e:
-        # Cleanup on error
-        if temp_png_path:
-            cleanup_temp_file(temp_png_path)
-        
         if isinstance(e, BusinessLogicException):
             raise
         else:
