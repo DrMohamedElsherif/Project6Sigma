@@ -130,6 +130,14 @@ Analysiere das Bild und extrahiere die Prozessinformationen:
                 for key in required_keys:
                     if key not in process:
                         process[key] = ""
+            if (
+                len(parsed_response["measureProcessCapture5"]) == 1 and
+                all(process.get(key, "") == "" for key in required_keys)
+            ):
+                raise BusinessLogicException(
+                    error_code="COULD_NOT_EXTRACT_DATA",
+                    details={"message": "Keine klaren Prozessinformationen im Bild erkennbar"}
+                )
             return parsed_response
         except (json.JSONDecodeError, ValueError) as e:
             raise BusinessLogicException(
