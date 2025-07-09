@@ -35,19 +35,19 @@ async def ai_analysis_endpoint(request: dict = Body(...)):
 
         if not project:
             raise BusinessLogicException(
-                error_code="MISSING_PROJECT",
+                error_code="error_missing_project",
                 details={"message": "project is required for AI analysis"}
             )
         
         if not step:
             raise BusinessLogicException(
-                error_code="MISSING_STEP",
+                error_code="error_missing_step",
                 details={"message": "step is required for AI analysis"}
             )
         
         if not chart_id:
             raise BusinessLogicException(
-                error_code="MISSING_CHART_ID",
+                error_code="error_missing_chart_id",
                 details={"message": "chart_id is required for AI analysis"}
             )
         
@@ -65,8 +65,8 @@ async def ai_analysis_endpoint(request: dict = Body(...)):
         raise
     except Exception as e:
         raise BusinessLogicException(
-            error_code="AI_ANALYSIS_ERROR", 
-            details={"original_error": str(e)}
+            error_code="error_ai_analysis", 
+            details={"message": "An error occurred during AI analysis"}
         )
 
 @router.post("/process-capture")
@@ -82,12 +82,10 @@ async def ai_process_capture_endpoint(request: dict):
         project = request.get("project")
         step = request.get("step")
 
-        print(f"File Name: {file_name}, Project: {project}, Step: {step}")
-
         if not all([file_name, project, step]):
             raise BusinessLogicException(
-                error_code="MISSING_PARAMETERS",
-                details={"message": "file_name, project, and step are required"}
+                error_code="error_missing_parameters",
+                details={"message": "Project, step, and chart_id/file_name are required"}
             )
 
         result = await process_capture_logic(file_name, project, step)
@@ -97,6 +95,38 @@ async def ai_process_capture_endpoint(request: dict):
         raise
     except Exception as e:
         raise BusinessLogicException(
-            error_code="AI_PROCESS_CAPTURE_ERROR",
-            details={"original_error": str(e)}
+            error_code="error_ai_process_capture",
+            details={"message": "An error occurred during AI process capture"}
+        )
+
+@router.post("/sipoc-capture")
+async def ai_sipoc_capture_endpoint(request: dict):
+    """
+    AI SIPOC Capture endpoint.
+    Expects: {"file_name": "...", "project": "...", "step": "..."}
+    """
+    from .sipoc import process_sipoc_logic
+
+    try:
+        file_name = request.get("file_name")
+        project = request.get("project")
+        step = request.get("step")
+
+        print(f"File Name: {file_name}, Project: {project}, Step: {step}")
+
+        if not all ([file_name, project, step]):
+            raise BusinessLogicException(
+                error_code="error_missing_parameters",
+                details={"message": "Project, step, and chart_id/file_name are required"}
+            )
+        
+        result = await process_sipoc_logic(file_name, project, step)
+        print(f"Result: {result}")
+        return SuccessResponse(data=result)
+    except BusinessLogicException:
+        raise
+    except Exception as e:
+        raise BusinessLogicException(
+            error_code="error_ai_sipoc_capture",
+            details={"message": "An error occured during AI SIPOC capture"}
         )

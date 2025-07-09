@@ -38,8 +38,8 @@ async def process_capture_logic(file_name: str, project: str, step: str) -> Dict
                 doc = fitz.open(local_file_path)
                 if len(doc) == 0:
                     raise BusinessLogicException(
-                        error_code="NO_PAGES_IN_PDF",
-                        details={"message": "No pages found in PDF file"}
+                        error_code="error_pdf_conversion",
+                        details={"message": "Failed to convert PDF to image for AI analysis"}
                     )
                 # Get first page and convert to PNG
                 page = doc[0]
@@ -56,14 +56,14 @@ async def process_capture_logic(file_name: str, project: str, step: str) -> Dict
                 raise
             except Exception as pdf_error:
                 raise BusinessLogicException(
-                    error_code="PDF_TO_IMAGE_FAILED",
-                    details={"message": f"Failed to convert PDF to image: {str(pdf_error)}"}
+                    error_code="error_pdf_conversion",
+                    details={"message": f"Failed to convert PDF to image for AI analysis"}
                 )
         elif file_type == 'image':
             png_path = local_file_path
         else:
             raise BusinessLogicException(
-                error_code="UNSUPPORTED_FILE_TYPE",
+                error_code="error_unsupported_file_type",
                 details={"message": f"Unsupported file type: {detected_extension}"}
             )
 
@@ -135,17 +135,14 @@ Analysiere das Bild und extrahiere die Prozessinformationen:
                 all(process.get(key, "") == "" for key in required_keys)
             ):
                 raise BusinessLogicException(
-                    error_code="COULD_NOT_EXTRACT_DATA",
+                    error_code="error_could_not_extract_data",
                     details={"message": "Keine klaren Prozessinformationen im Bild erkennbar"}
                 )
             return parsed_response
         except (json.JSONDecodeError, ValueError) as e:
             raise BusinessLogicException(
-                error_code="AI_RESPONSE_PARSE_ERROR",
-                details={
-                    "message": f"AI-Antwort konnte nicht als JSON geparst werden: {str(e)}",
-                    "ai_response": ai_response[:500] if ai_response else ""
-                }
+                error_code="error_ai_analysis_processing",
+                details={"message": f"An error occured during AI analysis"}
             )
     finally:
         # Clean up temporary PNG if created

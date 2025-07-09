@@ -1,67 +1,53 @@
-# AI Features Module
+## Possible prompt improvement for process_capture:
 
-This module contains all AI-related features for the SixAPI project, following the same pattern as other chart modules.
+Analysiere das dargestellte Prozessdiagramm oder Dokument und extrahiere strukturierte Prozessinformationen.
 
-## Structure
-
-```
-api/AI/
-├── __init__.py
-├── ai_router.py          # Router with endpoints (like hypothesistest_router.py)
-├── analysis.py           # Business logic functions (like ttest.py)
-└── README.md            # This file
-```
-
-## Pattern
-
-This follows the same pattern as `api/charts/hypothesistest/`:
-- **Router file** (`ai_router.py`): Contains FastAPI endpoints that import and call business logic
-- **Logic file** (`analysis.py`): Contains the actual processing functions and utilities
-- **Import pattern**: `from .analysis import process_ai_analysis` (similar to `from .ttest import Ttest`)
-
-## Migration from charts/ai_analysis_router.py
-
-The AI analysis functionality has been migrated from `api/charts/ai_analysis_router.py` to this module:
-
-- **Endpoint URL changed**: `/api/v1/charts/ai-analysis/ai-analysis` → `/api/v1/ai/ai-analysis`
-- **Business logic moved**: Analysis-specific code moved to `analysis.py`
-- **Generic utilities kept**: Common AI utilities remain in `api/utils/ai_utils.py`
-
-## Usage
-
-The AI analysis endpoint is now available at:
-```
-POST /api/v1/ai/ai-analysis
-```
-
-With the same request format:
-```json
+Gib die Antwort als gültiges JSON-Objekt zurück mit folgendem Format:
 {
-    "project": "project_name",
-    "step": "analysis",
-    "chart_url": "URL_to_PDF_or_PNG", 
-    "raw_data": "optional raw data string"
+  "measureProcessCapture5": [
+    {
+      "measureProcessCapture6": "Prozessschritt-Name",
+      "measureProcessCapture7": "WER (Prozessverantwortlicher/Owner)",
+      "measureProcessCapture8": "WAS (Beschreibung des Ablaufs)",
+      "measureProcessCapture9": "WIE (Beschreibung der Umsetzung)",
+      "measureProcessCapture10": "WO (Ort der Durchführung)",
+      "measureProcessCapture11": "WANN (Zeitpunkt/Häufigkeit)",
+      "measureProcessCapture12": "WARUM (Grund/Zweck)"
+    }
+  ]
 }
-```
 
-## Adding New AI Features
+KRITISCH WICHTIGE HINWEISE:
 
-To add a new AI feature (e.g., summarization):
+1. ZUORDNUNG DER FELDER (Dieses Schema entspricht der 5W1H-Methode):
+   - measureProcessCapture6: "Prozessschritt" - Name oder Bezeichnung des Prozessschritts
+   - measureProcessCapture7: "WER" - Person oder Rolle, die für diesen Schritt verantwortlich ist
+   - measureProcessCapture8: "WAS" - Beschreibung des Ablaufs oder was getan wird
+   - measureProcessCapture9: "WIE" - Beschreibung der Umsetzung oder wie es getan wird
+   - measureProcessCapture10: "WO" - Ort oder Bereich, wo der Schritt stattfindet
+   - measureProcessCapture11: "WANN" - Zeitpunkt, Dauer oder Häufigkeit des Schritts
+   - measureProcessCapture12: "WARUM" - Grund oder Zweck des Prozessschritts
 
-1. Add the business logic function to a new file (e.g., `summarization.py`)
-2. Add an endpoint in `ai_router.py`:
-```python
-@router.post("/summarization")
-async def ai_summarization_endpoint(request: dict):
-    from .summarization import process_summarization
-    # Process request and call business logic
-    return result
-```
+2. TABELLENERKENNUNG:
+   - Wenn das Dokument eine tabellarische Form hat, behalte die Struktur der Zeilen bei
+   - Jede Zeile wird zu einem eigenen Eintrag im "measureProcessCapture5" Array
+   - Achte besonders auf die Spaltenzuordnung - jede Spalte entspricht einem bestimmten Feld
+   - Bei Spaltenüberschriften wie "Wer", "Was", "Wie" usw. ordne sie entsprechend zu
 
-This follows the exact same pattern as the existing chart modules.
+3. UMGANG MIT LEEREN ZELLEN:
+   - Wenn eine Zelle leer ist, verwende einen leeren String ("") für das entsprechende Feld
+   - Fülle NICHT mit Platzhaltern oder vermeintlichen Informationen aus anderen Feldern auf
+   - Behalte die Zuordnung jeder Spalte konsequent bei, auch wenn Zellen leer sind
 
-## Dependencies
+4. ALLGEMEINE ANWEISUNGEN:
+   - Wenn mehrere Prozessschritte erkennbar sind, erstelle für jeden einen separaten Eintrag
+   - Alle Felder müssen in jedem Eintrag vorhanden sein, auch wenn sie leer sind
+   - Verwende deutsche Begriffe und Beschreibungen
+   - Antworte NUR mit dem JSON-Objekt, ohne zusätzlichen Text oder Markdown
+   - Bei unsicherer Zuordnung orientiere dich an der Bedeutung der Felder (WER, WAS, WIE, WO, WANN, WARUM)
 
-- Azure OpenAI (via `api.utils.ai_utils`)
-- FastAPI
-- PDF/Image processing utilities
+5. BEI UNKLAREN DOKUMENTEN:
+   - Falls keine klare Tabellenstruktur erkennbar ist, extrahiere so viele Prozessschritte wie möglich
+   - Wenn gar keine Prozessinformationen erkennbar sind, gib ein Array mit einem leeren Objekt zurück
+
+Analysiere das Bild jetzt und extrahiere die Prozessinformationen nach diesem Schema:
