@@ -81,11 +81,11 @@ class Npchart:
         ueg = np_mean - 3 * std_dev
 
         self.figure = plt.figure(figsize=FIGURE_SIZE_A4_PORTRAIT)
-        plt.subplots_adjust(top=0.85, bottom=0.4, left=0.1, right=0.9)
+        plt.subplots_adjust(top=0.85, bottom=0.4, left=0.15, right=0.85)
         plt.plot(data['np'], color='black', marker='o', lw=0.5)
-        plt.axhline(oeg, color='red', linestyle='dashed', label=f'OEG={round(oeg, 2)}')
+        plt.axhline(oeg, color='#a03130', linestyle='dashed', label=f'OEG={round(oeg, 2)}')
         plt.axhline(np_mean, color='grey', label=f'np={round(np_mean, 2)}', linestyle='dashed', alpha=0.7)
-        plt.axhline(ueg, color='red', linestyle='dashed', label=f'UEG={round(ueg, 2)}')
+        plt.axhline(ueg, color='#a03130', linestyle='dashed', label=f'UEG={round(ueg, 2)}')
 
         plt.title(self.config.title, fontsize=28, pad=20)
         plt.xlabel('Sample')

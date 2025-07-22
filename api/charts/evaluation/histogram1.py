@@ -46,7 +46,7 @@ class Histogram1:
 
         self.figure, ax = plt.subplots(figsize=(FIGURE_SIZE_A4_PORTRAIT))
 
-        plt.subplots_adjust(top=0.85, bottom=0.4, left=0.1, right=0.9)
+        plt.subplots_adjust(top=0.85, bottom=0.4, left=0.15, right=0.85)
 
         # Enable grid lines
         plt.grid(True, zorder=0, alpha=0.3)

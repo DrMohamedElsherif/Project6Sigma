@@ -71,6 +71,7 @@ class Histogram5:
             ax.set_title(column)
 
         plt.suptitle(title, fontsize=TITLE_FONT_SIZE, y=0.95)
-        plt.tight_layout()
+        plt.tight_layout(pad=2.0)
+        plt.subplots_adjust(top=0.85, bottom=0.15, left=0.15, right=0.85)
         plt.close('all')
         return self.figure

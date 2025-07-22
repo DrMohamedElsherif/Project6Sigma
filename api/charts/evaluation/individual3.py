@@ -107,7 +107,7 @@ class Individual3:
 
         # Set title and adjust layout
         sp.figure.suptitle(title, fontsize=TITLE_FONT_SIZE)
-        plt.subplots_adjust(top=0.9)
+        plt.subplots_adjust(top=0.85, bottom=0.4, left=0.15, right=0.85)
 
         # Add grid to all subplots
         for ax in sp.axes.flat:

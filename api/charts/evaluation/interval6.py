@@ -50,7 +50,7 @@ class Interval6:
         # Create figure
         self.figure = plt.figure(figsize=FIGURE_SIZE_A4_PORTRAIT)
         plt.suptitle(title, fontsize=TITLE_FONT_SIZE, y=0.95)
-        plt.subplots_adjust(top=0.85, bottom=0.1, left=0.1, right=0.9)
+        plt.subplots_adjust(top=0.85, bottom=0.1, left=0.15, right=0.85)
 
         # Create subplots for each column
         for index, column in enumerate(df.columns):

@@ -74,7 +74,7 @@ class Scatterplot5:
             self.figure.delaxes(axes[i])
 
         plt.tight_layout(pad=2.0)
-        plt.subplots_adjust(top=0.9)
+        plt.subplots_adjust(top=0.85, bottom=0.1, left=0.15, right=0.85)
         plt.suptitle(title, fontsize=TITLE_FONT_SIZE, y=0.98)
         plt.close('all')
         return self.figure

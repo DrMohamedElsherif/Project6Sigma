@@ -79,7 +79,7 @@ class Interval2:
             # Add legend
             ax.legend(loc='best')
 
-            plt.subplots_adjust(top=0.85, bottom=0.4, left=0.1, right=0.9)
+            plt.subplots_adjust(top=0.85, bottom=0.4, left=0.15, right=0.85)
 
             # Enable grid
             ax.grid(True, which='both', alpha=0.3)

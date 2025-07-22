@@ -90,20 +90,21 @@ class Rchart:
         r_lcl = D3 * r_mean
 
         self.figure, (ax1, ax2) = plt.subplots(2, figsize=FIGURE_SIZE_A4_PORTRAIT)
+        self.figure.subplots_adjust(top=0.85, bottom=0.15, left=0.15, right=0.85)
 
         ax1.plot(x_bars, color='black', marker='o', lw=0.5)
-        ax1.axhline(x_ucl, color='red', linestyle='dashed', label=f'UCL={round(x_ucl, 3)}')
+        ax1.axhline(x_ucl, color='#a03130', linestyle='dashed', label=f'UCL={round(x_ucl, 3)}')
         ax1.axhline(x_mean, color='grey', label=f'X={round(x_mean, 3)}', linestyle='dashed', alpha=0.7)
-        ax1.axhline(x_lcl, color='red', linestyle='dashed', label=f'LCL={round(x_lcl, 3)}')
+        ax1.axhline(x_lcl, color='#a03130', linestyle='dashed', label=f'LCL={round(x_lcl, 3)}')
         ax1.set_title(self.config.title, fontsize=28, pad=20)
         ax1.set(ylabel='Sample Mean')
         ax1.grid(True, alpha=0.3)
         ax1.legend(loc='upper right', framealpha=1)
 
         ax2.plot(ranges, color='black', marker='o', lw=0.5)
-        ax2.axhline(r_ucl, color='red', linestyle='dashed', label=f'UCL={round(r_ucl, 3)}')
+        ax2.axhline(r_ucl, color='#a03130', linestyle='dashed', label=f'UCL={round(r_ucl, 3)}')
         ax2.axhline(r_mean, color='grey', label=f'R={round(r_mean, 3)}', linestyle='dashed', alpha=0.7)
-        ax2.axhline(r_lcl, color='red', linestyle='dashed', label=f'LCL={round(r_lcl, 3)}')
+        ax2.axhline(r_lcl, color='#a03130', linestyle='dashed', label=f'LCL={round(r_lcl, 3)}')
         ax2.set(xlabel='Sample', ylabel='Sample Range')
         ax2.grid(True, alpha=0.3)
         ax2.legend(loc='upper right', framealpha=1)

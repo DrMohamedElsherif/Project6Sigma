@@ -71,7 +71,7 @@ class Cchart:
 
         self.figure = plt.figure(figsize=FIGURE_SIZE_A4_PORTRAIT)
 
-        plt.subplots_adjust(top=0.85, bottom=0.4, left=0.1, right=0.9)
+        plt.subplots_adjust(top=0.85, bottom=0.4, left=0.15, right=0.85)
 
         plt.plot(c['defects'], color='black', marker='o', lw=0.5)
 
@@ -79,10 +79,10 @@ class Cchart:
         OEG = C + 3 * np.sqrt(C)
         UEG = C - 3 * np.sqrt(C)
 
-        plt.axhline(OEG, color='red', linestyle='dashed',
+        plt.axhline(OEG, color='#a03130', linestyle='dashed',
                     label=f'OEG={round(OEG, 2)}')
         plt.axhline(C, color='grey', label=f'C={round(C, 1)}', linestyle='dashed', alpha=0.7)
-        plt.axhline(UEG, color='red', linestyle='dashed',
+        plt.axhline(UEG, color='#a03130', linestyle='dashed',
                     label=f'UEG={round(UEG, 2)}')
         plt.title(title, fontsize=28, pad=20)
         plt.xlabel('Sample')

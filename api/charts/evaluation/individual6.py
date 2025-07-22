@@ -56,7 +56,7 @@ class Individual6:
         sns.set_theme(style="whitegrid")
 
         # Create figure and subplots
-        fig, axes = plt.subplots(num_rows, num_cols, figsize=(8.27, max(8.27, num_rows * 4.5)))
+        fig, axes = plt.subplots(num_rows, num_cols, figsize=(8.27, max(11.69, num_rows * 5.5)))
 
         # Flatten the axes array if necessary
         axes = axes.flatten() if isinstance(axes, np.ndarray) else [axes]
@@ -81,7 +81,7 @@ class Individual6:
 
         # Set main title and adjust layout
         plt.suptitle(title, fontsize=TITLE_FONT_SIZE)
-        plt.subplots_adjust(left=0.1, bottom=0.1, right=0.9, top=0.9)
+        plt.subplots_adjust(top=0.85, bottom=0.1, left=0.15, right=0.85)
 
         self.figure = fig
         plt.close('all')

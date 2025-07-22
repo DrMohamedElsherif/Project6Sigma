@@ -60,7 +60,7 @@ class Matrixplot1:
         pair_plot.figure.suptitle(title, fontsize=TITLE_FONT_SIZE)
 
         # Adjust layout
-        plt.subplots_adjust(top=0.9, bottom=0.1, left=0.1, right=0.9)
+        plt.subplots_adjust(top=0.85, bottom=0.1, left=0.15, right=0.85)
 
         # Add grid
         for ax in pair_plot.axes.flatten():
