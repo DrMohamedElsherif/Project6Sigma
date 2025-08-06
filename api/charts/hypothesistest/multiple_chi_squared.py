@@ -73,6 +73,7 @@ class MultipleChiSquaredData(BaseModel):
 
 class MultipleChiSquaredRequest(BaseModel):
     project: str
+    projectNumber: Optional[str] = None
     step: str
     config: MultipleChiSquaredConfig
     data: Optional[MultipleChiSquaredData] = Field(default_factory=MultipleChiSquaredData)
@@ -85,6 +86,7 @@ class MultipleChiSquared:
             self.step = validated_data.step
             self.config = validated_data.config
             self.data = validated_data.data
+            self.projectNumber = validated_data.projectNumber
 
         except ValueError as e:
             raise BusinessLogicException(
@@ -100,6 +102,7 @@ class MultipleChiSquared:
         categories = self.config.categories if self.config.categories is not None else None
         outcomes = self.config.outcomes if self.config.outcomes is not None else None
         observed_count = self.config.observed_count if self.config.observed_count is not None else None
+        projectNumber = self.projectNumber
 
         if observed_count is None:
             # Obtain categories
@@ -149,7 +152,7 @@ class MultipleChiSquared:
             total_pages = 2 if many_categories else 1
 
             add_header_or_footer_to_a4_portrait(fig, header_image_path, position='header')
-            add_header_or_footer_to_a4_portrait(fig, footer_image_path, position='footer', page_number=1, total_pages=total_pages)
+            add_header_or_footer_to_a4_portrait(fig, footer_image_path, position='footer', page_number=1, total_pages=total_pages, projectNumber=projectNumber)
 
 
             # Define the colors + fontsize
@@ -584,7 +587,7 @@ class MultipleChiSquared:
                         ["Empty 2"]],
                         figsize=(8.27, 11.69), dpi=300)  # A4 size in inches
                     add_header_or_footer_to_a4_portrait(fig, header_image_path, position='header')
-                    add_header_or_footer_to_a4_portrait(fig, footer_image_path, position='footer', page_number=2, total_pages=total_pages)
+                    add_header_or_footer_to_a4_portrait(fig, footer_image_path, position='footer', page_number=2, total_pages=total_pages, projectNumber=projectNumber)
 
                     difference = np.array(observed_count) - np.array(results['expected_counts'])
 

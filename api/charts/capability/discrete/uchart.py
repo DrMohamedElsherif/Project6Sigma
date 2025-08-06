@@ -12,7 +12,7 @@ footer_image_path = 'assets/img/Footer.png'
 from api.schemas import BusinessLogicException
 
 
-def U_chart(data, title, acceptable_DPU=0, subgroup_size=1):
+def U_chart(data, title, acceptable_DPU=0, subgroup_size=1, projectNumber=None):
     """
     data: 'pandas DataFrame'
     acceptable_DPU: 'int' = 0
@@ -85,7 +85,7 @@ def U_chart(data, title, acceptable_DPU=0, subgroup_size=1):
         fig.suptitle(title, fontsize=14, y=0.92, ha='left', x=0.1)
 
         add_header_or_footer_to_a4_portrait(fig, header_image_path, position='header')
-        add_header_or_footer_to_a4_portrait(fig, footer_image_path, position='footer', page_number=1, total_pages=2)
+        add_header_or_footer_to_a4_portrait(fig, footer_image_path, position='footer', page_number=1, total_pages=2, projectNumber=projectNumber if projectNumber else None)
 
         # Plot U chart
         axs["U"].plot(data["u"], color='black', marker='o', lw=0.5, zorder=3)
@@ -117,7 +117,7 @@ def U_chart(data, title, acceptable_DPU=0, subgroup_size=1):
         plt.subplots_adjust(left=0.1, right=0.9, top=0.85, bottom=0.15, hspace=0.6, wspace=0.1)
 
         header_ax = add_header_or_footer_to_a4_portrait(fig, header_image_path, position='header')
-        footer_ax = add_header_or_footer_to_a4_portrait(fig, footer_image_path, position='footer', page_number=2, total_pages=2)
+        footer_ax = add_header_or_footer_to_a4_portrait(fig, footer_image_path, position='footer', page_number=2, total_pages=2, projectNumber=projectNumber if projectNumber else None)
 
         # Plot histogram of observed DPU per subgroup
         axs["Histogram"].hist(data["u"], color="#95b92a", edgecolor="black", bins=10, zorder=3)

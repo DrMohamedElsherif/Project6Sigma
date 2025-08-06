@@ -101,6 +101,7 @@ class PairedTtestDataCombined(BaseModel):
 
 class PairedTtestRequest(BaseModel):
     project: str
+    projectNumber: Optional[str] = None
     step: str
     config: PairedTtestConfig
     data: Any  #  validate this separately
@@ -139,6 +140,7 @@ class PairedTtest:
             self.step = validated_data.step
             self.config = validated_data.config
             self.data = validated_data.data
+            self.projectNumber = validated_data.projectNumber
             
             # Convert combined format to separate format if needed
             if isinstance(self.data, PairedTtestDataCombined):
@@ -202,6 +204,7 @@ class PairedTtest:
         power = self.config.power
         source_1 = list(self.data.values.keys())[0]
         source_2 = list(self.data.values.keys())[1]
+        projectNumber = self.projectNumber
 
         # Create two dataframes for each dataset
         data_keys = list(self.data.values.keys())
@@ -247,7 +250,7 @@ class PairedTtest:
             fig.suptitle(title, fontsize=14, y=0.92, ha='left', x=0.1)		
 
             add_header_or_footer_to_a4_portrait(fig, header_image_path, position='header')
-            add_header_or_footer_to_a4_portrait(fig, footer_image_path, position='footer', page_number=1, total_pages=2)
+            add_header_or_footer_to_a4_portrait(fig, footer_image_path, position='footer', page_number=1, total_pages=2, projectNumber=projectNumber)
 
             # Define the colors + font size
             edgecolor = "#7c7c7c"
@@ -658,7 +661,7 @@ class PairedTtest:
             fig.subplots_adjust(hspace=0.4)
 
             header_ax = add_header_or_footer_to_a4_portrait(fig, header_image_path, position='header')
-            footer_ax = add_header_or_footer_to_a4_portrait(fig, footer_image_path, position='footer', page_number=2, total_pages=2)
+            footer_ax = add_header_or_footer_to_a4_portrait(fig, footer_image_path, position='footer', page_number=2, total_pages=2, projectNumber=projectNumber)
 
             # Histogram
             ax = axes["Hist"]

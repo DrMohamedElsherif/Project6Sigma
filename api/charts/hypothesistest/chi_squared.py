@@ -46,6 +46,7 @@ class ChiSquaredData(BaseModel):
 
 class ChiSquaredRequest(BaseModel):
     project: str
+    projectNumber: Optional[str] = None
     step: str
     config: ChiSquaredConfig
     data: Optional[ChiSquaredData] = None
@@ -58,6 +59,7 @@ class ChiSquared:
             self.step = validated_data.step
             self.config = validated_data.config
             self.data = validated_data.data
+            self.projectNumber = validated_data.projectNumber
             
             # Validate that we have all required data for one of the two variants
             variant = self.config.variant
@@ -139,6 +141,7 @@ class ChiSquared:
         title = self.config.title
         variant = self.config.variant
         alphalevel = self.config.alphalevel
+        projectNumber = self.projectNumber
         
         if variant == "Summarized data":
             outcomes = self.config.outcomes
@@ -229,7 +232,7 @@ class ChiSquared:
             fig.suptitle(title, fontsize=14, y=0.92, ha='left', x=0.1)
 
             add_header_or_footer_to_a4_portrait(fig, header_image_path, position='header')
-            add_header_or_footer_to_a4_portrait(fig, footer_image_path, position='footer', page_number=1, total_pages=1)
+            add_header_or_footer_to_a4_portrait(fig, footer_image_path, position='footer', page_number=1, total_pages=1, projectNumber=projectNumber)
 
 
             # Define the colors + fontsize

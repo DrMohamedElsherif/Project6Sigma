@@ -25,6 +25,7 @@ class MSA1Data(BaseModel):
 
 class MSA1Request(BaseModel):
     project: str
+    projectNumber: Optional[str] = None
     step: str
     config: MSA1Config
     data: MSA1Data
@@ -53,6 +54,7 @@ class MSA1Chart:
                 self.step = validated_data.step
                 self.config = validated_data.config
                 self.data = validated_data.data
+                self.projectNumber = validated_data.projectNumber
                 self.message = ""
                 self.figure = None
             except ValidationError as e:
@@ -74,6 +76,7 @@ class MSA1Chart:
         reference = self.config.reference
         tolerance = self.config.tolerance
         percentage_of_tolerance = self.config.percentage_of_tolerance
+        projectNumber = self.projectNumber
 
         # Define Upper and Lower Control Limits
         UCL = reference + (0.1 * tolerance)
@@ -94,7 +97,7 @@ class MSA1Chart:
         self.figure.suptitle(title, fontsize=14, y=0.92, ha='left', x=0.1)
 
         add_header_or_footer_to_a4_portrait(self.figure, header_image_path, position='header')
-        add_header_or_footer_to_a4_portrait(self.figure, footer_image_path, position='footer', page_number=1, total_pages=1)
+        add_header_or_footer_to_a4_portrait(self.figure, footer_image_path, position='footer', page_number=1, total_pages=1, projectNumber=projectNumber)
             
 
         # Plot in the first row

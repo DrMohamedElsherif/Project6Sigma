@@ -31,6 +31,7 @@ class FtestData(BaseModel):
 
 class FtestRequest(BaseModel):
     project: str
+    projectNumber: Optional[str] = None
     step: str
     config: FtestConfig
     data: FtestData
@@ -81,7 +82,8 @@ class Ftest:
             self.step = validated_data.step
             self.config = validated_data.config
             self.data = validated_data.data
-        
+            self.projectNumber = validated_data.projectNumber
+
         except ValueError as e:
             raise BusinessLogicException(
                 error_code="error_validation",
@@ -96,6 +98,7 @@ class Ftest:
         power = self.config.power
         source = list(self.data.values.keys())[0]
         df1 = pd.DataFrame(self.data.values)
+        projectNumber = self.projectNumber
 
         # Calculate Bonett's confidence interval for the population standard deviation
         lower_bonett, upper_bonett = _bonett_confidence_interval(df1[source], alpha)
@@ -163,7 +166,7 @@ class Ftest:
             fig.suptitle(title, fontsize=14, y=0.92, ha='left', x=0.1)
 
             add_header_or_footer_to_a4_portrait(fig, header_image_path, position='header')
-            add_header_or_footer_to_a4_portrait(fig, footer_image_path, position='footer', page_number=1, total_pages=2)
+            add_header_or_footer_to_a4_portrait(fig, footer_image_path, position='footer', page_number=1, total_pages=2, projectNumber=projectNumber)
 
 
             # Define the colors + font size
@@ -681,7 +684,7 @@ class Ftest:
             # fig.suptitle(title, fontsize=16, weight='bold', y=0.94)
 
             add_header_or_footer_to_a4_portrait(fig, header_image_path, position='header')
-            add_header_or_footer_to_a4_portrait(fig, footer_image_path, position='footer', page_number=2, total_pages=2)
+            add_header_or_footer_to_a4_portrait(fig, footer_image_path, position='footer', page_number=2, total_pages=2, projectNumber=projectNumber)
 
 
             # Histogram

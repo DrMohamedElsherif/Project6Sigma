@@ -2,7 +2,7 @@ import matplotlib.pyplot as plt
 import os
 
 
-def add_header_or_footer_to_a4_portrait(fig, image_path, position='header', page_number=None, total_pages=None):
+def add_header_or_footer_to_a4_portrait(fig, image_path, position='header', page_number=None, total_pages=None, projectNumber=None):
     """
     Add header or footer image to an A4 portrait matplotlib figure.
     
@@ -66,5 +66,11 @@ def add_header_or_footer_to_a4_portrait(fig, image_path, position='header', page
             # Position the text at the bottom right of the footer
             ax.text(0.93, 0.7, page_text, ha='right', va='bottom', 
                    fontsize=9, transform=ax.transAxes)
+            
+    if projectNumber is not None:
+        if position == 'footer':
+            # Position the project number at the bottom left of the footer
+            ax.text(0.07, 0.7, f"Projekt Nr.: {projectNumber}", ha='left', va='bottom', 
+                   fontsize=7, transform=ax.transAxes)
     
     return ax

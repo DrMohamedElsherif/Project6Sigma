@@ -93,6 +93,7 @@ TwoFtestDataUnion = Union[TwoFtestDataSeparate, TwoFtestDataCombined]
 
 class TwoFtestRequest(BaseModel):
     project: str
+    projectNumber: Optional[str] = None
     step: str
     config: TwoFtestConfig
     data: TwoFtestDataUnion
@@ -144,6 +145,7 @@ class TwoFtest:
             self.step = validated_data.step
             self.config = validated_data.config
             self.data = validated_data.data
+            self.projectNumber = validated_data.projectNumber
         except Exception as e:
             raise BusinessLogicException(
                 error_code="error_validation",
@@ -174,6 +176,7 @@ class TwoFtest:
         df2 = pd.DataFrame(self.data.values[source_2], columns=[data_keys[1]])
         # Combine the two dataframes
         df_combined = pd.concat([df2, df1], axis=1)
+        projectNumber = self.projectNumber
 
         descriptive_statistics, f_statistics = _calculate_f_statistics(df1, source_1, df2, source_2, alpha)
 
@@ -204,7 +207,7 @@ class TwoFtest:
             fig.suptitle(title, fontsize=14, y=0.92, ha='left', x=0.1)
 
             add_header_or_footer_to_a4_portrait(fig, header_image_path, position='header')
-            add_header_or_footer_to_a4_portrait(fig, footer_image_path, position='footer', page_number=1, total_pages=2)
+            add_header_or_footer_to_a4_portrait(fig, footer_image_path, position='footer', page_number=1, total_pages=2, projectNumber=projectNumber)
 
             # Define the colors + font size
             edgecolor = "#7c7c7c"
@@ -692,7 +695,7 @@ class TwoFtest:
             # fig.suptitle(title, fontsize=16, weight='bold', y=0.94)
 
             add_header_or_footer_to_a4_portrait(fig, header_image_path, position='header')
-            add_header_or_footer_to_a4_portrait(fig, footer_image_path, position='footer', page_number=2, total_pages=2)
+            add_header_or_footer_to_a4_portrait(fig, footer_image_path, position='footer', page_number=2, total_pages=2, projectNumber=projectNumber)
 
 
             # Plot for the Histograms

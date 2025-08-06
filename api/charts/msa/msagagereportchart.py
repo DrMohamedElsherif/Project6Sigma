@@ -28,6 +28,7 @@ class MSAGageReportData(BaseModel):
 
 class MSAGageReportRequest(BaseModel):
     project: str
+    projectNumber: Optional[str] = None
     step: str
     config: MSAGageReportConfig
     data: MSAGageReportData
@@ -54,6 +55,7 @@ class MsaGageReportChart:
             self.step = validated_data.step
             self.config = validated_data.config
             self.data = validated_data.data
+            self.projectNumber = validated_data.projectNumber
             self.message = ""
             self.figure = None
 
@@ -94,6 +96,7 @@ class MsaGageReportChart:
         num_trials = self.config.trials
         lcl = self.config.lcl
         ucl = self.config.ucl
+        projectNumber = self.projectNumber
 
         # Validate control limits
         if lcl is not None and ucl is not None:
@@ -194,7 +197,7 @@ class MsaGageReportChart:
         fig.subplots_adjust(left=0.15, right=0.85, top=0.85, bottom=0.1, hspace=0.3)
         fig.suptitle(title, fontsize=14, y=0.92, ha='left', x=0.1)
         header_ax = add_header_or_footer_to_a4_portrait(fig, header_image_path, position='header')
-        footer_ax = add_header_or_footer_to_a4_portrait(fig, footer_image_path, position='footer', page_number=1, total_pages=1)
+        footer_ax = add_header_or_footer_to_a4_portrait(fig, footer_image_path, position='footer', page_number=1, total_pages=1, projectNumber=projectNumber)
 
         # First plot
         axs[0].scatter(data["Known-Value"], data["Percent Pass"], label="Data", zorder=5, color='grey')

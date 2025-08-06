@@ -34,6 +34,7 @@ class CapabilityData(BaseModel):
 
 class CapabilityRequest(BaseModel):
     project: str
+    projectNumber: Optional[str] = None
     step: str
     config: CapabilityConfig
     data: CapabilityData
@@ -44,6 +45,7 @@ class CapabilityStudy:
         try:
             validated_data = CapabilityRequest(**data)
             self.project = validated_data.project
+            self.projectNumber = validated_data.projectNumber
             self.step = validated_data.step
             self.config = validated_data.config
             self.data = validated_data.data
@@ -115,11 +117,11 @@ class CapabilityStudy:
             if p_value_shapiro > 0.05 and p_value_normaltest > 0.05:
                 return I_MR_chart(data, self.config.title, target=self.config.target,
                                   subgroup_size=self.config.subgroup_size, USL=self.config.upper_bound,
-                                  LSL=self.config.lower_bound)
+                                  LSL=self.config.lower_bound, projectNumber=self.projectNumber)
             else:
                 return I_MR_chart_transformed(data, self.config.title, target=self.config.target,
                                               subgroup_size=self.config.subgroup_size, LSL=self.config.lower_bound,
-                                              USL=self.config.upper_bound)
+                                              USL=self.config.upper_bound, projectNumber=self.projectNumber)
 
         elif self.config.type == "pchart":
             if self.config.acceptable_percent is None:
@@ -130,7 +132,7 @@ class CapabilityStudy:
                 )
             return P_chart(data, self.config.title,
                            acceptable_percent=self.config.acceptable_percent,
-                           subgroup_size=self.config.subgroup_size)
+                           subgroup_size=self.config.subgroup_size, projectNumber=self.projectNumber)
 
         elif self.config.type == "uchart":
             if self.config.acceptable_DPU is None:
@@ -141,4 +143,4 @@ class CapabilityStudy:
                 )
             return U_chart(data, self.config.title,
                            acceptable_DPU=self.config.acceptable_DPU,
-                           subgroup_size=self.config.subgroup_size)
+                           subgroup_size=self.config.subgroup_size, projectNumber=self.projectNumber)
