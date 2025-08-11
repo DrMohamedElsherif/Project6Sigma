@@ -77,6 +77,7 @@ TwoTtestData = Union[TwoTtestDataSeparate, TwoTtestDataCombined]
 
 class TwoTtestRequest(BaseModel):
     project: str
+    projectNumber: Optional[str] = None
     step: str
     config: TwoTtestConfig
     data: Any  # Use Any type to handle both formats
@@ -125,12 +126,14 @@ class TwoTtest:
                 self.step = validated_data.step
                 self.config = validated_data.config
                 self.data = validated_data.data
+                self.projectNumber = validated_data.projectNumber
             elif 'values' in data['data'] and isinstance(data['data']['values'], list) and 'groups' in data['data']:
                 # Combined format - need to convert
                 self.project = data['project']
                 self.step = data['step']
                 self.config = TwoTtestConfig(**data['config'])
-                
+                self.projectNumber = data['projectNumber']
+
                 # Store original data format temporarily
                 combined_data = {
                     'values': data['data']['values'],
@@ -164,6 +167,7 @@ class TwoTtest:
         df2 = pd.DataFrame(self.data.values[data_keys[1]], columns=[data_keys[1]])
         df_combined = pd.concat([df1, df2], axis=1)
         confidence_percent = int((1 - alpha) * 100)
+        projectNumber = self.projectNumber
 
         results = _calculate_statistics(df1, df2, power, alpha)
 
@@ -201,7 +205,7 @@ class TwoTtest:
             fig.suptitle(title, fontsize=14, y=0.92, ha='left', x=0.1)		
 
             add_header_or_footer_to_a4_portrait(fig, header_image_path, position='header')
-            add_header_or_footer_to_a4_portrait(fig, footer_image_path, position='footer', page_number=1, total_pages=2)
+            add_header_or_footer_to_a4_portrait(fig, footer_image_path, position='footer', page_number=1, total_pages=2, projectNumber=projectNumber)
 
             # Define the colors + font size
             edgecolor = "#7c7c7c"
@@ -636,7 +640,7 @@ class TwoTtest:
             # fig.suptitle(title, fontsize=16, weight='bold', y=0.94)
 
             add_header_or_footer_to_a4_portrait(fig, header_image_path, position='header')
-            add_header_or_footer_to_a4_portrait(fig, footer_image_path, position='footer', page_number=2, total_pages=2)
+            add_header_or_footer_to_a4_portrait(fig, footer_image_path, position='footer', page_number=2, total_pages=2, projectNumber=projectNumber)
 
             # Define gaussian function for fits
             def gaussian(x, a, mu, sigma):

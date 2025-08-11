@@ -33,6 +33,7 @@ class MultipleDefectiveTestData(BaseModel):
 
 class MultipleDefectiveTestRequest(BaseModel):
     project: str
+    projectNumber: Optional[str] = None
     step: str
     config: MultipleDefectiveTestConfig
     data: Optional[MultipleDefectiveTestData] = None
@@ -45,7 +46,8 @@ class MultipleDefectiveTest:
             self.step = validated_data.step
             self.config = validated_data.config
             self.data = validated_data.data
-            
+            self.projectNumber = validated_data.projectNumber
+
             # Determine which format is being used
             variant = self.config.variant
             
@@ -128,6 +130,7 @@ class MultipleDefectiveTest:
         power = self.config.power if self.config.power is not None else None
         alphalevel = self.config.alphalevel
         defective_name = self.config.defective_name
+        projectNumber = self.projectNumber
 
         # Extract or calculate sample sizes and defect counts based on variant
         sources = []
@@ -237,7 +240,7 @@ class MultipleDefectiveTest:
             fig.suptitle(title, fontsize=14, y=0.92, ha='left', x=0.1)
             
             add_header_or_footer_to_a4_portrait(fig, header_image_path, position='header')
-            add_header_or_footer_to_a4_portrait(fig, footer_image_path, position='footer', page_number=1, total_pages=1)
+            add_header_or_footer_to_a4_portrait(fig, footer_image_path, position='footer', page_number=1, total_pages=1, projectNumber=projectNumber)
 
             # Define the colors + fontsize
             grey = "#e7e6e6"

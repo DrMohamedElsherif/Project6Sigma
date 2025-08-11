@@ -107,7 +107,7 @@ class Probabilityplot2:
         plt.annotate(text, (0, 0), (0, -30), xycoords='axes fraction',
                      textcoords='offset points', va='top', fontsize=12)
 
-        plt.subplots_adjust(top=0.85, bottom=0.4, left=0.1, right=0.9)
+        plt.subplots_adjust(top=0.85, bottom=0.4, left=0.15, right=0.85)
         plt.xticks([])
         plt.close('all')
         return self.figure

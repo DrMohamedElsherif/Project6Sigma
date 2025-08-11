@@ -30,6 +30,7 @@ class MSA2GagerrData(BaseModel):
 
 class MSA2GagerrRequest(BaseModel):
     project: str
+    projectNumber: Optional[str] = None
     step: str
     config: MSA2GagerrConfig
     data: MSA2GagerrData
@@ -65,6 +66,7 @@ class MSA2n3GagerrChart:
             self.step = validated_data.step
             self.config = validated_data.config
             self.data = validated_data.data
+            self.projectNumber = validated_data.projectNumber
             self.message = ""
             self.figure = None
 
@@ -100,6 +102,7 @@ class MSA2n3GagerrChart:
         title = self.config.title
         values = self.data.values
         parts = self.data.parts
+        projectNumber = self.projectNumber
 
         if self.data.operators:
             operators = self.data.operators
@@ -244,9 +247,8 @@ class MSA2n3GagerrChart:
             
             # Add header and footer to this figure
             add_header_or_footer_to_a4_portrait(fig, header_image_path, position='header')
-            add_header_or_footer_to_a4_portrait(fig, footer_image_path, position='footer', page_number=1, total_pages=1)
-            
-            
+            add_header_or_footer_to_a4_portrait(fig, footer_image_path, position='footer', page_number=1, total_pages=1, projectNumber=projectNumber)
+
             # Flatten axes array for easier iteration
             if n_rows > 1 or n_cols > 1:
                 axes = axes.flatten()

@@ -55,7 +55,7 @@ class Individual2:
         # Define size of figure and style
         self.figure = plt.figure(figsize=FIGURE_SIZE_A4_PORTRAIT)
 
-        plt.subplots_adjust(top=0.85, bottom=0.4, left=0.1, right=0.9)
+        plt.subplots_adjust(top=0.85, bottom=0.4, left=0.15, right=0.85)
 
         sns.set_theme(style="whitegrid")
 

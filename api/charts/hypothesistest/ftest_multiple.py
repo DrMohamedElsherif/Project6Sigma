@@ -5,7 +5,7 @@ import scipy.stats as stats
 import matplotlib.pyplot as plt
 from pydantic import BaseModel, Field, field_validator, conlist
 from matplotlib.backends.backend_pdf import PdfPages
-from typing import Dict, List, Union
+from typing import Dict, Optional, Union
 from api.schemas import BusinessLogicException
 
 from ...utils.pdf_utils import add_header_or_footer_to_a4_portrait
@@ -93,6 +93,7 @@ FtestMultipleDataUnion = Union[FtestMultipleDataSeparate, FtestMultipleDataCombi
 
 class FtestMultipleRequest(BaseModel):
     project: str
+    projectNumber: Optional[str] = None
     step: str
     config: FtestMultipleConfig
     data: FtestMultipleDataUnion
@@ -106,6 +107,7 @@ class FtestMultiple:
             self.step = validated_data.step
             self.config = validated_data.config
             self.data = validated_data.data
+            self.projectNumber = validated_data.projectNumber
 
             # Check if data is in combined format and convert if needed
             if isinstance(validated_data.data, FtestMultipleDataCombined):
@@ -135,6 +137,7 @@ class FtestMultiple:
         keys = list(self.data.values.keys())
         datasets = list(self.data.values.values())
         dataframes = {key: pd.DataFrame({key: dataset}) for key, dataset in zip(keys, datasets)}
+        projectNumber = self.projectNumber
 
         pdf_io = io.BytesIO()
 
@@ -149,7 +152,7 @@ class FtestMultiple:
             fig.suptitle(title, fontsize=14, y=0.92, ha='left', x=0.1)
 
             add_header_or_footer_to_a4_portrait(fig, header_image_path, position='header')
-            add_header_or_footer_to_a4_portrait(fig, footer_image_path, position='footer', page_number=1, total_pages=3)
+            add_header_or_footer_to_a4_portrait(fig, footer_image_path, position='footer', page_number=1, total_pages=3, projectNumber=projectNumber)
 
 
             # Define the colors + font size
@@ -416,7 +419,7 @@ class FtestMultiple:
             # fig.suptitle(title, fontsize=16, weight='bold', y=0.94)
 
             add_header_or_footer_to_a4_portrait(fig, header_image_path, position='header')
-            add_header_or_footer_to_a4_portrait(fig, footer_image_path, position='footer', page_number=2, total_pages=3)
+            add_header_or_footer_to_a4_portrait(fig, footer_image_path, position='footer', page_number=2, total_pages=3, projectNumber=projectNumber)
 
 
             # First find global min and max across all datasets
@@ -475,7 +478,7 @@ class FtestMultiple:
             # fig.suptitle(title, fontsize=16, weight='bold', y=0.94)
 
             add_header_or_footer_to_a4_portrait(fig, header_image_path, position='header')
-            add_header_or_footer_to_a4_portrait(fig, footer_image_path, position='footer', page_number=3, total_pages=3)
+            add_header_or_footer_to_a4_portrait(fig, footer_image_path, position='footer', page_number=3, total_pages=3, projectNumber=projectNumber)
 
 
             # Boxplots

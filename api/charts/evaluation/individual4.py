@@ -52,7 +52,7 @@ class Individual4:
         sns.set_theme(rc={'figure.figsize': FIGURE_SIZE_A4_PORTRAIT})
         sns.set_theme(style="whitegrid")
 
-        plt.subplots_adjust(top=0.85, bottom=0.4, left=0.1, right=0.9)
+        plt.subplots_adjust(top=0.85, bottom=0.4, left=0.15, right=0.85)
 
         palette = self.get_color_palette(len(df['category'].unique()))
 

@@ -12,7 +12,7 @@ footer_image_path = 'assets/img/Footer.png'
 from api.schemas import BusinessLogicException
 
 
-def P_chart(data, title, acceptable_percent=0, subgroup_size=1):
+def P_chart(data, title, acceptable_percent=0, subgroup_size=1, projectNumber=None):
 
     """
     data: 'pandas DataFrame'
@@ -90,7 +90,7 @@ def P_chart(data, title, acceptable_percent=0, subgroup_size=1):
         plt.subplots_adjust(left=0.1, right=0.9, top=0.85, bottom=0.15, hspace=0.2, wspace=0.5)
         fig.suptitle(title, fontsize=14, y=0.92, ha='left', x=0.1)
         header_ax = add_header_or_footer_to_a4_portrait(fig, header_image_path, position='header')
-        footer_ax = add_header_or_footer_to_a4_portrait(fig, footer_image_path, position='footer', page_number=1, total_pages=2)
+        footer_ax = add_header_or_footer_to_a4_portrait(fig, footer_image_path, position='footer', page_number=1, total_pages=2, projectNumber=projectNumber if projectNumber else None)
 
         # Plot P chart
         axs["P"].plot(data["p"], color='black', marker="o", lw=0.5, zorder=3)
@@ -122,7 +122,7 @@ def P_chart(data, title, acceptable_percent=0, subgroup_size=1):
         plt.subplots_adjust(left=0.1, right=0.9, top=0.85, bottom=0.15, hspace=0.6, wspace=0.1)
 
         header_ax = add_header_or_footer_to_a4_portrait(fig, header_image_path, position='header')
-        footer_ax = add_header_or_footer_to_a4_portrait(fig, footer_image_path, position='footer', page_number=2, total_pages=2)
+        footer_ax = add_header_or_footer_to_a4_portrait(fig, footer_image_path, position='footer', page_number=2, total_pages=2, projectNumber=projectNumber if projectNumber else None)
 
         # Plot histogram of observed % defective per subgroup
         axs["Histogram"].hist(data["p"] * 100, color="#95b92a", edgecolor="black", bins=12, zorder=3)

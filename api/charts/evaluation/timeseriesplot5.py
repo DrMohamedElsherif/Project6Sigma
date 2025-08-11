@@ -61,6 +61,7 @@ class Timeseriesplot5:
             self.figure.delaxes(axes[idx])
 
         plt.suptitle(title, fontsize=TITLE_FONT_SIZE)
-        plt.tight_layout(pad=2.0)
+        plt.tight_layout(pad=3.0)
+        plt.subplots_adjust(top=0.85, bottom=0.1, left=0.15, right=0.85)
         plt.close('all')
         return self.figure

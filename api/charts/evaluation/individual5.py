@@ -115,7 +115,7 @@ class Individual5:
             )
 
         # Rotate x-axis labels
-        plt.subplots_adjust(top=0.85, bottom=0.4, left=0.1, right=0.9)
+        plt.subplots_adjust(top=0.85, bottom=0.4, left=0.15, right=0.85)
         sp.set_xticks(range(len(sp.get_xticklabels())))
         sp.set_xticklabels(sp.get_xticklabels(), rotation=45, ha='right')
 

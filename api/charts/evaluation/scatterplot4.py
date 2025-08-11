@@ -69,6 +69,6 @@ class Scatterplot4:
         plt.ylabel('Y-Data')
         plt.title(title, fontsize=TITLE_FONT_SIZE, pad=20)
         plt.grid(True, alpha=0.3)
-        plt.subplots_adjust(top=0.85, bottom=0.4, left=0.1, right=0.9)
+        plt.subplots_adjust(top=0.85, bottom=0.4, left=0.15, right=0.85)
         plt.close('all')
         return self.figure

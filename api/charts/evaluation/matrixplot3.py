@@ -64,7 +64,7 @@ class Matrixplot3:
         pair_plot.figure.suptitle(title, fontsize=TITLE_FONT_SIZE)
 
         # Adjust layout
-        plt.subplots_adjust(top=0.9, bottom=0.1, left=0.1, right=0.9)
+        plt.subplots_adjust(top=0.85, bottom=0.1, left=0.15, right=0.85)
         pair_plot.figure.set_size_inches(FIGURE_SIZE_A4_PORTRAIT)
 
         self.figure = pair_plot.figure

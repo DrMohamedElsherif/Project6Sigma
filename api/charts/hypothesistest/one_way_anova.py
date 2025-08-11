@@ -85,6 +85,7 @@ class OneWayAnovaDataCombined(BaseModel):
 
 class OneWayAnovaRequest(BaseModel):
     project: str
+    projectNumber: Optional[str] = None
     step: str
     config: OneWayAnovaConfig
     data: Any  # validate this separately
@@ -110,7 +111,8 @@ class OneWayAnova:
             self.step = validated_data.step
             self.config = validated_data.config
             self.data = validated_data.data
-            
+            self.projectNumber = validated_data.projectNumber
+
             # Convert combined format to separate format if needed
             if isinstance(self.data, OneWayAnovaDataCombined):
                 self._convert_combined_to_separate()
@@ -147,6 +149,7 @@ class OneWayAnova:
         keys = list(self.data.values.keys())
         datasets = list(self.data.values.values())
         dataframes = {key: pd.DataFrame({key: dataset}) for key, dataset in zip(keys, datasets)}
+        projectNumber = self.projectNumber
         
         # Format keys for display
         keys_string = "\n".join(keys)
@@ -195,7 +198,7 @@ class OneWayAnova:
 
 
             add_header_or_footer_to_a4_portrait(fig, header_image_path, position='header')
-            add_header_or_footer_to_a4_portrait(fig, footer_image_path, position='footer', page_number=1, total_pages=3)
+            add_header_or_footer_to_a4_portrait(fig, footer_image_path, position='footer', page_number=1, total_pages=3, projectNumber=projectNumber)
 
 
             # Define the colors + font size
@@ -496,7 +499,7 @@ class OneWayAnova:
 
 
             add_header_or_footer_to_a4_portrait(fig, header_image_path, position='header')
-            add_header_or_footer_to_a4_portrait(fig, footer_image_path, position='footer', page_number=2, total_pages=3)
+            add_header_or_footer_to_a4_portrait(fig, footer_image_path, position='footer', page_number=2, total_pages=3, projectNumber=self.projectNumber)
 
 
             # Track global min and max values across all datasets
@@ -773,7 +776,7 @@ class OneWayAnova:
 
 
             add_header_or_footer_to_a4_portrait(fig, header_image_path, position='header')
-            add_header_or_footer_to_a4_portrait(fig, footer_image_path, position='footer', page_number=3, total_pages=3)
+            add_header_or_footer_to_a4_portrait(fig, footer_image_path, position='footer', page_number=3, total_pages=3, projectNumber=self.projectNumber)
 
 
             # Boxplots

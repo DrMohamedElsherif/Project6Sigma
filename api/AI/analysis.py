@@ -31,8 +31,8 @@ def find_file_by_chart_id(project: str, step: str, chart_id: str, static_path: s
     """
     if not project or not step or not chart_id:
         raise BusinessLogicException(
-            error_code="INVALID_PARAMETERS",
-            details={"message": "Project, step, and chart_id are required"}
+            error_code="error_missing_parameters",
+            details={"message": "Project, step, and chart_id/file_name are required"}
         )
     
     # Construct the directory path
@@ -40,8 +40,8 @@ def find_file_by_chart_id(project: str, step: str, chart_id: str, static_path: s
     
     if not os.path.exists(chart_dir):
         raise BusinessLogicException(
-            error_code="DIRECTORY_NOT_FOUND",
-            details={"message": f"Directory not found: {chart_dir}"}
+            error_code="error_file_not_found",
+            details={"message": f"File not found"}
         )
     
     # Common image and document extensions
@@ -53,8 +53,8 @@ def find_file_by_chart_id(project: str, step: str, chart_id: str, static_path: s
             return file_path, ext
     
     raise BusinessLogicException(
-        error_code="FILE_NOT_FOUND",
-        details={"message": f"No file found for chart_id '{chart_id}' in {chart_dir}"}
+        error_code="error_file_not_found",
+        details={"message": f"File not found"}
     )
 
 def determine_file_type_from_extension(extension: str) -> str:
@@ -218,8 +218,8 @@ async def process_ai_analysis(project: str, step: str, chart_id: str, raw_data: 
         # Step 1: Find the chart file in static/{project}/{step}/{chart_id}.{ext}
         if not settings.staticFilePath:
             raise BusinessLogicException(
-                error_code="MISSING_STATIC_FILE_PATH",
-                details={"message": "staticFilePath is required to locate files"}
+                error_code="error_file_not_found",
+                details={"message": "File not found"}
             )
         
         local_file_path, file_extension = find_file_by_chart_id(project, step, chart_id, settings.staticFilePath)
@@ -229,8 +229,8 @@ async def process_ai_analysis(project: str, step: str, chart_id: str, raw_data: 
 
         if file_type == 'unknown':
             raise BusinessLogicException(
-                error_code="UNSUPPORTED_FILE_TYPE",
-                details={"message": f"Unsupported file type: {file_extension}. Supported: PDF, PNG, JPG, JPEG"}
+                error_code="error_unsupported_file_type",
+                details={"message": f"Unsupported file type: {file_extension}."}
             )
         
         # Step 3: Prepare image/document for AI vision analysis
@@ -245,8 +245,8 @@ async def process_ai_analysis(project: str, step: str, chart_id: str, raw_data: 
                 doc = fitz.open(local_file_path)
                 if len(doc) == 0:
                     raise BusinessLogicException(
-                        error_code="PDF_CONVERSION_ERROR",
-                        details={"message": "No pages found in PDF file."}
+                        error_code="error_pdf_conversion",
+                        details={"message": "Failed to convert PDF to image for AI analysis"}
                     )
                 
                 # Get first page and convert to PNG
@@ -271,8 +271,8 @@ async def process_ai_analysis(project: str, step: str, chart_id: str, raw_data: 
                 
             except Exception as pdf_error:
                 raise BusinessLogicException(
-                    error_code="PDF_TO_IMAGE_CONVERSION_ERROR",
-                    details={"message": f"Failed to convert PDF to image for AI analysis: {str(pdf_error)}"}
+                    error_code="error_pdf_conversion",
+                    details={"message": f"Failed to convert PDF to image for AI analysis"}
                 )
         else:
             # Convert image to base64 for AI analysis
@@ -306,6 +306,6 @@ async def process_ai_analysis(project: str, step: str, chart_id: str, raw_data: 
             raise
         else:
             raise BusinessLogicException(
-                error_code="AI_ANALYSIS_PROCESSING_ERROR", 
-                details={"original_error": str(e)}
+                error_code="error_ai_analysis_processing", 
+                details={"message": "An error occurred during AI analysis"}
             )

@@ -84,6 +84,6 @@ class Piechart2:
         plt.suptitle(title, fontsize=TITLE_FONT_SIZE)
 
         # Adjust layout
-        plt.tight_layout(rect=[0, 0, 1, 0.95])
+        plt.subplots_adjust(top=0.85, bottom=0.1, left=0.15, right=0.85)
         plt.close('all')
         return self.figure

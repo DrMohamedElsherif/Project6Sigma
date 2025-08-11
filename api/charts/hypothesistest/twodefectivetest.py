@@ -46,6 +46,7 @@ class TwoDefectiveTestData(BaseModel):
 
 class TwoDefectiveTestRequest(BaseModel):
     project: str
+    projectNumber: Optional[str] = None
     step: str
     config: TwoDefectiveTestConfig
     data: Optional[TwoDefectiveTestData] = None
@@ -58,6 +59,7 @@ class TwoDefectivetest:
             self.step = validated_data.step
             self.config = validated_data.config
             self.data = validated_data.data
+            self.projectNumber = validated_data.projectNumber
             
             # Determine which format is being used
             variant = self.config.variant
@@ -113,7 +115,8 @@ class TwoDefectivetest:
         variant = self.config.variant
         power = self.config.power if self.config.power is not None else None
         alphalevel = self.config.alphalevel
-        
+        projectNumber = self.projectNumber
+
         # Initialize variables
         count1 = count2 = fails1 = fails2 = source_1 = source_2 = None
         
@@ -274,7 +277,7 @@ class TwoDefectivetest:
             fig.suptitle(title, fontsize=14, y=0.92, ha='left', x=0.1)
 
             add_header_or_footer_to_a4_portrait(fig, header_image_path, position='header')
-            add_header_or_footer_to_a4_portrait(fig, footer_image_path, position='footer', page_number=1, total_pages=1)
+            add_header_or_footer_to_a4_portrait(fig, footer_image_path, position='footer', page_number=1, total_pages=1, projectNumber=projectNumber)
 
             # Define the colors + fontsize
             grey = "#e7e6e6"

@@ -4,7 +4,7 @@ import seaborn as sns
 from pydantic import BaseModel, Field
 from typing import List, Dict
 from api.schemas import BusinessLogicException
-from api.charts.constants import FIGURE_SIZE_A4_PORTRAIT, COLORS, MARKERS
+from api.charts.constants import FIGURE_SIZE_A4_PORTRAIT, COLOR_PALETTE, MARKERS
 
 
 class Scatterplot3Config(BaseModel):
@@ -51,31 +51,33 @@ class Scatterplot3:
         title = self.config.title
         df = pd.DataFrame(self.data.values)
 
+        # include hue and palette in the FacetGrid
         g = sns.FacetGrid(
             df,
             col=self.additional_data.group,
+            hue=self.additional_data.group,
+            palette=COLOR_PALETTE,
             col_wrap=2,
             aspect=1.5,
             height=5
         )
 
-        g.map(
+        # map_dataframe will respect the palette/hue you set above
+        g.map_dataframe(
             sns.scatterplot,
-            self.additional_data.yVar,
-            self.additional_data.xVar,
+            x=self.additional_data.xVar,
+            y=self.additional_data.yVar,
             zorder=3
         )
 
         g.set_titles(col_template="{col_name}")
-        g.set_axis_labels(self.additional_data.yVar, self.additional_data.xVar)
+        g.set_axis_labels(self.additional_data.xVar, self.additional_data.yVar)
 
-        for ax in g.axes:
+        for ax in g.axes.flatten():
             ax.grid(True, axis='both', zorder=-1, alpha=0.3)
 
-        plt.subplots_adjust(top=0.9)
+        plt.subplots_adjust(top=0.85, bottom=0.1, left=0.15, right=0.85)
         g.figure.suptitle(title)
-
-        # Set the figure size to A4 portrait
         g.figure.set_size_inches(*FIGURE_SIZE_A4_PORTRAIT)
 
         self.figure = g.figure

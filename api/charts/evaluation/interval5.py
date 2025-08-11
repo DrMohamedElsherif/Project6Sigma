@@ -102,6 +102,7 @@ class Interval5:
 
             # Adjust layout
             plt.subplots_adjust(hspace=0.4)
+            plt.subplots_adjust(top=0.85, bottom=0.1, left=0.15, right=0.85)
 
         else:
             # Create single figure without grouping
@@ -130,6 +131,7 @@ class Interval5:
                 ax.legend(loc='best')
                 ax.grid(True, alpha=0.3)
 
-        plt.tight_layout()
+        plt.tight_layout(pad=3.0)
+        plt.subplots_adjust(top=0.85, bottom=0.1, left=0.15, right=0.85)
         plt.close('all')
         return self.figure

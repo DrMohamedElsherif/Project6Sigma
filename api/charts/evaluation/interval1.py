@@ -83,7 +83,7 @@ class Interval1:
         # Enable grid
         plt.grid(True, which='both', alpha=0.3)
 
-        plt.subplots_adjust(top=0.85, bottom=0.4, left=0.1, right=0.9)
+        plt.subplots_adjust(top=0.85, bottom=0.4, left=0.15, right=0.85)
 
         self.figure = plt.gcf()
         plt.close('all')

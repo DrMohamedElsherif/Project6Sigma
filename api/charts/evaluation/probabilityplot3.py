@@ -97,6 +97,8 @@ class Probabilityplot3:
             for i in range(len(df.columns), num_rows * num_columns):
                 self.figure.delaxes(axes[i])
 
-        self.figure.tight_layout(pad=2.0)  # Add padding between plots and edges
+        self.figure.suptitle(title, fontsize=TITLE_FONT_SIZE, y=0.98)  # Add main title
+        self.figure.tight_layout(pad=2.0)
+        self.figure.subplots_adjust(top=0.85, bottom=0.15, left=0.15, right=0.85)  # Add padding
         plt.close('all')
         return self.figure

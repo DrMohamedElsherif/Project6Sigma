@@ -218,8 +218,8 @@ def convert_pdf_to_base64(pdf_path: str) -> str:
     try:
         if not os.path.exists(pdf_path):
             raise BusinessLogicException(
-                error_code="PDF_FILE_NOT_FOUND",
-                details={"message": f"PDF file not found: {pdf_path}"}
+                error_code="error_file_not_found",
+                details={"message": f"File not found"}
             )
         
         # Read PDF file and convert to base64
@@ -232,8 +232,8 @@ def convert_pdf_to_base64(pdf_path: str) -> str:
         
     except Exception as e:
         raise BusinessLogicException(
-            error_code="PDF_CONVERSION_ERROR",
-            details={"message": f"Failed to convert PDF to base64: {str(e)}"}
+            error_code="error_pdf_conversion",
+            details={"message": f"Failed to convert PDF to image for AI analysis"}
         )
 
 def decrypt_craft_encrypted_url(encrypted_b64: str, key: bytes) -> str:
@@ -299,8 +299,8 @@ def get_local_path_from_url(file_url: str) -> str:
         return file_url
     else:
         raise BusinessLogicException(
-            error_code="FILE_NOT_FOUND",
-            details={"message": f"Could not find local file for URL: {file_url}"}
+            error_code="error_file_not_found",
+            details={"message": f"File not found"}
         )
 
 def save_ai_response_files(ai_response: str, project: str, step: str, chart_path: str = None, file_type: str = None) -> Tuple[str, str]:
@@ -655,8 +655,8 @@ def convert_image_to_base64(image_path: str) -> str:
     try:
         if not os.path.exists(image_path):
             raise BusinessLogicException(
-                error_code="IMAGE_FILE_NOT_FOUND",
-                details={"message": f"Image file not found: {image_path}"}
+                error_code="error_file_not_found",
+                details={"message": f"File not found"}
             )
         
         # Determine image format from file extension
@@ -678,8 +678,8 @@ def convert_image_to_base64(image_path: str) -> str:
             
     except Exception as e:
         raise BusinessLogicException(
-            error_code="IMAGE_CONVERSION_ERROR",
-            details={"message": f"Failed to convert image to base64: {str(e)}"}
+            error_code="error_pdf_conversion",
+            details={"message": f"Failed to convert PDF to image for AI analysis"}
         )
 
 def image_to_b64(image_path):
@@ -715,8 +715,8 @@ def create_pdf_from_image(image_path: str, output_pdf_path: str) -> None:
         # Load the image
         if not os.path.exists(image_path):
             raise BusinessLogicException(
-                error_code="IMAGE_FILE_NOT_FOUND",
-                details={"message": f"Image file not found: {image_path}"}
+                error_code="error_file_not_found",
+                details={"message": f"File not found"}
             )
         
         # Create a new PDF document with same A4 dimensions as multi_vari_chart.py
@@ -826,8 +826,8 @@ def create_pdf_from_image(image_path: str, output_pdf_path: str) -> None:
         
     except Exception as e:
         raise BusinessLogicException(
-            error_code="PDF_FROM_IMAGE_ERROR",
-            details={"message": f"Failed to create PDF from image: {str(e)}"}
+            error_code="error_pdf_conversion",
+            details={"message": f"Failed to convert PDF to image for AI analysis"}
         )
 
 def merge_pdfs(pdf_paths: list, output_path: str) -> None:
@@ -862,8 +862,8 @@ def merge_pdfs(pdf_paths: list, output_path: str) -> None:
         
     except Exception as e:
         raise BusinessLogicException(
-            error_code="PDF_MERGE_ERROR",
-            details={"message": f"Failed to merge PDFs: {str(e)}"}
+            error_code="error_pdf_merge",
+            details={"message": f"Failed to merge PDFs"}
         )
 
 def create_chart_pdf(chart_path: str, file_type: str, temp_dir: str) -> str:
@@ -896,6 +896,6 @@ def create_chart_pdf(chart_path: str, file_type: str, temp_dir: str) -> str:
         
     except Exception as e:
         raise BusinessLogicException(
-            error_code="CHART_PDF_CREATION_ERROR",
-            details={"message": f"Failed to create chart PDF: {str(e)}"}
+            error_code="error_pdf_merge",
+            details={"message": f"Failed to merge PDFs"}
         )

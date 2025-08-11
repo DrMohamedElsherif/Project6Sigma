@@ -87,6 +87,7 @@ class TwoChiSquaredData(BaseModel):
 
 class TwoChiSquaredRequest(BaseModel):
     project: str
+    projectNumber: Optional[str] = None
     step: str
     config: TwoChiSquaredConfig
     data: Optional[TwoChiSquaredData] = None
@@ -99,6 +100,7 @@ class TwoChiSquared:
             self.step = validated_data.step
             self.config = validated_data.config
             self.data = validated_data.data
+            self.projectNumber = validated_data.projectNumber
             
 
         except ValueError as e:
@@ -113,6 +115,7 @@ class TwoChiSquared:
         variant = self.config.variant
         alphalevel = self.config.alphalevel
         outcomes = self.config.outcomes
+        projectNumber = self.projectNumber
 
         if variant == "Summarized data":
 
@@ -169,7 +172,7 @@ class TwoChiSquared:
             fig.suptitle(title, fontsize=14, y=0.92, ha='left', x=0.1)
 
             add_header_or_footer_to_a4_portrait(fig, header_image_path, position='header')
-            add_header_or_footer_to_a4_portrait(fig, footer_image_path, position='footer', page_number=1, total_pages=1)
+            add_header_or_footer_to_a4_portrait(fig, footer_image_path, position='footer', page_number=1, total_pages=1, projectNumber=projectNumber)
 
 
             # Define the colors + fontsize

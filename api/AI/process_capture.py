@@ -38,8 +38,8 @@ async def process_capture_logic(file_name: str, project: str, step: str) -> Dict
                 doc = fitz.open(local_file_path)
                 if len(doc) == 0:
                     raise BusinessLogicException(
-                        error_code="NO_PAGES_IN_PDF",
-                        details={"message": "No pages found in PDF file"}
+                        error_code="error_pdf_conversion",
+                        details={"message": "Failed to convert PDF to image for AI analysis"}
                     )
                 # Get first page and convert to PNG
                 page = doc[0]
@@ -56,14 +56,14 @@ async def process_capture_logic(file_name: str, project: str, step: str) -> Dict
                 raise
             except Exception as pdf_error:
                 raise BusinessLogicException(
-                    error_code="PDF_TO_IMAGE_FAILED",
-                    details={"message": f"Failed to convert PDF to image: {str(pdf_error)}"}
+                    error_code="error_pdf_conversion",
+                    details={"message": f"Failed to convert PDF to image for AI analysis"}
                 )
         elif file_type == 'image':
             png_path = local_file_path
         else:
             raise BusinessLogicException(
-                error_code="UNSUPPORTED_FILE_TYPE",
+                error_code="error_unsupported_file_type",
                 details={"message": f"Unsupported file type: {detected_extension}"}
             )
 
@@ -82,25 +82,50 @@ Gib die Antwort als gültiges JSON-Objekt zurück mit folgendem Format:
   "measureProcessCapture5": [
     {
       "measureProcessCapture6": "Prozessschritt-Name",
-      "measureProcessCapture7": "Prozessverantwortlicher/Owner", 
-      "measureProcessCapture8": "Beschreibung oder Notizen",
-      "measureProcessCapture12": "Zusätzliche Notizen",
-      "measureProcessCapture9": "Details",
-      "measureProcessCapture10": "Input/Eingabe",
-      "measureProcessCapture11": "Output/Ausgabe"
+      "measureProcessCapture7": "WER (Prozessverantwortlicher/Owner)",
+      "measureProcessCapture8": "WAS (Beschreibung des Ablaufs)",
+      "measureProcessCapture9": "WIE (Beschreibung der Umsetzung)",
+      "measureProcessCapture10": "WO (Ort der Durchführung)",
+      "measureProcessCapture11": "WANN (Zeitpunkt/Häufigkeit)",
+      "measureProcessCapture12": "WARUM (Grund/Zweck)"
     }
   ]
 }
 
-Wichtige Hinweise:
-- Wenn mehrere Prozessschritte erkennbar sind, erstelle für jeden einen separaten Eintrag im Array
-- Alle Felder müssen vorhanden sein, auch wenn sie leer sind (als leerer String "")
-- Antworte NUR mit dem JSON-Objekt, ohne zusätzlichen Text
-- Extrahiere alle erkennbaren Prozessschritte, Verantwortlichkeiten, Inputs und Outputs
-- Verwende deutsche Begriffe und Beschreibungen
-- Falls keine klaren Prozessinformationen erkennbar sind, gib ein Array mit einem leeren Objekt zurück
+KRITISCH WICHTIGE HINWEISE:
 
-Analysiere das Bild und extrahiere die Prozessinformationen:
+1. ZUORDNUNG DER FELDER (Dieses Schema entspricht der 5W1H-Methode):
+   - measureProcessCapture6: "Prozessschritt" - Name oder Bezeichnung des Prozessschritts
+   - measureProcessCapture7: "WER" - Person oder Rolle, die für diesen Schritt verantwortlich ist
+   - measureProcessCapture8: "WAS" - Beschreibung des Ablaufs oder was getan wird
+   - measureProcessCapture9: "WIE" - Beschreibung der Umsetzung oder wie es getan wird
+   - measureProcessCapture10: "WO" - Ort oder Bereich, wo der Schritt stattfindet
+   - measureProcessCapture11: "WANN" - Zeitpunkt, Dauer oder Häufigkeit des Schritts
+   - measureProcessCapture12: "WARUM" - Grund oder Zweck des Prozessschritts
+
+2. TABELLENERKENNUNG:
+   - Wenn das Dokument eine tabellarische Form hat, behalte die Struktur der Zeilen bei
+   - Jede Zeile wird zu einem eigenen Eintrag im "measureProcessCapture5" Array
+   - Achte besonders auf die Spaltenzuordnung - jede Spalte entspricht einem bestimmten Feld
+   - Bei Spaltenüberschriften wie "Wer", "Was", "Wie" usw. ordne sie entsprechend zu
+
+3. UMGANG MIT LEEREN ZELLEN:
+   - Wenn eine Zelle leer ist, verwende einen leeren String ("") für das entsprechende Feld
+   - Fülle NICHT mit Platzhaltern oder vermeintlichen Informationen aus anderen Feldern auf
+   - Behalte die Zuordnung jeder Spalte konsequent bei, auch wenn Zellen leer sind
+
+4. ALLGEMEINE ANWEISUNGEN:
+   - Wenn mehrere Prozessschritte erkennbar sind, erstelle für jeden einen separaten Eintrag
+   - Alle Felder müssen in jedem Eintrag vorhanden sein, auch wenn sie leer sind
+   - Verwende deutsche Begriffe und Beschreibungen
+   - Antworte NUR mit dem JSON-Objekt, ohne zusätzlichen Text oder Markdown
+   - Bei unsicherer Zuordnung orientiere dich an der Bedeutung der Felder (WER, WAS, WIE, WO, WANN, WARUM)
+
+5. BEI UNKLAREN DOKUMENTEN:
+   - Falls keine klare Tabellenstruktur erkennbar ist, extrahiere so viele Prozessschritte wie möglich
+   - Wenn gar keine Prozessinformationen erkennbar sind, gib ein Array mit einem leeren Objekt zurück
+
+Analysiere das Bild jetzt und extrahiere die Prozessinformationen nach diesem Schema:
 """
 
         # Step 5: Call Azure OpenAI
@@ -135,17 +160,14 @@ Analysiere das Bild und extrahiere die Prozessinformationen:
                 all(process.get(key, "") == "" for key in required_keys)
             ):
                 raise BusinessLogicException(
-                    error_code="COULD_NOT_EXTRACT_DATA",
+                    error_code="error_could_not_extract_data",
                     details={"message": "Keine klaren Prozessinformationen im Bild erkennbar"}
                 )
             return parsed_response
         except (json.JSONDecodeError, ValueError) as e:
             raise BusinessLogicException(
-                error_code="AI_RESPONSE_PARSE_ERROR",
-                details={
-                    "message": f"AI-Antwort konnte nicht als JSON geparst werden: {str(e)}",
-                    "ai_response": ai_response[:500] if ai_response else ""
-                }
+                error_code="error_ai_analysis_processing",
+                details={"message": f"An error occured during AI analysis"}
             )
     finally:
         # Clean up temporary PNG if created

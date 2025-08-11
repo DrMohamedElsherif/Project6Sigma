@@ -5,13 +5,10 @@ import numpy as np
 import scipy.stats as stats
 from scipy.optimize import brentq
 import matplotlib.pyplot as plt
-import matplotlib as mpl
 from matplotlib.backends.backend_pdf import PdfPages
 from pydantic import BaseModel, Field
 from typing import List, Dict, Optional
 from api.schemas import BusinessLogicException
-import seaborn as sns
-from statsmodels.stats.power import TTestIndPower
 
 from ...utils.pdf_utils import add_header_or_footer_to_a4_portrait
 
@@ -42,6 +39,7 @@ class DefectiveTestData(BaseModel):
 
 class DefectiveTestRequest(BaseModel):
     project: str
+    projectNumber: Optional[str] = None
     step: str
     config: DefectiveTestConfig
     data: Optional[DefectiveTestData] = None
@@ -54,6 +52,7 @@ class Defectivetest:
             self.step = validated_data.step
             self.config = validated_data.config
             self.data = validated_data.data
+            self.projectNumber = validated_data.projectNumber
 
             # Check for required parameters based on variant
             if self.config.variant == "Summarized data":
@@ -88,6 +87,7 @@ class Defectivetest:
         variant = self.config.variant
         power_percentage = self.config.power
         alphalevel = self.config.alphalevel
+        projectNumber = self.projectNumber
         
         # Handle data extraction based on variant
         if variant == "Summarized data":
@@ -223,7 +223,7 @@ class Defectivetest:
             fig.suptitle(title, fontsize=14, y=0.92, ha='left', x=0.1)
 
             add_header_or_footer_to_a4_portrait(fig, header_image_path, position='header')
-            add_header_or_footer_to_a4_portrait(fig, footer_image_path, position='footer', page_number=1, total_pages=1)
+            add_header_or_footer_to_a4_portrait(fig, footer_image_path, position='footer', page_number=1, total_pages=1, projectNumber=projectNumber)
 
             # Define the colors + fontsize
             grey = "#e7e6e6"

@@ -1,13 +1,12 @@
 import io
-import os
 import pandas as pd
 import numpy as np
 import scipy.stats as stats
 import matplotlib.pyplot as plt
 
 from matplotlib.backends.backend_pdf import PdfPages
-from pydantic import BaseModel, Field, conlist, model_validator
-from typing import Dict, Optional, Annotated, List
+from pydantic import BaseModel, Field, conlist
+from typing import Dict, Optional, Annotated
 from api.schemas import BusinessLogicException
 import seaborn as sns
 from statsmodels.stats.power import TTestIndPower
@@ -32,6 +31,7 @@ class TtestData(BaseModel):
 
 class TtestRequest(BaseModel):
     project: str
+    projectNumber: Optional[str] = None
     step: str
     config: TtestConfig
     data: TtestData
@@ -57,6 +57,7 @@ class Ttest:
             self.step = validated_data.step
             self.config = validated_data.config
             self.data = validated_data.data
+            self.projectNumber = validated_data.projectNumber
 
         except ValueError as e:
             raise BusinessLogicException(
@@ -77,7 +78,8 @@ class Ttest:
         target_mu = self.config.target_mu
         alpha = self.config.alphalevel
         power = self.config.power
-        
+        projectNumber = self.projectNumber
+
         # Prepare data
         source = list(self.data.values.keys())[0]
         df = pd.DataFrame(self.data.values)
@@ -127,7 +129,7 @@ class Ttest:
                 figsize=(8.27, 11.69),  dpi=300)  # A4 size in inches
             fig.suptitle(title, fontsize=14, y=0.92, ha='left', x=0.1)
             add_header_or_footer_to_a4_portrait(fig, header_image_path, position='header')
-            add_header_or_footer_to_a4_portrait(fig, footer_image_path, position='footer', page_number=1, total_pages=2)
+            add_header_or_footer_to_a4_portrait(fig, footer_image_path, position='footer', page_number=1, total_pages=2, projectNumber=projectNumber)
             
 
 
@@ -523,8 +525,8 @@ class Ttest:
             # fig.suptitle(title, fontsize=16, weight='bold', y=0.94)
             # fig.subplots_adjust(hspace=0.4)
             header_ax = add_header_or_footer_to_a4_portrait(fig, header_image_path, position='header')
-            footer_ax = add_header_or_footer_to_a4_portrait(fig, footer_image_path, position='footer', page_number=2, total_pages=2)
-            
+            footer_ax = add_header_or_footer_to_a4_portrait(fig, footer_image_path, position='footer', page_number=2, total_pages=2, projectNumber=self.projectNumber)
+
             # Histogram
             ax = axes["Hist"]
             n, bins, patches = ax.hist(df[source], color='#95b92a', edgecolor='black', zorder=1)

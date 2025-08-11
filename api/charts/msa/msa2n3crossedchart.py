@@ -32,6 +32,7 @@ class MSA2Data(BaseModel):
 
 class MSA2Request(BaseModel):
     project: str
+    projectNumber: Optional[str] = None
     step: str
     config: MSA2Config
     data: MSA2Data
@@ -64,6 +65,7 @@ class MSA2n3CrossedChart:
             self.step = validated_data.step
             self.config = validated_data.config
             self.data = validated_data.data
+            self.projectNumber = validated_data.projectNumber
             self.message = ""
             self.figure = None
 
@@ -98,6 +100,7 @@ class MSA2n3CrossedChart:
         title = self.config.title
         values = self.data.values
         parts = self.data.parts
+        projectNumber = self.projectNumber
 
         # Check if operators or devices are present
         if self.data.operators:
@@ -238,8 +241,7 @@ class MSA2n3CrossedChart:
             fig.suptitle(title, fontsize=14, y=0.92, ha='left', x=0.1)
 
             add_header_or_footer_to_a4_portrait(fig, header_image_path, position='header')
-            add_header_or_footer_to_a4_portrait(fig, footer_image_path, position='footer', page_number=1, total_pages=4)
-      
+            add_header_or_footer_to_a4_portrait(fig, footer_image_path, position='footer', page_number=1, total_pages=4, projectNumber=projectNumber)
 
             # Plot Value by Part Scatter Plot
             self._plot_value_by_part(data, data_grouped_by_part, axes[0])
@@ -260,7 +262,7 @@ class MSA2n3CrossedChart:
             # fig.suptitle(f"{title}\nX-bar and R Charts by {label}", fontsize=16, weight='bold', y=0.95)
 
             header_ax = add_header_or_footer_to_a4_portrait(fig, header_image_path, position='header')
-            footer_ax = add_header_or_footer_to_a4_portrait(fig, footer_image_path, position='footer', page_number=2, total_pages=4)
+            footer_ax = add_header_or_footer_to_a4_portrait(fig, footer_image_path, position='footer', page_number=2, total_pages=4, projectNumber=projectNumber)
 
             self._plot_r_chart_all_operators(data_grouped_by_operator_and_part_stats, label, ax_xbar)
             self._plot_xbar_chart_all_operators(data_grouped_by_operator_and_part_stats, label, ax_r)
@@ -272,7 +274,7 @@ class MSA2n3CrossedChart:
             fig, axes = plt.subplots(4, 1, figsize=(FIGURE_SIZE_A4_PORTRAIT), dpi=300)  # A4 size in inches
             fig.subplots_adjust(hspace=0.5)
             header_ax = add_header_or_footer_to_a4_portrait(fig, header_image_path, position='header')
-            footer_ax = add_header_or_footer_to_a4_portrait(fig, footer_image_path, position='footer', page_number=3, total_pages=4)
+            footer_ax = add_header_or_footer_to_a4_portrait(fig, footer_image_path, position='footer', page_number=3, total_pages=4, projectNumber=projectNumber)
 
             desired_height = 0.12
             font_size = 7
@@ -360,7 +362,7 @@ class MSA2n3CrossedChart:
             # NEW PDF PAGE - Two-way ANOVA
             fig, ax = plt.subplots(1, 1, figsize=(FIGURE_SIZE_A4_PORTRAIT), dpi=300)  # A4 size in portrait
             header_ax = add_header_or_footer_to_a4_portrait(fig, header_image_path, position='header')
-            footer_ax = add_header_or_footer_to_a4_portrait(fig, footer_image_path, position='footer', page_number=4, total_pages=4)
+            footer_ax = add_header_or_footer_to_a4_portrait(fig, footer_image_path, position='footer', page_number=4, total_pages=4, projectNumber=projectNumber)
 
             # Perform two-way ANOVA with and without interaction and plot the results
             self._perform_two_way_anova(data, label, operators_count, parts_count,

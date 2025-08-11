@@ -48,7 +48,9 @@ class Boxplot1:
 
         key, _ = list(self.data.values.items())[0]
 
-        plt.subplots_adjust(top=0.85, bottom=0.4, left=0.1, right=0.9)
+        plt.subplots_adjust(top=0.85, bottom=0.4, left=0.15, right=0.85)
+
+        sns.set_style("whitegrid")
 
         # bp = df.boxplot(
         #     column=[key],

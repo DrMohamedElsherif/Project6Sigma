@@ -80,12 +80,12 @@ class Pchart:
         ueg = p_mean - 3 * std_dev
 
         self.figure = plt.figure(figsize=FIGURE_SIZE_A4_PORTRAIT)
-        plt.subplots_adjust(top=0.85, bottom=0.4, left=0.1, right=0.9)
+        plt.subplots_adjust(top=0.85, bottom=0.4, left=0.15, right=0.85)
         plt.plot(data['p'], color='black', marker='o', lw=0.5)
-        plt.step(x=range(len(data)), y=oeg, color='red', linestyle='dashed',
+        plt.step(x=range(len(data)), y=oeg, color='#a03130', linestyle='dashed',
                  label=f'OEG={round(float(oeg[0]), 3)}')
         plt.axhline(p_mean, color='grey', label=f'p={round(p_mean, 3)}', linestyle='dashed', alpha=0.7)
-        plt.step(x=range(len(data)), y=ueg, color='red', linestyle='dashed',
+        plt.step(x=range(len(data)), y=ueg, color='#a03130', linestyle='dashed',
                  label=f'UEG={round(float(ueg[0]), 3)}')
 
         plt.title(self.config.title, fontsize=28, pad=20)
