@@ -112,8 +112,6 @@ async def ai_sipoc_capture_endpoint(request: dict):
         project = request.get("project")
         step = request.get("step")
 
-        print(f"File Name: {file_name}, Project: {project}, Step: {step}")
-
         if not all ([file_name, project, step]):
             raise BusinessLogicException(
                 error_code="error_missing_parameters",
@@ -121,7 +119,7 @@ async def ai_sipoc_capture_endpoint(request: dict):
             )
         
         result = await process_sipoc_logic(file_name, project, step)
-        print(f"Result: {result}")
+
         return SuccessResponse(data=result)
     except BusinessLogicException:
         raise
