@@ -112,8 +112,6 @@ async def ai_sipoc_capture_endpoint(request: dict):
         project = request.get("project")
         step = request.get("step")
 
-        print(f"File Name: {file_name}, Project: {project}, Step: {step}")
-
         if not all ([file_name, project, step]):
             raise BusinessLogicException(
                 error_code="error_missing_parameters",
@@ -121,7 +119,7 @@ async def ai_sipoc_capture_endpoint(request: dict):
             )
         
         result = await process_sipoc_logic(file_name, project, step)
-        print(f"Result: {result}")
+
         return SuccessResponse(data=result)
     except BusinessLogicException:
         raise
@@ -130,3 +128,36 @@ async def ai_sipoc_capture_endpoint(request: dict):
             error_code="error_ai_sipoc_capture",
             details={"message": "An error occured during AI SIPOC capture"}
         )
+    
+@router.post("/voc-capture")
+async def ai_voc_capture_endpoint(request: dict):
+    """
+    AI VOC Capture endpoint.
+    Expects: {"file_name": "...", "project": "...", "step": "..."}
+    """
+    from .voc import process_voc_logic
+
+    try: 
+        file_name = request.get("file_name")
+        project = request.get("project")
+        step = request.get("step")
+
+        if not all([file_name, project, step]):
+            raise BusinessLogicException(
+                error_code="error_missing_parameters",
+                details={"message": "Project, step and chart_id/file_name are required"}
+            )
+        
+        result = await process_voc_logic(file_name, project, step)
+        
+        print(f"Result: {result}")
+
+        return SuccessResponse(data=result)
+    except BusinessLogicException:
+        raise
+    except Exception as e:
+        raise BusinessLogicException(
+            error_code="error_ai_voc_capture",
+            details={"message": "An error occured during AI VOC capture"}
+        )
+    
