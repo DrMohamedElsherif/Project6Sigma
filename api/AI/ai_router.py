@@ -52,7 +52,7 @@ async def ai_analysis_endpoint(request: dict = Body(...)):
             )
         
         # Process the AI analysis
-        pdf_url, html_url = await process_ai_analysis(project, step, chart_id, raw_data)
+        pdf_url, _ = await process_ai_analysis(project, step, chart_id, raw_data)
         
         # Return response with URLs
         return SuccessResponse(data={
@@ -63,14 +63,14 @@ async def ai_analysis_endpoint(request: dict = Body(...)):
         
     except BusinessLogicException:
         raise
-    except Exception as e:
+    except Exception:
         raise BusinessLogicException(
             error_code="error_ai_analysis", 
             details={"message": "An error occurred during AI analysis"}
         )
 
 @router.post("/process-capture")
-async def ai_process_capture_endpoint(request: dict):
+async def ai_process_capture_endpoint(request: dict = Body(...)):
     """
     AI Process Capture endpoint.
     Expects: {"file_name": "...", "project": "...", "step": "..."}
@@ -78,17 +78,20 @@ async def ai_process_capture_endpoint(request: dict):
     from .process_capture import process_capture_logic
 
     try:
-        file_name = request.get("file_name")
-        project = request.get("project")
-        step = request.get("step")
+        data = request.get("postBody", request)
+        
+        file_name = data.get("file_name")
+        project = data.get("project")
+        step = data.get("step")
 
         if not all([file_name, project, step]):
             raise BusinessLogicException(
                 error_code="error_missing_parameters",
-                details={"message": "Project, step, and chart_id/file_name are required"}
+                details={"message": "Project, step, and file_name are required"}
             )
 
         result = await process_capture_logic(file_name, project, step)
+        
         return SuccessResponse(data=result)
 
     except BusinessLogicException:
@@ -100,7 +103,7 @@ async def ai_process_capture_endpoint(request: dict):
         )
 
 @router.post("/sipoc-capture")
-async def ai_sipoc_capture_endpoint(request: dict):
+async def ai_sipoc_capture_endpoint(request: dict = Body(...)):
     """
     AI SIPOC Capture endpoint.
     Expects: {"file_name": "...", "project": "...", "step": "..."}
@@ -108,14 +111,16 @@ async def ai_sipoc_capture_endpoint(request: dict):
     from .sipoc import process_sipoc_logic
 
     try:
-        file_name = request.get("file_name")
-        project = request.get("project")
-        step = request.get("step")
+        data = request.get("postBody", request)
+        
+        file_name = data.get("file_name")
+        project = data.get("project")
+        step = data.get("step")
 
         if not all ([file_name, project, step]):
             raise BusinessLogicException(
                 error_code="error_missing_parameters",
-                details={"message": "Project, step, and chart_id/file_name are required"}
+                details={"message": "Project, step, and file_name are required"}
             )
         
         result = await process_sipoc_logic(file_name, project, step)
@@ -123,14 +128,14 @@ async def ai_sipoc_capture_endpoint(request: dict):
         return SuccessResponse(data=result)
     except BusinessLogicException:
         raise
-    except Exception as e:
+    except Exception:
         raise BusinessLogicException(
             error_code="error_ai_sipoc_capture",
             details={"message": "An error occured during AI SIPOC capture"}
         )
     
 @router.post("/voc-capture")
-async def ai_voc_capture_endpoint(request: dict):
+async def ai_voc_capture_endpoint(request: dict = Body(...)):
     """
     AI VOC Capture endpoint.
     Expects: {"file_name": "...", "project": "...", "step": "..."}
@@ -138,6 +143,73 @@ async def ai_voc_capture_endpoint(request: dict):
     from .voc import process_voc_logic
 
     try: 
+        data = request.get("postBody", request)
+        
+        file_name = data.get("file_name")
+        project = data.get("project")
+        step = data.get("step")
+
+        if not all([file_name, project, step]):
+            raise BusinessLogicException(
+                error_code="error_missing_parameters",
+                details={"message": "Project, step and file_name are required"}
+            )
+        
+        result = await process_voc_logic(file_name, project, step)
+
+        return SuccessResponse(data=result)
+    except BusinessLogicException:
+        raise
+    except Exception:
+        raise BusinessLogicException(
+            error_code="error_ai_voc_capture",
+            details={"message": "An error occured during AI VOC capture"}
+        )
+    
+@router.post("/excel-capture")
+async def ai_excel_capture(request: dict = Body(...)):
+    """
+    AI Excel Capture endpoint.
+    Expects: {"file_name": "...", "project": "...", "step": "...", "sheet_name": "..."}
+    """
+    from .excel_capture import process_excel_capture
+
+    try:
+        data = request.get("postBody", request)
+        
+        file_name = data.get("file_name")
+        project = data.get("project")
+        step = data.get("step")
+        sheet_name = data.get("sheet_name")
+
+        if not all ([file_name, project, step, sheet_name]):
+            raise BusinessLogicException(
+                error_code="error_missing_parameters",
+                details={"message": "Project, step and file_name are required"}
+            )
+    
+        result = await process_excel_capture(file_name, project, step, sheet_name)
+
+        return SuccessResponse(data=result)
+    except BusinessLogicException:
+        raise
+    except Exception as e:
+        print(f"Unexpected error in excel-capture: {type(e).__name__}: {str(e)}")
+        raise BusinessLogicException(
+            error_code="error_ai_excel_capture",
+            details={"message": f"An error occurred during AI Excel capture"}
+        )
+
+@router.post("/excel-capture-all-sheets")
+async def ai_excel_capture_all_sheets(request: dict = Body(...)):
+    """
+    AI Excel Capture All Sheets endpoint.
+    Processes all available sheets in the Excel workbook.
+    Expects: {"file_name": "...", "project": "...", "step": "..."}
+    """
+    from .excel_capture import process_excel_capture, get_predefined_sheet_names
+
+    try:
         file_name = request.get("file_name")
         project = request.get("project")
         step = request.get("step")
@@ -145,19 +217,27 @@ async def ai_voc_capture_endpoint(request: dict):
         if not all([file_name, project, step]):
             raise BusinessLogicException(
                 error_code="error_missing_parameters",
-                details={"message": "Project, step and chart_id/file_name are required"}
+                details={"message": "Project, step and file_name are required, "}
             )
         
-        result = await process_voc_logic(file_name, project, step)
-        
-        print(f"Result: {result}")
+        predefined_sheets = get_predefined_sheet_names()
 
-        return SuccessResponse(data=result)
+        results = []
+        for sheet_name in predefined_sheets:
+            result = await process_excel_capture(file_name, project, step, sheet_name)
+            results.append({
+                "sheet_name": sheet_name,
+                "result": result
+            })
+
+        return SuccessResponse(data={
+            "sheets_processed": len(predefined_sheets),
+            "results": results
+        })
     except BusinessLogicException:
         raise
     except Exception as e:
         raise BusinessLogicException(
-            error_code="error_ai_voc_capture",
-            details={"message": "An error occured during AI VOC capture"}
+            error_code="error_ai_excel_capture_all_sheets",
+            details={"message": f"An error occurred during AI All-Sheets-Excel capture"}
         )
-    
