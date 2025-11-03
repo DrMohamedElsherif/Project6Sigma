@@ -44,13 +44,9 @@ async def process_excel_capture(file_name: str, project: str, step: str, sheet_n
                 details={"message": f"Could not find the specific sheet"}
             )
         
-        print(f"[DEBUG] Preprocessed Excel Sheet Data:\n{preprocessed_excel_sheet}\n--- End of Data ---")
-        
         prompt = get_prompt(sheet_name, preprocessed_excel_sheet)
         
         ai_response = await call_azure_openai(prompt)
-
-        print(f"[DEBUG] AI Response:\n{ai_response}\n--- End of Response ---")
 
         try:
             cleaned_response = ai_response.strip()
@@ -63,10 +59,8 @@ async def process_excel_capture(file_name: str, project: str, step: str, sheet_n
             cleaned_response = cleaned_response.strip()
             
             formatted_data = json.loads(cleaned_response)
-            print(f"[DEBUG] Parsed JSON:\n{json.dumps(formatted_data, indent=2)}\n--- End of Parsed JSON ---")
             
             validate_json(sheet_name, formatted_data)
-            print(f"[DEBUG] Validation successful for sheet '{sheet_name}'")
             return formatted_data
         
         except json.JSONDecodeError as e:
