@@ -1,0 +1,25 @@
+Metadata-Version: 2.1
+Name: probscale
+Version: 0.2.5
+Summary: mpl-probscale: Probabily scales for matplotlib
+Home-page: https://github.com/matplotlib/mpl-probscale
+Author: Paul Hobson (Geosyntec Consultants)
+Author-email: phobson@geosyntec.com
+License: BSD 3-clause
+Download-URL: https://github.com/matplotlib/mpl-probscale/archive/master.zip
+Platform: Python 3.5 and later.
+Classifier: License :: OSI Approved :: BSD License
+Classifier: Operating System :: OS Independent
+Classifier: Programming Language :: Python
+Classifier: Intended Audience :: Science/Research
+Classifier: Topic :: Software Development :: Libraries :: Python Modules
+Classifier: Programming Language :: Python :: 3.5
+Classifier: Programming Language :: Python :: 3.6
+Classifier: Programming Language :: Python :: 3.7
+Classifier: Programming Language :: Python :: 3.8
+License-File: LICENSE
+Requires-Dist: numpy
+Requires-Dist: matplotlib
+
+mpl-probscale: Probabily scales for matplotlib
+

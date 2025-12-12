@@ -1,0 +1,2 @@
+[console_scripts]
+hubspot3 = hubspot3.__main__:main

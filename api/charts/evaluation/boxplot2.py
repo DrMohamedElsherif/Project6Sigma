@@ -5,7 +5,9 @@ from pydantic import BaseModel, Field
 from typing import List, Dict
 from api.schemas import BusinessLogicException
 from api.charts.constants import COLOR_BLUE, FIGURE_SIZE_A4_PORTRAIT, COLOR_BLACK, TITLE_FONT_SIZE
+from api.charts.statistics import calculate_descriptive_stats, add_stats_table
 
+    
 
 class Boxplot2Config(BaseModel):
     title: str
@@ -64,3 +66,7 @@ class Boxplot2:
         ax.grid(True, alpha=0.3)
         plt.close('all')
         return self.figure
+    
+
+    
+    

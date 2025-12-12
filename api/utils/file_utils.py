@@ -51,7 +51,6 @@ def save_figure(figure, project: str, step: str, extension: str = "png", is_test
 
     return save_path, url
 
-
 async def generate_chart(request: dict, chart_class, error_code, extension="png"):
     try:
         chart_generator = chart_class(request)
@@ -64,16 +63,27 @@ async def generate_chart(request: dict, chart_class, error_code, extension="png"
             project_id = "api_test"
             is_test = True
 
-        save_path, url = save_figure(fig, project_id, chart_generator.step, extension=extension, is_test=is_test,
-                             test_title=request.get("config").get("title"))
+        save_path, url = save_figure(
+            fig,
+            project_id,
+            chart_generator.step,
+            extension=extension,
+            is_test=is_test,
+            test_title=request.get("config").get("title")
+        )
         
         # Extract chart_id from the filename (without extension)
         filename = os.path.basename(save_path)
         chart_id = os.path.splitext(filename)[0]
 
-        return SuccessResponse(
-            data={"url": url, "chart_id": chart_id}
-        )
+        # Include statistics if available  (Add by Mohamed Elsherif) #####
+        response_data = {"url": url, "chart_id": chart_id}
+        if hasattr(chart_generator, "get_statistics"):
+            response_data["statistics"] = chart_generator.get_statistics()
+        ##################################################################
+
+        return SuccessResponse(data=response_data)
+
     except Exception as e:
         if isinstance(e, BusinessLogicException):
             raise e
