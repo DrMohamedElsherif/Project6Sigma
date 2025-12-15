@@ -58,7 +58,9 @@ class BaseBoxplot:
 
     def process(self):
 
-        df = pd.DataFrame(self.data.values)
+        dataset_name = getattr(self.data, "dataset_name", "Dataset")
+        df = pd.DataFrame(self.data.values)  # columns are Measurement1, Measurement2, etc.
+
 
         # compute statistics (optional)
         self.statistics = self.compute_statistics(df)

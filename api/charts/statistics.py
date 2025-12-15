@@ -1,12 +1,9 @@
-# statistics.py 
-
-"""Helper functions for statistical calculations"""
 import numpy as np
 import pandas as pd
 from scipy import stats
 from api.schemas import BusinessLogicException
-import matplotlib.pyplot as plt
 from typing import Dict, Any
+import matplotlib.pyplot as plt
 
 
 def calculate_descriptive_stats(data: pd.Series, column_name: str = "") -> Dict[str, Any]:
@@ -102,10 +99,13 @@ def calculate_descriptive_stats(data: pd.Series, column_name: str = "") -> Dict[
             details={"message": f"Unexpected error calculating statistics: {str(e)}"}
         )
 
-
-def add_stats_table(figure, stats_data: Dict[str, Any], 
-                    position: tuple = (0.15, 0.02), 
-                    fontsize: int = 10) -> None:
+def add_stats_table(
+    figure,
+    stats_data: Dict[str, Any],
+    dataset_name: str = "Dataset",
+    position: tuple = (0.13, 0.01), 
+    fontsize: int = 10
+) -> None:
     """
     Fügt Statistik-Textblock unter/über einem Matplotlib-Figure hinzu.
 
@@ -115,31 +115,23 @@ def add_stats_table(figure, stats_data: Dict[str, Any],
         position: (x, y) tuple, figure-relative position des Textes
         fontsize: Font size
     """
-    column_name = stats_data.get("column_name", "Dataset")
-    n = stats_data.get("n", 0)
-    average = stats_data.get("average", 0.0)
-    median = stats_data.get("median", 0.0)
-    range_str = stats_data.get("range", "0.00 - 0.00")
-    std_dev = stats_data.get("standard_deviation", 0.0)
-    ci_str = stats_data.get("ci_95", "[0.00, 0.00]")
+    x_pos, y_pos = position
+    text_lines = [f"Dataset: {dataset_name}", "-" * 50]
 
-    separator = "─" * 40
-    stats_text = (
-        f"Dataset: {column_name}\n"
-        f"{separator}\n"
-        f"n : {n}\n"
-        f"Average : {average:.2f}\n"
-        f"Median : {median:.2f}\n"
-        f"Range : {range_str}\n"
-        f"Standard dev. : {std_dev:.2f}\n"
-        f"95% CI : {ci_str}"
-    )
+    # Loop through columns
+    for col_name, col_stats in stats_data.items():
+        text_lines.append(f"\nColumn: {col_name}")
+        text_lines.append(f"n : {col_stats['n']}")
+        text_lines.append(f"Average : {col_stats['average']:.2f}")
+        text_lines.append(f"Median : {col_stats['median']:.2f}")
+        text_lines.append(f"Range : {col_stats['range']}")
+        text_lines.append(f"Std Dev : {col_stats['standard_deviation']:.2f}")
+        text_lines.append(f"95% CI : {col_stats['ci_95']}")
 
-    x_position, y_position = position
     figure.text(
-        x_position,
-        y_position,
-        stats_text,
+        x_pos,
+        y_pos,
+        "\n".join(text_lines),
         fontsize=fontsize,
         fontfamily='monospace',
         verticalalignment='bottom',

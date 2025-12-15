@@ -282,12 +282,14 @@
 #     from .multi_vari_chart import MultiVariChart
 #     return await generate_chart(request, MultiVariChart, "error_processing", extension="pdf")
 
+
+#################################################
 from fastapi import APIRouter
 from api.utils.file_utils import generate_chart
+from api.schemas import BusinessLogicException
 
 router = APIRouter()
 
-# Map endpoints to classes
 BOXPLOT_MAP = {
     "boxplot1": "Boxplot1",
     "boxplot2": "Boxplot2",
@@ -302,7 +304,10 @@ async def generate_boxplot(chart_name: str, request: dict):
     if chart_name not in BOXPLOT_MAP:
         raise BusinessLogicException(error_code="error_not_found")
 
-    module = __import__(f"api.charts.boxplots.{chart_name}", fromlist=[BOXPLOT_MAP[chart_name]])
+    module = __import__(
+        f"api.charts.evaluation.{chart_name.replace('-', '_')}",
+        fromlist=[BOXPLOT_MAP[chart_name]]
+    )
     chart_class = getattr(module, BOXPLOT_MAP[chart_name])
 
     return await generate_chart(request, chart_class, "error_processing")
