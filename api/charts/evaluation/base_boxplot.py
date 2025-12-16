@@ -117,34 +117,3 @@ class BaseBoxplot:
     def get_statistics(self):
         return self.statistics
 
-
-
-
-    # def process(self):
-
-    #     dataset_name = getattr(self.data, "dataset_name", "Dataset")
-    #     df = pd.DataFrame(self.data.values)  # columns are Measurement1, Measurement2, etc.
-
-
-    #     # compute statistics (optional)
-    #     self.statistics = self.compute_statistics(df)
-
-    #     # create figure
-    #     self.figure = plt.figure(figsize=FIGURE_SIZE_A4_PORTRAIT)
-    #     ax = self.figure.add_subplot(111)
-
-    #     # draw boxplot
-    #     self.draw_boxplot(df, ax)
-
-    #     # styling
-    #     ax.set_title(self.config.title, fontsize=TITLE_FONT_SIZE, pad=20)
-    #     ax.grid(True, alpha=0.3)
-
-    #     # hooks
-    #     self.postprocess(ax)
-
-    #     plt.close(self.figure)
-    #     return self.figure
-
-    # def get_statistics(self):
-    #     return self.statistics
