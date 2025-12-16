@@ -98,44 +98,67 @@ def calculate_descriptive_stats(data: pd.Series, column_name: str = "") -> Dict[
             field="statistics",
             details={"message": f"Unexpected error calculating statistics: {str(e)}"}
         )
-
+        
 def add_stats_table(
     figure,
     stats_data: Dict[str, Any],
     dataset_name: str = "Dataset",
-    position: tuple = (0.13, 0.01), 
-    fontsize: int = 10
+    position: tuple = (0.13, 0.02),
+    fontsize: int = 9
 ) -> None:
     """
-    Fügt Statistik-Textblock unter/über einem Matplotlib-Figure hinzu.
-
-    Args:
-        figure: Matplotlib figure object
-        stats_data: Dictionary von calculate_descriptive_stats()
-        position: (x, y) tuple, figure-relative position des Textes
-        fontsize: Font size
+    Adds a column-oriented statistics table to a Matplotlib figure.
+    Each dataset column is rendered side-by-side.
     """
+
     x_pos, y_pos = position
-    text_lines = [f"Dataset: {dataset_name}", "-" * 50]
 
-    # Loop through columns
-    for col_name, col_stats in stats_data.items():
-        text_lines.append(f"\nColumn: {col_name}")
-        text_lines.append(f"n : {col_stats['n']}")
-        text_lines.append(f"Average : {col_stats['average']:.2f}")
-        text_lines.append(f"Median : {col_stats['median']:.2f}")
-        text_lines.append(f"Range : {col_stats['range']}")
-        text_lines.append(f"Std Dev : {col_stats['standard_deviation']:.2f}")
-        text_lines.append(f"95% CI : {col_stats['ci_95']}")
+    # Define rows as (metrics) and their labels
+    metrics = [
+        ("n", "n"),
+        ("average", "Average"),
+        ("median", "Median"),
+        ("range", "Range"),
+        ("standard_deviation", "Std Dev"),
+        ("ci_95", "95% CI"),
+        ("q1", "Q1"),
+        ("q3", "Q3"),
+        ("iqr", "IQR"),
+    ]
 
+    column_names = list(stats_data.keys())
+
+    # Build header
+    header = ["Metric"] + column_names
+    table_lines = [
+        f"Dataset: {dataset_name}",
+        "-" * (14 * (len(column_names) + 1)),
+        "  ".join(f"{h:<12}" for h in header),
+        "-" * (14 * (len(column_names) + 1)),
+    ]
+
+    # Build rows
+    for key, label in metrics:
+        row = [f"{label:<12}"]
+        for col in column_names:
+            value = stats_data[col].get(key, "")
+            if isinstance(value, float):
+                row.append(f"{value:<12.2f}")
+            else:
+                row.append(f"{str(value):<12}")
+        table_lines.append("  ".join(row))
+
+    # Render table
     figure.text(
         x_pos,
         y_pos,
-        "\n".join(text_lines),
+        "\n".join(table_lines),
         fontsize=fontsize,
-        fontfamily='monospace',
-        verticalalignment='bottom',
+        fontfamily="monospace",
+        verticalalignment="bottom",
         transform=figure.transFigure,
-        bbox=dict(boxstyle='round', facecolor='wheat', alpha=0.8)
+        bbox=dict(boxstyle="round", facecolor="wheat", alpha=0.85)
     )
+    
+    
 
