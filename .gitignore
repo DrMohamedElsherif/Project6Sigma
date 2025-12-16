@@ -3,6 +3,7 @@ static/*
 env/
 .env*
 .venv/
+lean2sigma/
 
 ## OS X
 .DS_Store

@@ -1,7 +1,10 @@
+# base_boxplot.py
+
 import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
 from api.schemas import BusinessLogicException
+from api.charts.statistics import calculate_descriptive_stats, add_stats_table
 from api.charts.constants import FIGURE_SIZE_A4_PORTRAIT, TITLE_FONT_SIZE
 
 class BaseBoxplot:
@@ -14,6 +17,7 @@ class BaseBoxplot:
     """
 
     request_model = None  # subclasses must set this
+    show_stats_table = False
 
     def __init__(self, data: dict):
         try:
@@ -34,8 +38,15 @@ class BaseBoxplot:
     # ------------------ HOOKS ------------------
 
     def compute_statistics(self, df):
-        """Override if the plot needs descriptive stats."""
-        return None
+        """
+        Compute descriptive statistics for each column.
+        Returns a dict keyed by column names.
+        """
+        stats_dict = {}
+        for col in df.columns:
+            stats_dict[col] = calculate_descriptive_stats(df[col], column_name=col)
+        return stats_dict
+
 
     def draw_boxplot(self, df, ax):
         """Default horizontal boxplot."""
@@ -55,19 +66,31 @@ class BaseBoxplot:
         pass
 
     # -------------------------------------------
-
+    
     def process(self):
 
         dataset_name = getattr(self.data, "dataset_name", "Dataset")
-        df = pd.DataFrame(self.data.values)  # columns are Measurement1, Measurement2, etc.
+        df = pd.DataFrame(self.data.values)
 
-
-        # compute statistics (optional)
-        self.statistics = self.compute_statistics(df)
+        # compute statistics only if enabled
+        if self.show_stats_table:
+            self.statistics = self.compute_statistics(df)
+        else:
+            self.statistics = None
 
         # create figure
-        self.figure = plt.figure(figsize=FIGURE_SIZE_A4_PORTRAIT)
-        ax = self.figure.add_subplot(111)
+        if self.show_stats_table:
+            import matplotlib.gridspec as gridspec
+
+            self.figure = plt.figure(figsize=FIGURE_SIZE_A4_PORTRAIT)
+            gs = gridspec.GridSpec(2, 1, height_ratios=[15, 2], hspace=0.05)
+
+            ax = self.figure.add_subplot(gs[0])
+            table_ax = self.figure.add_subplot(gs[1])
+            table_ax.axis("off")
+        else:
+            self.figure = plt.figure(figsize=FIGURE_SIZE_A4_PORTRAIT)
+            ax = self.figure.add_subplot(111)
 
         # draw boxplot
         self.draw_boxplot(df, ax)
@@ -79,8 +102,49 @@ class BaseBoxplot:
         # hooks
         self.postprocess(ax)
 
+        # add statistics table
+        if self.show_stats_table and self.statistics:
+            add_stats_table(
+                figure=self.figure,
+                stats_data=self.statistics,
+                dataset_name=dataset_name,
+                fontsize=9
+            )
+
         plt.close(self.figure)
         return self.figure
-
+    
     def get_statistics(self):
         return self.statistics
+
+
+
+
+    # def process(self):
+
+    #     dataset_name = getattr(self.data, "dataset_name", "Dataset")
+    #     df = pd.DataFrame(self.data.values)  # columns are Measurement1, Measurement2, etc.
+
+
+    #     # compute statistics (optional)
+    #     self.statistics = self.compute_statistics(df)
+
+    #     # create figure
+    #     self.figure = plt.figure(figsize=FIGURE_SIZE_A4_PORTRAIT)
+    #     ax = self.figure.add_subplot(111)
+
+    #     # draw boxplot
+    #     self.draw_boxplot(df, ax)
+
+    #     # styling
+    #     ax.set_title(self.config.title, fontsize=TITLE_FONT_SIZE, pad=20)
+    #     ax.grid(True, alpha=0.3)
+
+    #     # hooks
+    #     self.postprocess(ax)
+
+    #     plt.close(self.figure)
+    #     return self.figure
+
+    # def get_statistics(self):
+    #     return self.statistics

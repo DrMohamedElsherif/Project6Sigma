@@ -8,6 +8,7 @@ from api.charts.constants import TITLE_FONT_SIZE
 
 class Boxplot6(BaseBoxplot):
     request_model = BoxplotRequest
+    show_stats_table = True
 
     def process(self):
         df = pd.DataFrame(self.data.values)
