@@ -31,24 +31,33 @@ def calculate_descriptive_stats(data: pd.Series, column_name: str = "") -> Dict[
                 details={"message": "Dataset contains only NaN values or is empty"}
             )
 
+        # if n == 1:
+        #     single_value = float(clean_data.iloc[0])
+        #     return {
+        #         "column_name": column_name,
+        #         "n": 1,
+        #         "average": single_value,
+        #         "median": single_value,
+        #         "min": single_value,
+        #         "max": single_value,
+        #         "range": f"{single_value:.2f} - {single_value:.2f}",
+        #         "standard_deviation": 0.0,
+        #         "ci_95_lower": single_value,
+        #         "ci_95_upper": single_value,
+        #         "ci_95": f"[{single_value:.2f}, {single_value:.2f}]",
+        #         "q1": single_value,
+        #         "q3": single_value,
+        #         "iqr": 0.0
+        #     }
+        
         if n == 1:
-            single_value = float(clean_data.iloc[0])
-            return {
-                "column_name": column_name,
-                "n": 1,
-                "average": single_value,
-                "median": single_value,
-                "min": single_value,
-                "max": single_value,
-                "range": f"{single_value:.2f} - {single_value:.2f}",
-                "standard_deviation": 0.0,
-                "ci_95_lower": single_value,
-                "ci_95_upper": single_value,
-                "ci_95": f"[{single_value:.2f}, {single_value:.2f}]",
-                "q1": single_value,
-                "q3": single_value,
-                "iqr": 0.0
-            }
+            raise BusinessLogicException(
+                error_code="error_validation",
+                field="data",
+                details={
+                    "message": "At least two valid data points are required to calculate statistics"
+                }
+            )
 
         average = np.mean(clean_data)
         median = np.median(clean_data)
