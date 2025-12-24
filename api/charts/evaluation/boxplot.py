@@ -21,8 +21,9 @@ class Boxplot(BaseBoxplot):
         if variant == "single":
             return self._single(df)
 
-        if variant == "by_category":
-            return self._by_category(df)
+        if variant == "faceted_by_group":
+            return self._faceted_by_group(df)
+
 
         if variant == "multipanel_columns":
             return self._multipanel_columns(df)
@@ -40,8 +41,16 @@ class Boxplot(BaseBoxplot):
         ax.grid(True, alpha=0.3)
 
         return self.finalize()
+    
 
-    def _by_category(self, df):
+    def _faceted_by_group(self, df):
+        """
+        Faceted boxplots by row-level group.
+
+        - Categories are used ONLY to split rows into subplots
+        - Each subplot shows boxplots for numeric columns
+        - Categories are NOT x-axis values
+        """
         if not self.data.categories:
             raise ValueError("categories required for by_category variant")
 
@@ -54,11 +63,15 @@ class Boxplot(BaseBoxplot):
             rows=1,
             cols=len(unique_categories),
         )
-
+        
         for ax, cat in zip(axes, unique_categories):
-            group_data = df.join(categories_df)[categories_df[category_col] == cat]
+            group_data = (
+                df.join(categories_df)
+                .loc[categories_df[category_col] == cat, df.columns]
+            )
+
             self.draw_boxplot(group_data, ax)
-            ax.set_xlabel(cat)
+            ax.set_title(cat)     # ← use title, not xlabel
             ax.grid(True, alpha=0.3)
 
         self.figure.suptitle(self.config.title, fontsize=TITLE_FONT_SIZE)

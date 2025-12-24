@@ -55,6 +55,7 @@ class BaseBoxplot:
                 for r in range(rows)
                 for c in range(cols)
             ]
+        
         else:
             raise ValueError(f"Unknown layout: {layout}")
 

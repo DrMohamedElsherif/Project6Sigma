@@ -96,6 +96,9 @@ BY_CATEGORY_DATASET = {
     },
 }
 
+
+
+
 MULTIPANEL_COLUMNS_DATASET = {
     "dataset_name": "Machine F",
     "values": {
@@ -125,9 +128,10 @@ MULTIPANEL_COLUMNS_DATASET = {
 
 VARIANT_MAP = {
     "single": SINGLE_DATASETS,
-    "by_category": [BY_CATEGORY_DATASET],
+    "faceted_by_group": [BY_CATEGORY_DATASET],
     "multipanel_columns": [MULTIPANEL_COLUMNS_DATASET]
 }
+
 
 SCENARIOS = ["normal", "large", "some_nans", "n_less_than_2", "all_nans"]
 
@@ -156,6 +160,7 @@ def _nanify(values, categories=None, cat_name=None):
                         missing -= 1
     return new_values
 
+
 def build_scenario_dataset(variant, scenario):
     """Apply scenario transformations to hard-coded dataset"""
     for ds in VARIANT_MAP[variant]:
@@ -166,7 +171,6 @@ def build_scenario_dataset(variant, scenario):
         if "categories" in ds:
             dataset["categories"] = {k: v.copy() for k, v in ds["categories"].items()}
 
-        # apply scenario modifications
         if scenario == "some_nans":
             for col in dataset["values"]:
                 if "categories" in dataset:
@@ -217,8 +221,9 @@ def test_invalid_datasets_raise_error(variant, scenario):
 def test_valid_datasets_compute_stats(variant, scenario):
     for dataset in build_scenario_dataset(variant, scenario):
         # ensure by_category always has categories
-        if variant == "by_category" and "categories" not in dataset:
+        if variant == "faceted_by_group" and "categories" not in dataset:
             dataset["categories"] = {"Group": ["X"] * len(next(iter(dataset["values"].values())))}
+
 
         data = {
             "project": "api_test",
@@ -257,11 +262,13 @@ def test_valid_datasets_compute_stats(variant, scenario):
                 assert stats[col]["min"] == min(valid_vals)
                 assert stats[col]["max"] == max(valid_vals)
 
+
+
 # ----------------------------
 # VARIANT-SPECIFIC TESTS
 # ----------------------------
 
-def test_by_category_requires_categories():
+def test_faceted_by_group_requires_categories():
     dataset = {
         "dataset_name": "NoCats",
         "values": {"A": [1, 2, 3]}
@@ -269,7 +276,7 @@ def test_by_category_requires_categories():
     data = {
         "project": "api_test",
         "step": "eval_charts",
-        "config": {"title": "Missing Categories", "variant": "by_category"},
+        "config": {"title": "Missing Categories", "variant": "faceted_by_group"},
         "data": dataset
     }
     with pytest.raises(ValueError):
@@ -294,340 +301,3 @@ def test_unknown_variant_raises_error():
 
 
 
-# import pytest
-# import math
-# import random
-# from api.charts.evaluation.boxplot import Boxplot
-# from api.schemas import BusinessLogicException
-
-# # ------------------------------------------------------------------
-# # VARIANT DEFINITIONS
-# # Mapping to old implementation:
-# #
-# # "single"             → old Boxplot1, Boxplot2, Boxplot3, Boxplot4
-# # "by_category"        → old Boxplot5
-# # "multipanel_columns" → old Boxplot6
-# # ------------------------------------------------------------------
-
-# VARIANTS = [
-#     "single",
-#     "by_category",
-#     "multipanel_columns",
-# ]
-
-# # ----------------------------
-# # ERROR SCENARIOS
-# # ----------------------------
-
-# @pytest.mark.parametrize("variant", VARIANTS)
-# def test_empty_dataset_raises_error(variant):
-#     """Empty dataset should raise BusinessLogicException"""
-#     data = {
-#         "project": "test",
-#         "step": "step1",
-#         "config": {"title": "Empty Dataset", "variant": variant},
-#         "data": {"dataset_name": "Empty", "values": {}}
-#     }
-#     with pytest.raises(BusinessLogicException):
-#         Boxplot(data).process()
-
-
-# @pytest.mark.parametrize("variant", VARIANTS)
-# def test_only_nan_values_raises_error(variant):
-#     """Dataset with only NaNs should raise BusinessLogicException"""
-#     data = {
-#         "project": "test",
-#         "step": "step1",
-#         "config": {"title": "All NaNs", "variant": variant},
-#         "data": {
-#             "dataset_name": "NaNs",
-#             "values": {"A": [float("nan"), float("nan")], "B": [math.nan, math.nan]}
-#         }
-#     }
-#     with pytest.raises(BusinessLogicException):
-#         Boxplot(data).process()
-
-
-# @pytest.mark.parametrize("variant", VARIANTS)
-# def test_single_value_raises_error(variant):
-#     """Dataset with only one value per column should raise BusinessLogicException"""
-#     data = {
-#         "project": "test",
-#         "step": "step1",
-#         "config": {"title": "Single Value", "variant": variant},
-#         "data": {"dataset_name": "SingleValue", "values": {"A": [42.0]}}
-#     }
-#     with pytest.raises(BusinessLogicException):
-#         Boxplot(data).process()
-
-
-# # ----------------------------
-# # VALID DATASET SCENARIOS
-# # ----------------------------
-
-# @pytest.mark.parametrize("variant", VARIANTS)
-# def test_normal_dataset_runs(variant):
-#     """Normal dataset with 30 numeric measurements"""
-#     values = [23.5, 25.2, 24.7, 24.1, 25.4, 23.9, 24.8, 25.1, 24.3, 24.9,
-#               23.8, 24.6, 25.3, 24.2, 24.5, 25.0, 24.4, 23.7, 24.0, 25.5,
-#               24.8, 23.6, 25.2, 24.3, 24.7, 25.1, 24.5, 23.9, 24.2, 25.0]
-#     data = {
-#         "project": "test",
-#         "step": "step1",
-#         "config": {"title": "Normal Dataset", "variant": variant},
-#         "data": {"dataset_name": "Machine A", "values": {"Measurements": values}}
-#     }
-#     if variant == "by_category":
-#         data["data"]["categories"] = {"Group": ["X", "Y"] * 15}
-
-#     boxplot_instance = Boxplot(data)
-#     fig = boxplot_instance.process()
-#     stats = boxplot_instance.statistics
-
-#     assert fig is not None
-#     assert stats is not None
-#     assert stats["Measurements"]["n"] == 30
-
-
-# @pytest.mark.parametrize("variant", VARIANTS)
-# def test_large_dataset_runs(variant):
-#     """Large dataset (10,000 points) to test performance"""
-#     values = [round(random.uniform(20, 30), 2) for _ in range(10000)]
-#     data = {
-#         "project": "test",
-#         "step": "step1",
-#         "config": {"title": "Large Dataset", "variant": variant},
-#         "data": {"dataset_name": "Machine Large", "values": {"Measurements": values}}
-#     }
-#     if variant == "by_category":
-#         data["data"]["categories"] = {"Group": ["X", "Y"] * 5000}
-
-#     boxplot_instance = Boxplot(data)
-#     fig = boxplot_instance.process()
-#     stats = boxplot_instance.statistics
-
-#     assert fig is not None
-#     assert stats is not None
-#     assert stats["Measurements"]["n"] == 10000
-
-
-# @pytest.mark.parametrize("variant", VARIANTS)
-# def test_dataset_with_some_nans_runs(variant):
-#     """Dataset with some NaNs should compute statistics ignoring NaNs"""
-#     values = [23.5, 24.7, 24.1, float("nan"), 23.9, 24.8, float("nan"), 24.2, 24.5]
-#     data = {
-#         "project": "test",
-#         "step": "step1",
-#         "config": {"title": "Some NaNs", "variant": variant},
-#         "data": {"dataset_name": "Some NaNs", "values": {"Measurements": values}}
-#     }
-#     if variant == "by_category":
-#         data["data"]["categories"] = {"Group": ["X", "Y", "X", "Y", "X", "Y", "X", "Y", "X"]}
-
-#     boxplot_instance = Boxplot(data)
-#     fig = boxplot_instance.process()
-#     stats = boxplot_instance.statistics
-
-#     assert fig is not None
-#     assert stats is not None
-#     assert stats["Measurements"]["n"] == 7  # 2 NaNs ignored
-
-
-# # ----------------------------
-# # VARIANT-SPECIFIC VALIDATION
-# # ----------------------------
-
-# def test_by_category_without_categories_raises_error():
-#     """by_category variant MUST require categories"""
-#     data = {
-#         "project": "test",
-#         "step": "step1",
-#         "config": {"title": "Missing Categories", "variant": "by_category"},
-#         "data": {"dataset_name": "NoCats", "values": {"A": [1, 2, 3]}}
-#     }
-#     with pytest.raises(ValueError):
-#         Boxplot(data).process()
-
-
-# def test_unknown_variant_raises_error():
-#     """Unknown variant should fail fast"""
-#     data = {
-#         "project": "test",
-#         "step": "step1",
-#         "config": {"title": "Invalid Variant", "variant": "does_not_exist"},
-#         "data": {"dataset_name": "Dataset", "values": {"A": [1, 2, 3]}}
-#     }
-
-#     with pytest.raises(BusinessLogicException) as exc_info:
-#         Boxplot(data).process()
-
-#     exc = exc_info.value
-#     assert exc.error_code == "error_validation"
-#     assert "does_not_exist" in exc.details["message"]
-
-
-
-
-
-# # test_boxplots.py
-
-# import pytest
-# import math
-# import pandas as pd
-# from api.charts.evaluation.boxplot1 import Boxplot1
-# from api.charts.evaluation.boxplot2 import Boxplot2
-# from api.charts.evaluation.boxplot3 import Boxplot3
-# from api.charts.evaluation.boxplot4 import Boxplot4
-# from api.charts.evaluation.boxplot5 import Boxplot5
-# from api.charts.evaluation.boxplot6 import Boxplot6
-# from api.charts.evaluation.base_boxplot import BaseBoxplot
-# from api.charts.evaluation.boxplot_schemas import BoxplotRequest
-# from api.schemas import BusinessLogicException
-
-
-# boxplots = [Boxplot1, Boxplot2, Boxplot3, Boxplot4, Boxplot5, Boxplot6]
-
-
-# # ----------------------------
-# # ERROR CASES
-# # ----------------------------
-
-# @pytest.mark.parametrize("BoxplotClass", boxplots)
-# def test_empty_dataset_raises_error(BoxplotClass):
-#     """Empty values dict should raise BusinessLogicException"""
-#     data = {
-#         "project": "test",
-#         "step": "step1",
-#         "config": {"title": "Test Empty Dataset"},
-#         "data": {
-#             "dataset_name": "Empty",
-#             "values": {}
-#         }
-#     }
-#     with pytest.raises(BusinessLogicException):
-#         BoxplotClass(data).process()
-
-
-# @pytest.mark.parametrize("BoxplotClass", boxplots)
-# def test_only_nan_values_raises_error(BoxplotClass):
-#     """Dataset with only NaN values should raise BusinessLogicException"""
-#     data = {
-#         "project": "test",
-#         "step": "step1",
-#         "config": {"title": "Test Only NaNs"},
-#         "data": {
-#             "dataset_name": "NaNs",
-#             "values": {
-#                 "A": [float("nan"), float("nan")],
-#                 "B": [math.nan, math.nan]
-#             }
-#         }
-#     }
-#     with pytest.raises(BusinessLogicException):
-#         BoxplotClass(data).process()
-
-
-# @pytest.mark.parametrize("BoxplotClass", boxplots)
-# def test_single_value_raises_error(BoxplotClass):
-#     """Dataset with only one value per column should raise BusinessLogicException"""
-#     data = {
-#         "project": "test",
-#         "step": "step1",
-#         "config": {"title": "Test Single Value"},
-#         "data": {
-#             "dataset_name": "SingleValue",
-#             "values": {
-#                 "A": [42.0]
-#             }
-#         }
-#     }
-#     with pytest.raises(BusinessLogicException):
-#         BoxplotClass(data).process()
-
-
-# # ----------------------------
-# # VALID DATASET CASES
-# # ----------------------------
-
-# @pytest.mark.parametrize("BoxplotClass", boxplots)
-# def test_valid_dataset_runs(BoxplotClass):
-#     """Valid dataset should produce a figure and statistics"""
-#     data = {
-#         "project": "test",
-#         "step": "step1",
-#         "config": {"title": "Valid Dataset Test"},
-#         "data": {
-#             "dataset_name": "ValidDataset",
-#             "values": {
-#                 "A": [1, 2, 3, 4, 5],
-#                 "B": [2, 3, 4, 5, 6]
-#             },
-#             "categories": {  # For Boxplot5 & Boxplot6 multipanel
-#                 "Group": ["X", "Y", "X", "Y", "X"]
-#             }
-#         }
-#     }
-
-#     boxplot_instance = BoxplotClass(data)
-#     fig = boxplot_instance.process()
-#     stats = boxplot_instance.get_statistics()
-
-#     # Check that figure is returned
-#     assert fig is not None
-#     # Check that statistics are returned
-#     assert stats is not None
-#     for col in ["A", "B"]:
-#         assert stats[col]["n"] == 5
-#         assert stats[col]["average"] == pytest.approx(sum(data["data"]["values"][col])/5)
-#         assert stats[col]["min"] == min(data["data"]["values"][col])
-#         assert stats[col]["max"] == max(data["data"]["values"][col])
-
-
-# def test_boxplot5_no_categories_calls_super():
-#     """Boxplot5 without categories triggers fallback to BaseBoxplot.process()"""
-#     data = {
-#         "project": "test",
-#         "step": "step1",
-#         "config": {"title": "No Categories"},
-#         "data": {
-#             "dataset_name": "NoCats",
-#             "values": {
-#                 "A": [1, 2, 3],
-#                 "B": [4, 5, 6]
-#             },
-#             "categories": None
-#         }
-#     }
-#     boxplot_instance = Boxplot5(data)
-#     fig = boxplot_instance.process()
-#     stats = boxplot_instance.get_statistics()
-
-#     assert fig is not None
-#     assert stats is not None
-
-
-# def test_base_boxplot_no_stats_table():
-#     """BaseBoxplot branch with show_stats_table=False to cover remaining lines"""
-#     class TestBoxplot(BaseBoxplot):
-#         request_model = BoxplotRequest
-#         show_stats_table = False
-
-#     data = {
-#         "project": "test",
-#         "step": "step1",
-#         "config": {"title": "No Stats Table"},
-#         "data": {
-#             "dataset_name": "Dataset",
-#             "values": {
-#                 "A": [1, 2, 3],
-#                 "B": [4, 5, 6]
-#             }
-#         }
-#     }
-
-#     instance = TestBoxplot(data)
-#     fig = instance.process()
-#     stats = instance.get_statistics()
-
-#     assert fig is not None
-#     assert stats is None 

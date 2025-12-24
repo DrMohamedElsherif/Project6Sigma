@@ -6,7 +6,7 @@ class BoxplotConfig(BaseModel):
     title: str
     variant: Literal[
         "single",
-        "by_category",
+        "faceted_by_group",
         "multipanel_columns"
     ]
 
