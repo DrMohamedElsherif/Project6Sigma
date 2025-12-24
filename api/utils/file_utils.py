@@ -1,5 +1,8 @@
+# file_utils.py
+
 import os
 import uuid
+import urllib.parse
 from typing import Tuple
 
 from api.schemas import SuccessResponse, BusinessLogicException
@@ -47,6 +50,7 @@ def save_figure(figure, project: str, step: str, extension: str = "png", is_test
             f.write(figure.read())
 
     # URL generieren
+
     url = save_path if settings.useFullPath == "1" else f"{settings.staticUrl}/{project}/{step}/{filename}"
 
     return save_path, url
@@ -72,15 +76,24 @@ async def generate_chart(request: dict, chart_class, error_code, extension="png"
             test_title=request.get("config").get("title")
         )
         
+        # ------------------ MODIFICATION START ------------------
+        # URL-encode path to handle spaces/special chars
+        url = urllib.parse.urljoin(url, urllib.parse.quote(os.path.basename(url)))
+        # ------------------ MODIFICATION END --------------------
+        
         # Extract chart_id from the filename (without extension)
         filename = os.path.basename(save_path)
         chart_id = os.path.splitext(filename)[0]
 
-        # Include statistics if available  (Add by Mohamed Elsherif) #####
+        # ------------------ MODIFICATION START ------------------
+        # Include statistics if available
         response_data = {"url": url, "chart_id": chart_id}
-        if hasattr(chart_generator, "get_statistics"):
-            response_data["statistics"] = chart_generator.get_statistics()
-        ##################################################################
+
+        # Check if chart_generator has attribute `statistics` and include it
+        if hasattr(chart_generator, "statistics") and chart_generator.statistics is not None:
+            response_data["statistics"] = chart_generator.statistics
+        # ------------------ MODIFICATION END --------------------
+        
 
         return SuccessResponse(data=response_data)
 

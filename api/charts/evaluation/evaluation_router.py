@@ -284,30 +284,14 @@
 
 
 #################################################
+
+# evaluation_router.py
 from fastapi import APIRouter
 from api.utils.file_utils import generate_chart
-from api.schemas import BusinessLogicException
+from api.charts.evaluation.boxplot import Boxplot
 
 router = APIRouter()
 
-BOXPLOT_MAP = {
-    "boxplot1": "Boxplot1",
-    "boxplot2": "Boxplot2",
-    "boxplot3": "Boxplot3",
-    "boxplot4": "Boxplot4",
-    "boxplot5": "Boxplot5",
-    "boxplot6": "Boxplot6",
-}
-
-@router.post("/{chart_name}")
-async def generate_boxplot(chart_name: str, request: dict):
-    if chart_name not in BOXPLOT_MAP:
-        raise BusinessLogicException(error_code="error_not_found")
-
-    module = __import__(
-        f"api.charts.evaluation.{chart_name.replace('-', '_')}",
-        fromlist=[BOXPLOT_MAP[chart_name]]
-    )
-    chart_class = getattr(module, BOXPLOT_MAP[chart_name])
-
-    return await generate_chart(request, chart_class, "error_processing")
+@router.post("/boxplot")
+async def generate_boxplot(request: dict):
+    return await generate_chart(request, Boxplot, "error_processing")

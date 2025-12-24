@@ -1,11 +1,14 @@
 # boxplot_schemas.py
-
 from pydantic import BaseModel, Field
-from typing import Dict, List, Optional, Any
-
+from typing import Dict, List, Optional, Literal
 
 class BoxplotConfig(BaseModel):
     title: str
+    variant: Literal[
+        "single",
+        "by_category",
+        "multipanel_columns"
+    ]
 
 
 class BoxplotData(BaseModel):
@@ -14,9 +17,11 @@ class BoxplotData(BaseModel):
     categories: Optional[Dict[str, List[str]]] = None
 
 
-
 class BoxplotRequest(BaseModel):
     project: str
     step: str
     config: BoxplotConfig
     data: BoxplotData
+
+
+

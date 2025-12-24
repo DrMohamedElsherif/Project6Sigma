@@ -12,7 +12,6 @@ from api.charts.constants import FIGURE_SIZE_A4_PORTRAIT, TITLE_FONT_SIZE
 
 class BaseBoxplot:
     request_model = None
-    show_stats_table = False
 
     def __init__(self, data: dict):
         try:
@@ -34,37 +33,18 @@ class BaseBoxplot:
 
     def _create_figure(self, layout="single", *, rows=1, cols=1):
         sns.set_style("whitegrid")
-
         self.figure = plt.figure(figsize=FIGURE_SIZE_A4_PORTRAIT)
 
-        if self.show_stats_table:
-            import matplotlib.gridspec as gridspec
+        gs = gridspec.GridSpec(
+            2, 1,
+            height_ratios=[18, 3],
+            hspace=0.01
+        )
 
-            # Tight vertical coupling: plot + table
-            gs = gridspec.GridSpec(
-                2, 1,
-                height_ratios=[18, 3],  # plot dominates
-                hspace=0.01             # 🔑 key line
-            )
+        plot_gs = gs[0]
+        table_ax = self.figure.add_subplot(gs[1])
+        table_ax.axis("off")
 
-            plot_gs = gs[0]
-            table_ax = self.figure.add_subplot(gs[1])
-            table_ax.axis("off")
-
-        else:
-            import matplotlib.gridspec as gridspec
-            gs = gridspec.GridSpec(1, 1)
-            plot_gs = gs[0]
-
-            # ONLY apply margins when no table
-            self.figure.subplots_adjust(
-                top=0.85,
-                bottom=0.15,
-                left=0.15,
-                right=0.85
-            )
-
-        # axes creation
         if layout == "single":
             axes = [self.figure.add_subplot(plot_gs)]
 
@@ -79,7 +59,6 @@ class BaseBoxplot:
             raise ValueError(f"Unknown layout: {layout}")
 
         return axes
-
 
     # ---------------- HOOKS ----------------
 
@@ -101,44 +80,15 @@ class BaseBoxplot:
             width=0.3
         )
 
-    def postprocess(self, axes):
-        pass
-
     # ---------------- MAIN PROCESS ----------------
 
-    def process(self):
-        df = pd.DataFrame(self.data.values)
-
-        if self.show_stats_table:
-            self.statistics = self.compute_statistics(df)
-
-        axes = self._create_figure(layout="single")
-        ax = axes[0]
-
-        self.draw_boxplot(df, ax)
-
-        ax.set_title(self.config.title, fontsize=TITLE_FONT_SIZE, pad=20)
-        ax.grid(True, alpha=0.3)
-
-        self.postprocess(axes)
-
-        if self.show_stats_table and self.statistics:
-            add_stats_table(
-                figure=self.figure,
-                stats_data=self.statistics,
-                dataset_name=self.data.dataset_name,
-                fontsize=9
-            )
-
+    def finalize(self):
+        add_stats_table(
+            figure=self.figure,
+            stats_data=self.statistics,
+            dataset_name=self.data.dataset_name,
+            fontsize=9
+        )
         plt.close(self.figure)
         return self.figure
-    
-    def get_statistics(self) -> dict | None:
-        """
-        Public API for retrieving computed statistics.
-        API layer depends on this.
-        """
-        return self.statistics
-
-
 
