@@ -1,14 +1,14 @@
 import pytest
 import math
-import os  # MODIFIED: needed for saving figures
+import os  
 from api.charts.evaluation.boxplot import Boxplot
 from api.schemas import BusinessLogicException
 
 # ----------------------------
 # OUTPUT DIRECTORY FOR FIGURES
 # ----------------------------
-OUTPUT_DIR = "static/api_test/eval_charts"  # MODIFIED
-os.makedirs(OUTPUT_DIR, exist_ok=True)       # MODIFIED
+OUTPUT_DIR = "static/api_test/eval_charts"  
+os.makedirs(OUTPUT_DIR, exist_ok=True)       
 
 # ----------------------------
 # HARD-CODED DATASETS PER VARIANT
@@ -96,9 +96,6 @@ BY_CATEGORY_DATASET = {
     },
 }
 
-
-
-
 MULTIPANEL_COLUMNS_DATASET = {
     "dataset_name": "Machine F",
     "values": {
@@ -120,11 +117,6 @@ MULTIPANEL_COLUMNS_DATASET = {
         ]
     }
 }
-
-
-# ----------------------------
-# TEST FACTORY
-# ----------------------------
 
 VARIANT_MAP = {
     "single": SINGLE_DATASETS,
@@ -294,10 +286,5 @@ def test_unknown_variant_raises_error():
     exc = exc_info.value
     assert exc.error_code == "error_validation"
     assert "does_not_exist" in exc.details["message"]
-
-
-
-
-
 
 

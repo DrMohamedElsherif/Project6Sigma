@@ -26,6 +26,7 @@ def calculate_descriptive_stats(data: pd.Series, column_name: str = "") -> Dict[
         clean_data = data.dropna()
         n = len(clean_data)
 
+        # Validate dataset size
         if n == 0:
             raise BusinessLogicException(
                 error_code="error_validation",
@@ -41,7 +42,7 @@ def calculate_descriptive_stats(data: pd.Series, column_name: str = "") -> Dict[
                     "message": "At least two valid data points are required to calculate statistics"
                 }
             )
-
+        # Compute basic statistics       
         average = np.mean(clean_data)
         median = np.median(clean_data)
         minimum = np.min(clean_data)
@@ -59,6 +60,7 @@ def calculate_descriptive_stats(data: pd.Series, column_name: str = "") -> Dict[
             scale=std_dev/np.sqrt(n)
         )
 
+        # Return all metrics in a dictionary
         return {
             "column_name": column_name,
             "n": n,
@@ -79,12 +81,14 @@ def calculate_descriptive_stats(data: pd.Series, column_name: str = "") -> Dict[
     except BusinessLogicException:
         raise
     except ValueError as e:
+        # Non-numeric or invalid data
         raise BusinessLogicException(
             error_code="error_validation",
             field=column_name or "data",
             details={"message": f"Invalid numeric data: {str(e)}"}
         )
     except Exception as e:
+        # Catch-all for unexpected errors
         raise BusinessLogicException(
             error_code="error_calculation",
             field="statistics",
@@ -99,13 +103,25 @@ def add_stats_table(
     fontsize: int = 9
 ) -> None:
     """
-    Adds a column-oriented statistics table to a Matplotlib figure.
-    Each dataset column is rendered side-by-side.
-    """
+    Adds a statistics table to a Matplotlib figure.
 
+    The table is column-oriented, with each dataset column displayed side-by-side.
+    Common metrics such as n, average, median, range, std deviation, quartiles, IQR,
+    and 95% confidence interval are included.
+
+    Args:
+        figure (matplotlib.figure.Figure): Figure to add the table to.
+        stats_data (dict): Dictionary with statistics per column (output of calculate_descriptive_stats).
+        dataset_name (str): Optional name of the dataset for labeling.
+        position (tuple): (x, y) coordinates for the table's lower-left corner in figure coordinates.
+        fontsize (int): Font size for the table text.
+
+    Returns:
+        None: Modifies the figure in-place.
+    """
     x_pos, y_pos = position
 
-    # Define rows as (metrics) and their labels
+    # Define metrics to include in the table
     metrics = [
         ("n", "n"),
         ("average", "Average"),
@@ -120,7 +136,7 @@ def add_stats_table(
 
     column_names = list(stats_data.keys())
 
-    # Build header
+    # Build table header and separator lines
     header = ["Metric"] + column_names
     table_lines = [
         f"Dataset: {dataset_name}",
@@ -129,7 +145,7 @@ def add_stats_table(
         "-" * (14 * (len(column_names) + 1)),
     ]
 
-    # Build rows
+    # Build table rows
     for key, label in metrics:
         row = [f"{label:<12}"]
         for col in column_names:
@@ -140,7 +156,7 @@ def add_stats_table(
                 row.append(f"{str(value):<12}")
         table_lines.append("  ".join(row))
 
-    # Render table
+    # Render the table as text on the figure
     figure.text(
         x_pos,
         y_pos,
