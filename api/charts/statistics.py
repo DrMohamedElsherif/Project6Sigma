@@ -165,7 +165,7 @@ def add_stats_table(
         fontfamily="monospace",
         verticalalignment="bottom",
         transform=figure.transFigure,
-        bbox=dict(boxstyle="round", facecolor="wheat", alpha=0.85)
+        bbox=dict(boxstyle="round", facecolor="white", alpha=0.85)
     )
     
     
