@@ -1,0 +1,4 @@
+# file: /home/l2s-team/Sites/sixapi/api/correlation/correlation.py
+# hypothesis_version: 6.151.9
+
+[1e-10, 1e-06, 0.05, 0.08, 0.15, 0.19, 0.2, 0.3, 0.5, 0.6, 0.7, 0.9, 100, '#a1d111', '--', 'Correlation Analysis', 'Dataset', 'X Variable', 'Y Variable', 'all', 'alpha', 'analyze', 'best', 'config', 'correlation_error', 'data', 'dataset_name', 'error_validation', 'has_outliers', 'is_significant', 'linear_relationship', 'message', 'normal_distributed', 'off', 'p < 0.05', 'p ≥ 0.05', 'pattern_type', 'process', 'project', 'quick_analysis', 'sample_size', 'show_regression', 'step', 'whitegrid', 'x', 'x_has_outliers', 'x_label', 'x_normal', 'y_has_outliers', 'y_label', 'y_normal']

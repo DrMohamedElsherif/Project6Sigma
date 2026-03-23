@@ -1,0 +1,4 @@
+# file: /home/l2s-team/Sites/sixapi/api/correlation/schemas.py
+# hypothesis_version: 6.151.9
+
+[0.05, 'Dataset', 'Plot title', 'X Variable', 'X-axis values', 'Y Variable', 'Y-axis values', 'auto', 'kendall', 'pearson', 'spearman', 'x_values', 'y_values']

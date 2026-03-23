@@ -1,0 +1,4 @@
+# file: /home/l2s-team/Sites/sixapi/api/charts/constants.py
+# hypothesis_version: 6.151.9
+
+[8.27, 11.69, 100, '#7EA6D7', '#7c7c7c', '#95b92a', '#e7e6e6', '*', '-', '--', '-.', ':', '<', '>', 'C0', 'C1', 'C2', 'C3', 'C4', 'C5', 'C6', 'C7', 'C8', 'C9', 'D', 'P', 'X', '^', 'black', 'o', 's', 'v']

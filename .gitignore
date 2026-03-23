@@ -1,31 +1,69 @@
-## project
-static/*
+# .gitignore for SixAPI project
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
 env/
-.env*
-.venv/
+venv/
 lean2sigma/
+.venv/
+*.egg-info/
+dist/
+build/
 
-## OS X
+# Virtual Environment
+lean2sigma/
+lib64/
+bin/
+include/
+share/
+etc/
+pyvenv.cfg
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
 .DS_Store
-.AppleDouble
-.LSOverride
-Icon
-._*
-.Spotlight-V100
-.Trashes
-.vscode
 
-## Windows
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+.mypy_cache/
+
+# Logs and databases
+*.log
+*.sql
+*.sqlite
+
+# Uploads and temporary files
+api/uploads/
+static/tmp/
+static/api_test/
+static/correlation-test/
+
+# Environment variables
+.env
+.env.local
+
+# Coverage reports
+htmlcov/
+.coverage
+.coverage.*
+
+# Jupyter Notebook
+.ipynb_checkpoints/
+
+# OS files
 Thumbs.db
-ehthumbs.db
-Desktop.ini
-$RECYCLE.BIN/
 
-## python
-__pycache__
-
-## ide
-.idea
+## Draft .py files to be ignored or deleted 
 PLAY.py
 PLAYEXTENSION.py
 fire.py

@@ -1,0 +1,4 @@
+# file: /home/l2s-team/Sites/sixapi/api/correlation/__init__.py
+# hypothesis_version: 6.151.9
+
+['*.py', '__init__.py']
