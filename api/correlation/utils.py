@@ -20,7 +20,7 @@ def check_normality(data: np.ndarray, alpha: float = 0.05) -> bool:
         True if data appears normally distributed
     """
     if len(data) < 3 or len(data) > 5000:  # Shapiro-Wilk limitations
-        return False
+        return None
     
     statistic, p_value = stats.shapiro(data)
     return bool(p_value > alpha)  # Convert to Python bool
@@ -107,6 +107,18 @@ def detect_outliers(data: np.ndarray, threshold: float = 3) -> bool:
     outlier_count = np.mean(outliers)
     return bool(outlier_count > 0.05)  # Only flag if >5% are outliers
     # return bool(np.any(outliers))
+
+
+def has_many_ties(arr: np.ndarray, threshold: float = 0.2) -> bool:   #  Threshold 2% Less sensitive → avoids over-triggering Kendall
+    _, counts = np.unique(arr, return_counts=True)
+    
+    # proportion of observations involved in ties
+    tied_obs = np.sum(counts[counts > 1])
+    
+    # proportion of tied *groups* (structure signal)
+    tied_groups = np.sum(counts > 1) / len(counts)
+    
+    return (tied_obs / len(arr) > threshold) or (tied_groups > 0.3)
 
 
 def interpret_strength(coefficient: float) -> str:
@@ -238,6 +250,14 @@ def prepare_stats_data(method: CorrelationMethod, coefficient: float,
     Returns:
         Dictionary with all correlation statistics
     """
+    normality = assumptions.get('normal_distributed')
+    if normality is True:
+        normality_display = "✓"
+    elif normality is False:
+        normality_display = "✗"
+    else:
+        normality_display = "?"
+        
     return {
         "method_used": method.value.capitalize(),
         "sample_size": n,
@@ -247,7 +267,8 @@ def prepare_stats_data(method: CorrelationMethod, coefficient: float,
         "strength_interpretation": interpret_strength(coefficient),
         "r_squared": coefficient ** 2 if method == CorrelationMethod.PEARSON else None,
         "effect_size": calculate_effect_size(coefficient),
-        "normality_assumption": "✓" if assumptions.get('normal_distributed', False) else "✗",
+        # "normality_assumption": "✓" if assumptions.get('normal_distributed', False) else "✗",
+        "normality_assumption": normality_display,
         "linearity_assumption": "✓" if assumptions.get('linear_relationship', False) else "✗",
         "outliers_detected": "✓" if assumptions.get('has_outliers', False) else "✗",
         "pattern_detected": assumptions.get('pattern_type', 'unknown').capitalize()

@@ -38,12 +38,12 @@ class TestCheckNormality:
     def test_sample_size_too_small_returns_false(self):
         """Test that sample size < 3 returns False"""
         data = np.array([1, 2])
-        assert check_normality(data) is False
+        assert check_normality(data) is None
     
     def test_sample_size_too_large_returns_false(self):
         """Test that sample size > 5000 returns False (Shapiro-Wilk limitation)"""
         data = np.random.normal(0, 1, 5001)
-        assert check_normality(data) is False
+        assert check_normality(data) is None
     
     def test_custom_alpha(self):
         """Test with custom alpha threshold"""

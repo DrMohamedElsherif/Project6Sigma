@@ -265,15 +265,40 @@ class TestSelectMethod:
     #     method = analysis.select_method(x, y)
     #     assert method in [CorrelationMethod.KENDALL]
     
-    def test_small_sample_linear_uses_kendall(self, analysis):
-        """Very small sample (n=5) with linear relationship should use Kendall"""
+    # def test_small_sample_linear_uses_kendall(self, analysis):
+    #     """Very small sample (n=5) with linear relationship should use Kendall"""
+    #     x = np.array([1, 2, 3, 4, 5])
+    #     y = 2 * x + 1
+        
+    #     method = analysis.select_method(x, y)
+        
+    #     # Kendall is more robust for very small samples
+    #     assert method == CorrelationMethod.KENDALL
+    def test_small_sample_linear_uses_pearson(self, analysis):
+        """Small sample with clean linear relationship should use Pearson"""
         x = np.array([1, 2, 3, 4, 5])
         y = 2 * x + 1
         
         method = analysis.select_method(x, y)
+        #SSmall sample but clean linear data → Pearson
+        assert method == CorrelationMethod.PEARSON
         
-        # Kendall is more robust for very small samples
+    def test_small_sample_nonlinear_uses_kendall(self, analysis):
+        x = np.array([1, 2, 3, 4, 5])
+        y = x ** 2
+        
+        method = analysis.select_method(x, y)
+        
         assert method == CorrelationMethod.KENDALL
+        
+    def test_small_sample_with_outliers_uses_kendall(self, analysis):
+        x = np.array([1, 2, 3, 4, 5])
+        y = np.array([2, 4, 6, 8, 100])  # outlier
+        
+        method = analysis.select_method(x, y)
+        
+        assert method == CorrelationMethod.KENDALL
+    
 
     def test_kendall_for_many_ties(self, analysis):
         x = np.array([1, 1, 1, 2, 2, 2, 3, 3, 3])
@@ -407,19 +432,26 @@ class TestProcessMethod:
         
         assert isinstance(figure, plt.Figure)
         assert analysis.results is not None
-        assert analysis.results.method_used == CorrelationMethod.KENDALL
+        # assert analysis.results.method_used == CorrelationMethod.KENDALL
+        assert analysis.results.method_used == CorrelationMethod.PEARSON
         assert analysis.results.coefficient == pytest.approx(1.0, abs=1e-10)
     
     def test_process_stores_results(self, analysis):
         """Test that process stores results correctly"""
         figure = analysis.process()
         
-        assert analysis.results.method_used == CorrelationMethod.KENDALL
+        # assert analysis.results.method_used == CorrelationMethod.KENDALL
+        assert analysis.results.method_used == CorrelationMethod.PEARSON
         assert analysis.results.coefficient == pytest.approx(1.0, abs=1e-10)
         assert analysis.results.p_value <= 0.05
         assert analysis.results.is_significant is True
         assert analysis.results.sample_size == 5
-        assert analysis.results.r_squared is None  # R-squared is not calculated for Kendall
+        # assert analysis.results.r_squared is None  # R-squared is not calculated for Kendall
+        # New (correct for Pearson):
+        if analysis.results.method_used == CorrelationMethod.PEARSON:
+            assert analysis.results.r_squared == pytest.approx(analysis.results.coefficient ** 2, abs=1e-10)
+        else:
+            assert analysis.results.r_squared is None
     
     @patch('api.correlation.correlation.add_regression_line')
     def test_regression_line_called_when_configured(self, mock_add_regression_line, analysis):

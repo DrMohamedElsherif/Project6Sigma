@@ -21,13 +21,14 @@ from api.correlation.utils import (
     add_regression_line,           
     prepare_stats_data,             
     get_results_summary,            
-    export_data                    
+    export_data  
 )
 from api.charts.statistics import (
     StatisticsCalculator,
     add_correlation_stats_table,
     StatsTableType
 )
+from api.correlation.utils import has_many_ties
 
 
 class CorrelationAnalysis:
@@ -101,6 +102,21 @@ class CorrelationAnalysis:
                 field="data",
                 details={"message": "At least 3 valid data points recommended for meaningful correlation analysis"}
             )
+            
+        # ✅ NEW: Constant variance check
+        if np.std(x_clean) == 0:
+            raise BusinessLogicException(
+                error_code="error_validation",
+                field="x_values",
+                details={"message": "X variable has zero variance (all values are identical). Correlation is undefined."}
+            )
+
+        if np.std(y_clean) == 0:
+            raise BusinessLogicException(
+                error_code="error_validation",
+                field="y_values",
+                details={"message": "Y variable has zero variance (all values are identical). Correlation is undefined."}
+            )
         
         # Store cleaned data for later use
         self.clean_x = x_clean
@@ -123,7 +139,11 @@ class CorrelationAnalysis:
         # Normality check
         is_x_normal = check_normality(x)
         is_y_normal = check_normality(y)
-        is_normal = is_x_normal and is_y_normal
+        # is_normal = is_x_normal and is_y_normal
+        if is_x_normal is None or is_y_normal is None:
+            is_normal = None
+        else:
+            is_normal = is_x_normal and is_y_normal
         
         # Linearity check - compare Pearson and Spearman
         is_linear = check_linearity(x, y)
@@ -138,9 +158,14 @@ class CorrelationAnalysis:
         
         return {
             # Normality (diagnostic only)
-            'normal_distributed': is_normal,
-            'x_normal': is_x_normal,
-            'y_normal': is_y_normal,
+            # 'normal_distributed': is_normal,
+            'normal_distributed': (
+                is_normal if is_normal is not None else "unknown"
+            ),
+            'x_normal': is_x_normal if is_x_normal is not None else "unknown",
+            'y_normal': is_y_normal if is_y_normal is not None else "unknown",
+            # 'x_normal': is_x_normal,
+            # 'y_normal': is_y_normal,
 
             # Core assumptions
             'linear_relationship': is_linear,
@@ -154,67 +179,6 @@ class CorrelationAnalysis:
             # Metadata
             'sample_size': len(x)
         }
-    
-    # def select_method(self, x: np.ndarray, y: np.ndarray) -> CorrelationMethod:
-    #     """
-    #     Statistically grounded automatic selection of correlation method.
-
-    #     Decision logic:
-    #     1. Kendall → many ties / ordinal data
-    #     2. Spearman → monotonic non-linear OR outliers present
-    #     3. Pearson → linear, clean data
-    #     """
-
-    #     # 1. Manual override
-    #     if self.config.method != CorrelationMethod.AUTO:
-    #         return self.config.method
-
-    #     n = len(x)
-
-    #     # 2. Assumptions
-    #     assumptions = self.check_assumptions(x, y)
-
-    #     has_outliers = assumptions.get("has_outliers", False)
-    #     is_linear = assumptions.get("linear_relationship", False)
-
-    #     # 3. Tie detection (important for Kendall)
-    #     unique_ratio_x = len(np.unique(x)) / n
-    #     unique_ratio_y = len(np.unique(y)) / n
-
-    #     many_ties = (unique_ratio_x < 0.7) or (unique_ratio_y < 0.7)
-
-    #     # 4. Correlations (for monotonicity check)
-    #     r, _ = stats.pearsonr(x, y)
-    #     rho, _ = stats.spearmanr(x, y)
-
-    #     # 5. Detect monotonic but non-linear relationship
-    #     monotonic = abs(rho) > 0.7
-    #     nonlinear = not is_linear
-
-    #     nonlinear_monotonic = monotonic and nonlinear
-
-    #     # =========================
-    #     # DECISION TREE
-    #     # =========================
-
-    #     # 🔴 1. Many ties → Kendall (ordinal data)
-    #     if many_ties:
-    #         return CorrelationMethod.KENDALL
-
-    #     # 🟡 2. Nonlinear monotonic → Spearman
-    #     if nonlinear_monotonic:
-    #         return CorrelationMethod.SPEARMAN
-
-    #     # 🟡 3. Outliers → Spearman (robust default)
-    #     if has_outliers:
-    #         return CorrelationMethod.SPEARMAN
-
-    #     # 🟢 4. Linear & clean → Pearson
-    #     if is_linear:
-    #         return CorrelationMethod.PEARSON
-
-    #     # 🟡 5. Fallback → Spearman (safe default)
-    #     return CorrelationMethod.SPEARMAN
     
     def select_method(self, x: np.ndarray, y: np.ndarray) -> CorrelationMethod:
         """
@@ -239,10 +203,11 @@ class CorrelationAnalysis:
         is_linear = assumptions.get("linear_relationship", False)
         
         # 3. Tie detection (important for Kendall)
-        unique_ratio_x = len(np.unique(x)) / n
-        unique_ratio_y = len(np.unique(y)) / n
-        
-        many_ties = (unique_ratio_x < 0.7) or (unique_ratio_y < 0.7)
+        # unique_ratio_x = len(np.unique(x)) / n
+        # unique_ratio_y = len(np.unique(y)) / n
+        # many_ties = (unique_ratio_x < 0.7) or (unique_ratio_y < 0.7)
+
+        many_ties = has_many_ties(x) or has_many_ties(y)
         
         # 4. Small sample detection (Kendall is robust for small n)
         is_small_sample = n < 30 # Common threshold for small sample size in correlation analysis        
@@ -264,7 +229,11 @@ class CorrelationAnalysis:
             return CorrelationMethod.KENDALL
         
         # 🟠 2. Small sample → Kendall (robust for small n)
+        # if is_small_sample:
+        #     return CorrelationMethod.KENDALL
         if is_small_sample:
+            if is_linear and not has_outliers:
+                return CorrelationMethod.PEARSON
             return CorrelationMethod.KENDALL
 
         
