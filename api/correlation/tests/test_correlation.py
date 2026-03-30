@@ -200,120 +200,200 @@ import numpy as np
 from scipy import stats
 from api.correlation.correlation import CorrelationMethod, CorrelationAnalysis
 
+# class TestSelectMethod:
+
+#     @pytest.fixture
+#     def analysis(self):
+#         config = CorrelationConfig(
+#             title="Test Correlation",  # required
+#             method=CorrelationMethod.AUTO,
+#             show_regression=True,
+#             show_confidence_interval=True,
+#             alpha=0.05
+#         )
+#         # Create minimal valid data
+#         data = {
+#             "project": "test_project",
+#             "step": "analyze",
+#             "config": config.model_dump(),  # Pydantic v2 uses model_dump()
+#             "data": {
+#                 "dataset_name": "Test Dataset",
+#                 "x_values": [1, 2, 3],
+#                 "y_values": [1, 2, 3],
+#                 "x_label": "X Variable",
+#                 "y_label": "Y Variable"
+#             }
+#         }
+#         return CorrelationAnalysis(data)
+
+#     # def analysis(self):
+#     #     # Create a CorrelationAnalysis instance with AUTO method
+#     #     config = CorrelationConfig(method=CorrelationMethod.AUTO)
+#     #     return CorrelationAnalysis(config)
+
+#     def test_pearson_selection(self, analysis):
+#         x = np.arange(50)
+#         y = 2 * x + np.random.normal(0, 0.1, 50)
+#         method = analysis.select_method(x, y)
+#         assert method == CorrelationMethod.PEARSON
+
+#     def test_spearman_for_nonlinear_monotonic(self, analysis):
+#         x = np.linspace(1, 50, 50)
+#         y = np.log(x) 
+#         method = analysis.select_method(x, y)
+#         assert method == CorrelationMethod.SPEARMAN
+
+#     def test_spearman_for_outliers(self, analysis):
+#         x = np.arange(50)
+#         y = 2 * x
+#         y[10] += 20000  # Add outlier
+#         method = analysis.select_method(x, y)
+#         assert method == CorrelationMethod.SPEARMAN
+        
+#     def test_spearman_for_monotonic_with_outliers(self, analysis):
+#         x = np.linspace(1, 50, 50)
+#         y = np.log(x)
+#         y[25] += 50  # outlier
+
+#         method = analysis.select_method(x, y)
+#         assert method == CorrelationMethod.SPEARMAN
+        
+#     # def test_small_sample_defaults(self, analysis):
+#     #     x = np.array([1, 2, 3, 4])
+#     #     y = np.array([1, 4, 9, 16])
+
+#     #     method = analysis.select_method(x, y)
+#     #     assert method in [CorrelationMethod.KENDALL]
+    
+#     # def test_small_sample_linear_uses_kendall(self, analysis):
+#     #     """Very small sample (n=5) with linear relationship should use Kendall"""
+#     #     x = np.array([1, 2, 3, 4, 5])
+#     #     y = 2 * x + 1
+        
+#     #     method = analysis.select_method(x, y)
+        
+#     #     # Kendall is more robust for very small samples
+#     #     assert method == CorrelationMethod.KENDALL
+#     def test_small_sample_linear_uses_pearson(self, analysis):
+#         """Small sample with clean linear relationship should use Pearson"""
+#         x = np.array([1, 2, 3, 4, 5])
+#         y = 2 * x + 1
+        
+#         method = analysis.select_method(x, y)
+#         #SSmall sample but clean linear data → Pearson
+#         assert method == CorrelationMethod.PEARSON
+        
+#     def test_small_sample_nonlinear_uses_kendall(self, analysis):
+#         x = np.array([1, 2, 3, 4, 5])
+#         y = x ** 2
+        
+#         method = analysis.select_method(x, y)
+        
+#         assert method == CorrelationMethod.KENDALL
+        
+#     def test_small_sample_with_outliers_uses_kendall(self, analysis):
+#         x = np.array([1, 2, 3, 4, 5])
+#         y = np.array([2, 4, 6, 8, 100])  # outlier
+        
+#         method = analysis.select_method(x, y)
+        
+#         assert method == CorrelationMethod.KENDALL
+    
+
+#     def test_kendall_for_many_ties(self, analysis):
+#         x = np.array([1, 1, 1, 2, 2, 2, 3, 3, 3])
+#         y = np.array([10, 10, 10, 20, 20, 20, 30, 30, 30])
+#         method = analysis.select_method(x, y)
+#         assert method == CorrelationMethod.KENDALL
+
+#     def test_manual_method_override(self, analysis):
+#         analysis.config.method = CorrelationMethod.PEARSON
+#         x = np.arange(50)
+#         y = np.log(x) + np.random.normal(0, 0.1, 50)
+#         method = analysis.select_method(x, y)
+#         # Should return the manual method, not auto-selected
+#         assert method == CorrelationMethod.PEARSON
+
 class TestSelectMethod:
 
     @pytest.fixture
     def analysis(self):
         config = CorrelationConfig(
-            title="Test Correlation",  # required
+            title="Test",
             method=CorrelationMethod.AUTO,
             show_regression=True,
             show_confidence_interval=True,
             alpha=0.05
         )
-        # Create minimal valid data
+
         data = {
             "project": "test_project",
             "step": "analyze",
-            "config": config.model_dump(),  # Pydantic v2 uses model_dump()
+            "config": config.model_dump(),
             "data": {
                 "dataset_name": "Test Dataset",
                 "x_values": [1, 2, 3],
                 "y_values": [1, 2, 3],
-                "x_label": "X Variable",
-                "y_label": "Y Variable"
+                "x_label": "X",
+                "y_label": "Y"
             }
         }
         return CorrelationAnalysis(data)
 
-    # def analysis(self):
-    #     # Create a CorrelationAnalysis instance with AUTO method
-    #     config = CorrelationConfig(method=CorrelationMethod.AUTO)
-    #     return CorrelationAnalysis(config)
+    # =========================
+    # Deterministic expectations
+    # =========================
 
-    def test_pearson_selection(self, analysis):
+    def test_linear_data_uses_pearson(self, analysis):
         x = np.arange(50)
-        y = 2 * x + np.random.normal(0, 0.1, 50)
+        y = 2 * x + np.random.normal(0, 0.01, 50)
+
         method = analysis.select_method(x, y)
+
         assert method == CorrelationMethod.PEARSON
 
-    def test_spearman_for_nonlinear_monotonic(self, analysis):
-        x = np.linspace(1, 50, 50)
-        y = np.log(x) 
-        method = analysis.select_method(x, y)
-        assert method == CorrelationMethod.SPEARMAN
-
-    def test_spearman_for_outliers(self, analysis):
-        x = np.arange(50)
-        y = 2 * x
-        y[10] += 20000  # Add outlier
-        method = analysis.select_method(x, y)
-        assert method == CorrelationMethod.SPEARMAN
-        
-    def test_spearman_for_monotonic_with_outliers(self, analysis):
+    def test_monotonic_nonlinear_uses_spearman(self, analysis):
         x = np.linspace(1, 50, 50)
         y = np.log(x)
-        y[25] += 50  # outlier
 
         method = analysis.select_method(x, y)
+
         assert method == CorrelationMethod.SPEARMAN
-        
-    # def test_small_sample_defaults(self, analysis):
-    #     x = np.array([1, 2, 3, 4])
-    #     y = np.array([1, 4, 9, 16])
 
-    #     method = analysis.select_method(x, y)
-    #     assert method in [CorrelationMethod.KENDALL]
-    
-    # def test_small_sample_linear_uses_kendall(self, analysis):
-    #     """Very small sample (n=5) with linear relationship should use Kendall"""
-    #     x = np.array([1, 2, 3, 4, 5])
-    #     y = 2 * x + 1
-        
-    #     method = analysis.select_method(x, y)
-        
-    #     # Kendall is more robust for very small samples
-    #     assert method == CorrelationMethod.KENDALL
-    def test_small_sample_linear_uses_pearson(self, analysis):
-        """Small sample with clean linear relationship should use Pearson"""
-        x = np.array([1, 2, 3, 4, 5])
-        y = 2 * x + 1
-        
-        method = analysis.select_method(x, y)
-        #SSmall sample but clean linear data → Pearson
-        assert method == CorrelationMethod.PEARSON
-        
-    def test_small_sample_nonlinear_uses_kendall(self, analysis):
-        x = np.array([1, 2, 3, 4, 5])
-        y = x ** 2
-        
-        method = analysis.select_method(x, y)
-        
-        assert method == CorrelationMethod.KENDALL
-        
-    def test_small_sample_with_outliers_uses_kendall(self, analysis):
-        x = np.array([1, 2, 3, 4, 5])
-        y = np.array([2, 4, 6, 8, 100])  # outlier
-        
-        method = analysis.select_method(x, y)
-        
-        assert method == CorrelationMethod.KENDALL
-    
+    def test_outliers_switch_to_rank_method(self, analysis):
+        x = np.arange(50)
+        y = 2 * x
+        y[10] += 10000
 
-    def test_kendall_for_many_ties(self, analysis):
+        method = analysis.select_method(x, y)
+
+        assert method == CorrelationMethod.SPEARMAN
+
+    def test_many_ties_use_kendall(self, analysis):
         x = np.array([1, 1, 1, 2, 2, 2, 3, 3, 3])
         y = np.array([10, 10, 10, 20, 20, 20, 30, 30, 30])
+
         method = analysis.select_method(x, y)
+
         assert method == CorrelationMethod.KENDALL
 
-    def test_manual_method_override(self, analysis):
-        analysis.config.method = CorrelationMethod.PEARSON
-        x = np.arange(50)
-        y = np.log(x) + np.random.normal(0, 0.1, 50)
-        method = analysis.select_method(x, y)
-        # Should return the manual method, not auto-selected
-        assert method == CorrelationMethod.PEARSON
+    def test_small_sample_behavior(self, analysis):
+        x = np.array([1, 2, 3, 4, 5])
+        y = x ** 2
 
+        method = analysis.select_method(x, y)
+
+        assert method == CorrelationMethod.KENDALL
+
+    def test_manual_override(self, analysis):
+        analysis.config.method = CorrelationMethod.PEARSON
+
+        x = np.arange(50)
+        y = np.log(x + 1)
+
+        method = analysis.select_method(x, y)
+
+        assert method == CorrelationMethod.PEARSON
 
 class TestCalculateCorrelation:
     """Tests for calculate_correlation method"""

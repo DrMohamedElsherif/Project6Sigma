@@ -18,7 +18,8 @@ from api.correlation.utils import (
     interpret_strength,
     calculate_effect_size,
     detect_pattern_type,
-    add_regression_line,           
+    add_regression_line,
+    correlation_confidence_interval,           
     prepare_stats_data,             
     get_results_summary,            
     export_data  
@@ -29,7 +30,7 @@ from api.charts.statistics import (
     StatsTableType
 )
 from api.correlation.utils import has_many_ties
-
+import joblib
 
 class CorrelationAnalysis:
     """
@@ -180,7 +181,7 @@ class CorrelationAnalysis:
             'sample_size': len(x)
         }
     
-    def select_method(self, x: np.ndarray, y: np.ndarray) -> CorrelationMethod:
+    def select_method(self, x: np.ndarray, y: np.ndarray, rho_threshold: float = 0.7) -> CorrelationMethod:
         """
         Statistically grounded automatic selection of correlation method.
         
@@ -212,11 +213,18 @@ class CorrelationAnalysis:
         # 4. Small sample detection (Kendall is robust for small n)
         is_small_sample = n < 30 # Common threshold for small sample size in correlation analysis        
         # 5. Correlations (for monotonicity check)
-        r, _ = stats.pearsonr(x, y)
-        rho, _ = stats.spearmanr(x, y)
+        # r, _ = stats.pearsonr(x, y)
+        try:
+            r, _ = stats.pearsonr(x, y)
+        except Exception:
+            r = 0
+        try:
+            rho, _ = stats.spearmanr(x, y)
+        except Exception:
+            rho = 0
         
         # 6. Detect monotonic but non-linear relationship
-        monotonic = abs(rho) > 0.7
+        monotonic = abs(rho) > rho_threshold
         nonlinear = not is_linear
         nonlinear_monotonic = monotonic and nonlinear
         
@@ -242,7 +250,7 @@ class CorrelationAnalysis:
             return CorrelationMethod.SPEARMAN
         
         # 🟡 4. Outliers → Spearman (robust default)
-        if has_outliers:
+        if has_outliers and not is_linear:
             return CorrelationMethod.SPEARMAN
         
         # 🟢 5. Linear & clean & sufficient sample → Pearson
@@ -251,7 +259,7 @@ class CorrelationAnalysis:
         
         # 🟡 6. Fallback → Spearman (safe default)
         return CorrelationMethod.SPEARMAN
-    
+
     def calculate_correlation(self, x: np.ndarray, y: np.ndarray, 
                              method: CorrelationMethod) -> Tuple[float, float]:
         """
@@ -327,12 +335,12 @@ class CorrelationAnalysis:
         significance = "p < 0.05" if p_value < self.config.alpha else "p ≥ 0.05"
         
         title_lines = [
-            f"{self.config.title}",
-            f"Method: {method.value.capitalize()} | r = {coefficient:.3f} (p = {p_value:.4f})",
-            f"{strength} | {significance}",
-            f"Pattern: {assumptions['pattern_type'].capitalize()}"
+            #f"{self.config.title}",
+            f"{method.value.capitalize()} | r = {coefficient:.3f} (p = {p_value:.7f})"
+            #f"{strength} | {significance}",
+            #f"Pattern: {assumptions['pattern_type'].capitalize()}"
         ]
-        ax.set_title('\n'.join(title_lines), fontsize=TITLE_FONT_SIZE, pad=20)
+        ax.set_title('\n'.join(title_lines), fontsize=12, pad=20)
         
         # Labels and grid
         ax.set_xlabel(self.data.x_label or 'X Variable', fontsize=11)
@@ -388,6 +396,7 @@ class CorrelationAnalysis:
             
             # 3. Select method
             method = self.select_method(x, y)
+      
             
             # 4. Calculate correlation
             coefficient, p_value = self.calculate_correlation(x, y, method)

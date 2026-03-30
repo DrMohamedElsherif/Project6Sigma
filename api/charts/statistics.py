@@ -53,6 +53,7 @@ class StatisticsCalculator:
             StatsMetric("method_used", "Method", "{}"),
             StatsMetric("sample_size", "n", "{}"),
             StatsMetric("coefficient", "Coefficient (r)", "{:.4f}"),
+            StatsMetric("correlation_CI", "95% CI", "{}", condition=None),
             StatsMetric("p_value", "p-value", "{:.4f}"),
             StatsMetric("is_significant", "Significant (α=0.05)", "{}"),
             StatsMetric("strength_interpretation", "Interpretation", "{}"),

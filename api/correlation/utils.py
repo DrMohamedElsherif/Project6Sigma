@@ -207,39 +207,71 @@ def detect_pattern_type(x: np.ndarray, y: np.ndarray) -> str:
 def add_regression_line(ax: plt.Axes, x: np.ndarray, y: np.ndarray,
                        show_confidence_interval: bool = True) -> None:
     """
-    Add regression line with confidence interval to plot.
-    
-    Args:
-        ax: Matplotlib axes object
-        x: X values
-        y: Y values
-        show_confidence_interval: Whether to show confidence interval
+    Add regression line with TRUE 95% confidence interval (mean prediction).
     """
-    # Calculate regression
+
+    n = len(x)
+
+    # Linear regression
     slope, intercept, r_value, p_value, std_err = stats.linregress(x, y)
-    
-    # Create regression line
+
+    x_mean = np.mean(x)
+    y_pred = slope * x + intercept
+
+    # Line for plotting
     x_line = np.linspace(min(x), max(x), 100)
     y_line = slope * x_line + intercept
-    
-    # Plot regression line
-    ax.plot(x_line, y_line, color='red', linewidth=2,
-            label=f'Regression (y = {slope:.2f}x + {intercept:.2f})')
-    
-    # Add confidence interval if configured
-    if show_confidence_interval:
-        # Calculate prediction interval (95% confidence)
-        y_pred = slope * x + intercept
-        residuals = y - y_pred
-        std_residuals = np.std(residuals, ddof=2)  # Unbiased estimator
-        
-        # 95% confidence interval for prediction
-        ci_upper = y_line + 1.96 * std_residuals
-        ci_lower = y_line - 1.96 * std_residuals
-        
-        ax.fill_between(x_line, ci_lower, ci_upper, color='red', alpha=0.2,
-                        label='95% Prediction Interval')
 
+    # Plot regression line
+    ax.plot(
+        x_line, y_line,
+        color='red',
+        linewidth=2,
+        label=f'Regression (y = {slope:.2f}x + {intercept:.2f})'
+    )
+
+    if show_confidence_interval:
+        # Residual standard error
+        residuals = y - y_pred
+        s_err = np.sqrt(np.sum(residuals**2) / (n - 2))
+
+        # t critical value (95%)
+        t_val = stats.t.ppf(0.975, df=n - 2)
+
+        # Confidence interval
+        ci = (
+            t_val * s_err *
+            np.sqrt(
+                1/n +
+                (x_line - x_mean)**2 / np.sum((x - x_mean)**2)
+            )
+        )
+
+        ci_upper = y_line + ci
+        ci_lower = y_line - ci
+
+        ax.fill_between(
+            x_line, ci_lower, ci_upper,
+            color='red',
+            alpha=0.2,
+            label='95% Confidence Interval'
+        )
+        
+def correlation_confidence_interval(r: float, n: int, alpha: float = 0.05) -> Tuple[float, float]:
+    """
+    Calculate 95% confidence interval for correlation coefficient using Fisher Z.
+    """
+    if n < 4:
+        return None, None
+
+    z = np.arctanh(r)
+    se = 1 / np.sqrt(n - 3)
+    z_crit = stats.norm.ppf(1 - alpha / 2)
+
+    z_lower = z - z_crit * se
+    z_upper = z + z_crit * se
+
+    return float(np.tanh(z_lower)), float(np.tanh(z_upper))
 
 def prepare_stats_data(method: CorrelationMethod, coefficient: float,
                       p_value: float, n: int, assumptions: Dict[str, Any],
@@ -250,6 +282,7 @@ def prepare_stats_data(method: CorrelationMethod, coefficient: float,
     Returns:
         Dictionary with all correlation statistics
     """
+
     normality = assumptions.get('normal_distributed')
     if normality is True:
         normality_display = "✓"
@@ -257,6 +290,10 @@ def prepare_stats_data(method: CorrelationMethod, coefficient: float,
         normality_display = "✗"
     else:
         normality_display = "?"
+        
+    # 🔹 Add correlation CI
+    ci_lower, ci_upper = correlation_confidence_interval(coefficient, n, alpha)
+    ci_display = f"[{ci_lower:.3f}, {ci_upper:.4f}]" if ci_lower is not None else "-"
         
     return {
         "method_used": method.value.capitalize(),
@@ -271,7 +308,8 @@ def prepare_stats_data(method: CorrelationMethod, coefficient: float,
         "normality_assumption": normality_display,
         "linearity_assumption": "✓" if assumptions.get('linear_relationship', False) else "✗",
         "outliers_detected": "✓" if assumptions.get('has_outliers', False) else "✗",
-        "pattern_detected": assumptions.get('pattern_type', 'unknown').capitalize()
+        "pattern_detected": assumptions.get('pattern_type', 'unknown').capitalize(),
+        "correlation_CI": ci_display 
     }
 
 

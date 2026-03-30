@@ -1,0 +1,4 @@
+# file: /home/l2s-team/Sites/sixapi/api/correlation/utils.py
+# hypothesis_version: 6.151.9
+
+[0.05, 0.1, 0.2, 0.3, 0.5, 0.6745, 0.7, 1.96, 100, 5000, '?', 'Moderate correlation', 'Strong correlation', 'Weak correlation', 'assumptions', 'clean_data', 'coefficient', 'dataset_name', 'effect_size', 'exponential', 'has_outliers', 'input_data', 'insufficient_data', 'interpretation', 'is_significant', 'linear', 'linear_relationship', 'linearity_assumption', 'metadata', 'method', 'method_used', 'normal_distributed', 'normality_assumption', 'outliers_detected', 'p_value', 'pattern_detected', 'pattern_type', 'project', 'quadratic', 'r_squared', 'red', 'results', 'sample_size', 'significant', 'step', 'timestamp', 'unknown', 'unknown/noisy', 'x', 'x_label', 'x_values', 'y', 'y_label', 'y_values', '✓', '✗']
