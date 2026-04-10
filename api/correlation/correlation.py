@@ -10,7 +10,7 @@ from typing import Tuple, Dict, Any, Optional
 from api.schemas import BusinessLogicException
 from api.charts.constants import FIGURE_SIZE_A4_PORTRAIT, TITLE_FONT_SIZE
 from api.correlation.schemas import CorrelationRequest, CorrelationMethod, CorrelationResult
-
+from api.charts.statistics import add_colored_correlation_table
 from api.correlation.utils import (
     check_normality,
     check_linearity,
@@ -26,7 +26,6 @@ from api.correlation.utils import (
 )
 from api.charts.statistics import (
     StatisticsCalculator,
-    add_correlation_stats_table,
     StatsTableType
 )
 from api.correlation.utils import has_many_ties
@@ -288,86 +287,154 @@ class CorrelationAnalysis:
         return float(coef), float(p_val)
     
 
+    # def _create_visualization(self, x: np.ndarray, y: np.ndarray,
+    #                       method: CorrelationMethod,
+    #                       coefficient: float, p_value: float,
+    #                       assumptions: Dict[str, Any]):
+    #     """
+    #     Create complete visualization with scatter plot and statistics.
+        
+    #     Args:
+    #         x: X values
+    #         y: Y values
+    #         method: Correlation method used
+    #         coefficient: Correlation coefficient
+    #         p_value: P-value
+    #         assumptions: Assumption check results
+    #     """
+    #     # Set style
+    #     sns.set_style("whitegrid")
+    #     self.figure = plt.figure(figsize=FIGURE_SIZE_A4_PORTRAIT)
+        
+    #     # Create a GridSpec with two rows: one for plot, one for stats table
+    #     # Using similar proportions as boxplot (18:3 ratio)
+    #     gs = gridspec.GridSpec(
+    #         2, 1,
+    #         height_ratios=[18, 3],  # Match boxplot ratio
+    #         hspace=0.19 # Minimal space between plot and table
+    #     )
+        
+    #     # Main plot area
+    #     ax = self.figure.add_subplot(gs[0])
+        
+    #     # Hide axes for stats table area (we'll add text table directly to figure)
+    #     table_ax = self.figure.add_subplot(gs[1])
+    #     table_ax.axis("off")
+        
+    #     # Scatter plot
+    #     ax.scatter(x, y, color='#a1d111', marker='x', s=100, alpha=0.6, 
+    #             label=f'Data points (n={len(x)})')
+        
+    #     # Add regression line if configured
+    #     if self.config.show_regression:
+    #         add_regression_line(ax, x, y, self.config.show_confidence_interval)
+        
+    #     # Create title with results
+    #     strength = interpret_strength(coefficient)
+    #     significance = "p < 0.05" if p_value < self.config.alpha else "p ≥ 0.05"
+        
+    #     title_lines = [
+    #         #f"{self.config.title}",
+    #         f"{method.value.capitalize()} | r = {coefficient:.3f} (p = {p_value:.7f})"
+    #         #f"{strength} | {significance}",
+    #         #f"Pattern: {assumptions['pattern_type'].capitalize()}"
+    #     ]
+    #     ax.set_title('\n'.join(title_lines), fontsize=12, pad=20)
+        
+    #     # Labels and grid
+    #     ax.set_xlabel(self.data.x_label or 'X Variable', fontsize=11)
+    #     ax.set_ylabel(self.data.y_label or 'Y Variable', fontsize=11)
+    #     ax.grid(True, alpha=0.3, linestyle='--')
+    #     ax.legend(loc='best', framealpha=0.9)
+        
+    #     # Prepare statistics data for table
+    #     stats_data = prepare_stats_data(  
+    #     method, coefficient, p_value, len(x), assumptions, self.config.alpha
+    # )
+        
+    #     # Add statistics table using unified function
+    #     # add_correlation_stats_table(
+    #     #     figure=self.figure,
+    #     #     stats_data=stats_data,
+    #     #     dataset_name=self.data.dataset_name or "Correlation Analysis",
+    #     #     title="Correlation Statistics",
+    #     #     position=(0.15, 0.08),  # Slightly higher position within the table area
+    #     #     fontsize=9,
+    #     #     color_significant=True,
+    #     #     significant_key="is_significant"
+    #     # )
+    #     add_colored_correlation_table(
+    #         figure=self.figure,
+    #         stats_data=stats_data,
+    #         dataset_name=self.data.dataset_name,
+    #         fontsize=9,
+    #         color_strength=True
+    #     )
+        
+    #     # Don't use tight_layout with rect as it interferes with GridSpec
+    #     # Just do a simple tight_layout
+    #     plt.tight_layout()
     def _create_visualization(self, x: np.ndarray, y: np.ndarray,
                           method: CorrelationMethod,
                           coefficient: float, p_value: float,
                           assumptions: Dict[str, Any]):
         """
-        Create complete visualization with scatter plot and statistics.
-        
-        Args:
-            x: X values
-            y: Y values
-            method: Correlation method used
-            coefficient: Correlation coefficient
-            p_value: P-value
-            assumptions: Assumption check results
+        Create complete visualization with scatter plot and statistics table.
         """
         # Set style
         sns.set_style("whitegrid")
         self.figure = plt.figure(figsize=FIGURE_SIZE_A4_PORTRAIT)
-        
-        # Create a GridSpec with two rows: one for plot, one for stats table
-        # Using similar proportions as boxplot (18:3 ratio)
+
+        # Create a GridSpec with two rows: scatter plot (top), table (bottom)
         gs = gridspec.GridSpec(
             2, 1,
-            height_ratios=[18, 3],  # Match boxplot ratio
-            hspace=0.19 # Minimal space between plot and table
+            height_ratios=[18, 3],  # Main plot taller, table smaller
+            hspace=0.3 # Space between plot and table
         )
-        
-        # Main plot area
-        ax = self.figure.add_subplot(gs[0])
-        
-        # Hide axes for stats table area (we'll add text table directly to figure)
-        table_ax = self.figure.add_subplot(gs[1])
-        table_ax.axis("off")
-        
-        # Scatter plot
-        ax.scatter(x, y, color='#a1d111', marker='x', s=100, alpha=0.6, 
-                label=f'Data points (n={len(x)})')
-        
+
+        # --- Scatter plot area ---
+        ax_scatter = self.figure.add_subplot(gs[0])
+        ax_scatter.scatter(
+            x, y, color='#a1d111', marker='x', s=100, alpha=0.6,
+            label=f'Data points (n={len(x)})'
+        )
+
         # Add regression line if configured
         if self.config.show_regression:
-            add_regression_line(ax, x, y, self.config.show_confidence_interval)
-        
-        # Create title with results
-        strength = interpret_strength(coefficient)
-        significance = "p < 0.05" if p_value < self.config.alpha else "p ≥ 0.05"
-        
+            add_regression_line(ax_scatter, x, y, self.config.show_confidence_interval)
+
+        # Title with correlation results
         title_lines = [
-            #f"{self.config.title}",
             f"{method.value.capitalize()} | r = {coefficient:.3f} (p = {p_value:.7f})"
-            #f"{strength} | {significance}",
-            #f"Pattern: {assumptions['pattern_type'].capitalize()}"
         ]
-        ax.set_title('\n'.join(title_lines), fontsize=12, pad=20)
-        
+        ax_scatter.set_title('\n'.join(title_lines), fontsize=12, pad=20)
+
         # Labels and grid
-        ax.set_xlabel(self.data.x_label or 'X Variable', fontsize=11)
-        ax.set_ylabel(self.data.y_label or 'Y Variable', fontsize=11)
-        ax.grid(True, alpha=0.3, linestyle='--')
-        ax.legend(loc='best', framealpha=0.9)
-        
-        # Prepare statistics data for table
-        stats_data = prepare_stats_data(  
-        method, coefficient, p_value, len(x), assumptions, self.config.alpha
-    )
-        
-        # Add statistics table using unified function
-        add_correlation_stats_table(
-            figure=self.figure,
-            stats_data=stats_data,
-            dataset_name=self.data.dataset_name or "Correlation Analysis",
-            title="Correlation Statistics",
-            position=(0.15, 0.08),  # Slightly higher position within the table area
-            fontsize=9,
-            color_significant=True,
-            significant_key="is_significant"
+        ax_scatter.set_xlabel(self.data.x_label or 'X Variable', fontsize=11)
+        ax_scatter.set_ylabel(self.data.y_label or 'Y Variable', fontsize=11)
+        ax_scatter.grid(True, alpha=0.3, linestyle='--')
+        ax_scatter.legend(loc='best', framealpha=0.9)
+
+        # --- Table area ---
+        ax_table = self.figure.add_subplot(gs[1])
+        ax_table.axis("off")  # Remove axes
+
+        # Prepare statistics data
+        stats_data = prepare_stats_data(
+            method, coefficient, p_value, len(x), assumptions, self.config.alpha
         )
-        
-        # Don't use tight_layout with rect as it interferes with GridSpec
-        # Just do a simple tight_layout
+
+        # Add colored correlation table in the dedicated subplot
+        add_colored_correlation_table(
+            ax=ax_table,                  # ✅ Pass the dedicated axis
+            stats_data=stats_data,
+            fontsize=9,
+            color_strength=True
+        )
+
+        # Ensure layout fits
         plt.tight_layout()
+        
     
     def process(self) -> plt.Figure:
         """

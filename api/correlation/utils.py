@@ -261,7 +261,7 @@ def correlation_confidence_interval(r: float, n: int, alpha: float = 0.05) -> Tu
     """
     Calculate 95% confidence interval for correlation coefficient using Fisher Z.
     """
-    if n < 4:
+    if n < 4 or abs(r) >= 1:
         return None, None
 
     z = np.arctanh(r)
@@ -272,6 +272,7 @@ def correlation_confidence_interval(r: float, n: int, alpha: float = 0.05) -> Tu
     z_upper = z + z_crit * se
 
     return float(np.tanh(z_lower)), float(np.tanh(z_upper))
+
 
 def prepare_stats_data(method: CorrelationMethod, coefficient: float,
                       p_value: float, n: int, assumptions: Dict[str, Any],
@@ -293,7 +294,7 @@ def prepare_stats_data(method: CorrelationMethod, coefficient: float,
         
     # 🔹 Add correlation CI
     ci_lower, ci_upper = correlation_confidence_interval(coefficient, n, alpha)
-    ci_display = f"[{ci_lower:.3f}, {ci_upper:.4f}]" if ci_lower is not None else "-"
+    ci_display = f"[{ci_lower:.3f}, {ci_upper:.3f}]" if ci_lower is not None else "-"
         
     return {
         "method_used": method.value.capitalize(),

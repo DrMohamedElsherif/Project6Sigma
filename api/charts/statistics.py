@@ -9,6 +9,9 @@ import matplotlib.pyplot as plt
 from enum import Enum
 from dataclasses import dataclass, field
 
+############################################# 31.03 - Added color mapping for correlation strength interpretation
+
+##############################################
 class StatsTableType(str, Enum):
     """Types of statistics tables available"""
     DESCRIPTIVE = "descriptive"      # Basic descriptive stats (mean, median, etc.)
@@ -26,7 +29,7 @@ class StatsMetric:
     format: str = "{:.2f}"              # Format string for floats
     condition: Optional[callable] = None  # Optional condition to include metric
     depends_on: Optional[List[str]] = None  # Other metrics this depends on
-
+    
 class StatisticsCalculator:
     """
     Unified statistics calculator that can generate different types of statistical summaries.
@@ -56,7 +59,7 @@ class StatisticsCalculator:
             StatsMetric("correlation_CI", "95% CI", "{}", condition=None),
             StatsMetric("p_value", "p-value", "{:.4f}"),
             StatsMetric("is_significant", "Significant (α=0.05)", "{}"),
-            StatsMetric("strength_interpretation", "Interpretation", "{}"),
+            StatsMetric("strength_interpretation", "Interpretation", "{}"),  
             StatsMetric("r_squared", "R²", "{:.4f}", 
                        condition=lambda d: d.get("method_used") == "pearson"),
             StatsMetric("effect_size", "Effect Size", "{:.3f}"),
@@ -319,19 +322,202 @@ def add_stats_table(
                   edgecolor='lightgray')
     )
 
+            
+
 def add_descriptive_stats_table(figure, stats_data, dataset_name="Dataset", **kwargs):
     """Convenience function for descriptive statistics"""
     return add_stats_table(
         figure, stats_data, StatsTableType.DESCRIPTIVE, dataset_name, **kwargs
     )
 
-def add_correlation_stats_table(figure, stats_data, dataset_name="Correlation Analysis", **kwargs):
-    """Convenience function for correlation statistics"""
-    return add_stats_table(
-        figure, stats_data, StatsTableType.CORRELATION, dataset_name, **kwargs
+# def add_correlation_stats_table(figure, stats_data, dataset_name="Correlation Analysis", **kwargs):
+#     """Convenience function for correlation statistics"""
+#     return add_stats_table(
+#         figure, stats_data, StatsTableType.CORRELATION, dataset_name, **kwargs
+#     )
+import matplotlib.pyplot as plt
+from matplotlib.colors import ListedColormap
+import matplotlib.pyplot as plt
+from matplotlib.colors import ListedColormap
+from typing import Dict, Optional
+
+# def add_colored_correlation_table(
+#     ax: plt.Axes,
+#     stats_data: Dict[str, any],
+#     fontsize: int = 10,
+#     color_strength: bool = True
+# ):
+#     """
+#     Add a two-column matplotlib table with metrics and values,
+#     coloring the 'strength_interpretation' row automatically based on coefficient.
+#     Excludes 'is_significant' row.
+#     """
+#     ax.clear()
+#     ax.axis("off")
+
+#     # Use the order defined in StatsMetric definitions for correlation table
+#     metrics_def = StatisticsCalculator.METRIC_DEFINITIONS[StatsTableType.CORRELATION]
+
+#     table_data = []
+
+#     for metric in metrics_def:
+#         if metric.key == "is_significant":
+#             continue  # Skip this row entirely
+#         value = stats_data.get(metric.key)
+#         table_data.append([metric.label, StatisticsCalculator.format_value(value, metric)])
+
+#     # Create table: Metric | Value
+#     table = ax.table(
+#         cellText=table_data,
+#         colLabels=["Metric", "Value"],
+#         loc='center',
+#         cellLoc='center',
+#         colLoc='center'
+#     )
+
+#     table.auto_set_font_size(False)
+#     table.set_fontsize(fontsize)
+
+#     # Automatic coloring based on coefficient for 'strength_interpretation' row
+#     if color_strength and "coefficient" in stats_data and "strength_interpretation" in stats_data:
+#         coef = stats_data["coefficient"]
+#         abs_coef = abs(coef)
+
+#         # Map correlation strength to color
+#         if abs_coef < 0.3:
+#             color = "#f4cccc"  # Weak → red-ish
+#         elif abs_coef < 0.5:
+#             color = "#ffe599"  # Moderate → yellow
+#         elif abs_coef < 0.7:
+#             color = "#b6d7a8"  # Strong → light green
+#         else:
+#             color = "#6aa84f"  # Very strong → dark green
+
+#         # Loop over all cells to find the "Interpretation" row
+#         for (i, j), cell in table.get_celld().items():
+#             # Only check first column (Metric labels)
+#             if j == 0 and "Interpretation" in str(cell.get_text().get_text()):
+#                 # Color the value cell in the same row
+#                 table[(i, 1)].set_facecolor(color)
+#                 table[(i, 1)].set_text_props(weight='bold')
+
+#     return table
+
+def add_colored_correlation_table(
+    ax: plt.Axes,
+    stats_data: Dict[str, any],
+    fontsize: int = 10,
+    color_strength: bool = True
+):
+    """
+    Compact, professional styled correlation table.
+
+    Improvements:
+    - Fixed column widths (prevents excessive stretching)
+    - Centered values
+    - Compact layout (Power BI style)
+    """
+
+    ax.clear()
+    ax.axis("off")
+
+    # ---- Prepare data ----
+    metrics_def = StatisticsCalculator.METRIC_DEFINITIONS[StatsTableType.CORRELATION]
+
+    table_data = []
+    metric_keys = []
+
+    for metric in metrics_def:
+        if metric.key == "is_significant":
+            continue
+
+        value = stats_data.get(metric.key)
+        formatted = StatisticsCalculator.format_value(value, metric)
+
+        table_data.append([metric.label, formatted])
+        metric_keys.append(metric.key)
+
+    # ---- Create table (IMPORTANT: control width here) ----
+    table = ax.table(
+        cellText=table_data,
+        colLabels=["Metric", "Value"],
+        loc='center',
+        cellLoc='center',   # ✅ center everything by default
+        colLoc='center',
+        colWidths=[0.25, 0.35],              
     )
 
+    table.auto_set_font_size(False)
+    table.set_fontsize(fontsize)
 
+    # Compact scaling (less horizontal stretch, more vertical breathing)
+    table.scale(0.9, 1.4)
+
+
+    # ---- Styling ----
+    header_color = "#2F5597"
+    zebra_light = "#f7f9fc"
+    zebra_white = "#ffffff"
+    text_color = "#222222"
+
+    for (row, col), cell in table.get_celld().items():
+
+        # HEADER
+        if row == 0:
+            cell.set_facecolor(header_color)
+            cell.set_text_props(color="white", weight="bold", ha="center")
+            cell.set_edgecolor(header_color)
+            continue
+
+        # ZEBRA STRIPES
+        cell.set_facecolor(zebra_light if row % 2 == 0 else zebra_white)
+
+        # CLEAN LOOK (no gridlines)
+        cell.set_edgecolor("#ffffff")
+
+        # ALIGNMENT
+        if col == 0:
+            cell.set_text_props(ha='left', color=text_color)
+        else:
+            cell.set_text_props(ha='center', color=text_color)  # ✅ centered values
+
+        # PADDING (tight but readable)
+        cell.PAD = 0.015
+
+    # ---- Helper ----
+    def find_row_index(key_name):
+        return metric_keys.index(key_name) + 1 if key_name in metric_keys else None
+
+    # 🎨 Correlation strength coloring
+    if color_strength and "coefficient" in stats_data:
+        coef = stats_data["coefficient"]
+        abs_coef = abs(coef)
+
+        if abs_coef < 0.3:
+            color = "#f4cccc"
+        elif abs_coef < 0.5:
+            color = "#ffe599"
+        elif abs_coef < 0.7:
+            color = "#d9ead3"
+        else:
+            color = "#93c47d"
+
+        row_idx = find_row_index("strength_interpretation")
+        if row_idx:
+            table[(row_idx, 1)].set_facecolor(color)
+            table[(row_idx, 1)].set_text_props(weight='bold')
+
+    # 🎯 p-value coloring
+    if "p_value" in stats_data:
+        p_val = stats_data["p_value"]
+        row_idx = find_row_index("p_value")
+
+        if row_idx:
+            table[(row_idx, 1)].set_facecolor(
+                "#d9ead3" if p_val < 0.05 else "#f4cccc"
+            )
+
+    return table
 
 
 

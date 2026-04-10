@@ -1,3 +1,5 @@
+# charts_router.py
+
 from fastapi import APIRouter
 
 from .capability.capability_router import router as capability_router
