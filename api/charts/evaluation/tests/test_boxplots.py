@@ -60,7 +60,7 @@ BASE_DATASETS = {
                 "winter": [5.1, 4.8, 5.3, 4.9, 5.2, 5.0, 4.7, 5.4, 5.1, 4.6,
                            5.2, 5.0, 4.8, 5.3, 4.7, 5.2, 5.4, 4.6, 5.1, 4.9]
             },
-            "categories": {"Group": ["X"]*20 + ["Y"]*20}  # ensure faceted_by_group has categories
+            "categories": {"Group": ["X"]*20}  # ensure faceted_by_group has categories
         }
     ],
     "multipanel_columns": [
@@ -193,8 +193,10 @@ def test_unknown_variant_raises_error():
     exc = exc_info.value
     assert exc.error_code == "error_validation"
     assert "does_not_exist" in exc.details["message"]
+    
+    
 
-
+###################### BELOW OS THE OLD UNREFACTORED CODE, IGNORE ######################
 # import pytest
 # import math
 # import os  
