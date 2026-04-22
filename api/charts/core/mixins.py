@@ -1,5 +1,7 @@
 # /api/charts/core/mixins.py
 
+
+
 from api.charts.statistics import StatisticsCalculator
 
 class StatisticsMixin:

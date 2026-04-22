@@ -9,7 +9,8 @@ import matplotlib.pyplot as plt
 from enum import Enum
 from dataclasses import dataclass, field
 
-############################################# 31.03 - Added color mapping for correlation strength interpretation
+from api.charts.core.table_builder import TableBuilder
+from api.charts.core.table_styling import DEFAULT_TABLE_STYLE
 
 ##############################################
 class StatsTableType(str, Enum):
@@ -244,62 +245,49 @@ class StatisticsCalculator:
             
             return [header] + rows
 
+
 def add_stats_table(
     figure: plt.Figure,
     stats_data: Union[Dict[str, Any], Dict[str, Dict[str, Any]]],
     table_type: StatsTableType = StatsTableType.DESCRIPTIVE,
     dataset_name: str = "Dataset",
     title: Optional[str] = None,
-    position: Tuple[float, float] = (0.13, 0.02),
+    position: Optional[Tuple[float, float]] = None,
     fontsize: int = 9,
     col_widths: Optional[List[float]] = None,
     include_metrics: Optional[List[str]] = None,
     color_significant: bool = False,
-    significant_key: str = "is_significant"
+    significant_key: str = "is_significant",
+    auto_position: bool = True
 ) -> None:
     """
     Unified function to add statistics tables to matplotlib figures.
     
     Args:
-        figure: Figure to add table to
-        stats_data: Statistics dictionary or dict of column_name -> stats dict
-        table_type: Type of statistics table
-        dataset_name: Name of the dataset
-        title: Optional table title (overrides default)
-        position: (x, y) position in figure coordinates
-        fontsize: Font size for table
-        col_widths: Custom column widths
-        include_metrics: Optional list of metric keys to include
-        color_significant: Whether to color significant rows
-        significant_key: Key to check for significance
+        auto_position: If True, automatically positions table below plots.
+                      If False, uses manual position parameter.
     """
-    x_pos, y_pos = position
     
-    # Prepare table data
+    # Prepare table data (same as before)
     table_data = StatisticsCalculator.prepare_table_data(
         stats_data, table_type, include_metrics
     )
     
-    # Build table text
+    # Build table text (same as before)
     table_lines = []
-    
-    # Add title
     if title:
         table_lines.append(f"{title}")
     else:
         table_lines.append(f"Dataset: {dataset_name}")
     
-    # Add header separator
     n_cols = len(table_data[0])
-    col_width = 14  # Default width
+    col_width = 14
     table_lines.append("-" * (col_width * n_cols))
     
-    # Format header
     header = table_data[0]
     table_lines.append("  ".join(f"{h:<{col_width-2}}" for h in header))
     table_lines.append("-" * (col_width * n_cols))
     
-    # Add data rows
     for row in table_data[1:]:
         formatted_row = []
         for i, cell in enumerate(row):
@@ -308,6 +296,17 @@ def add_stats_table(
             else:
                 formatted_row.append(f"{cell:>{col_width-2}}")
         table_lines.append("  ".join(formatted_row))
+    
+    # Position the table
+    if auto_position and position is None:
+        # Auto-position
+        x_pos, y_pos = TablePositioner.calculate_table_position(figure)
+    elif position is not None:
+        # Manual position (backward compatible)
+        x_pos, y_pos = position
+    else:
+        # Default position
+        x_pos, y_pos = (0.13, 0.02)
     
     # Render table
     figure.text(
@@ -318,90 +317,79 @@ def add_stats_table(
         fontfamily="monospace",
         verticalalignment="bottom",
         transform=figure.transFigure,
-        bbox=dict(boxstyle="round", facecolor="white", alpha=0.85, 
+        bbox=dict(boxstyle="round", facecolor="white", alpha=0.95, 
                   edgecolor='lightgray')
     )
 
-            
 
-def add_descriptive_stats_table(figure, stats_data, dataset_name="Dataset", **kwargs):
-    """Convenience function for descriptive statistics"""
-    return add_stats_table(
-        figure, stats_data, StatsTableType.DESCRIPTIVE, dataset_name, **kwargs
+def add_descriptive_stats_table(
+    figure, 
+    stats_data, 
+    dataset_name="Dataset", 
+    table_ax=None, 
+    title_top_margin=None,  # Now optional
+    style=None,  # Allow custom styling
+    **kwargs
+):
+    """Add statistics table using a dedicated axis - DRY implementation"""
+    
+    if style is None:
+        style = DEFAULT_TABLE_STYLE
+    
+    if title_top_margin is None:
+        title_top_margin = style.title_top_margin
+    
+    if table_ax is None:
+        table_ax = figure.add_axes([0.1, 0.02, 0.8, 0.15])
+    
+    # Clear and setup axis
+    table_ax.clear()
+    table_ax.axis('off')
+    table_ax.set_frame_on(False)
+    
+    # Add title
+    table_ax.text(
+        0.5, title_top_margin,
+        f"Statistics: {dataset_name}",
+        transform=table_ax.transAxes, ha='center', va='top',
+        fontsize=style.title_fontsize, fontweight='bold'
     )
+    
+    # Build table data (DRY - single method)
+    is_multi_column = all(isinstance(v, dict) for v in stats_data.values()) if isinstance(stats_data, dict) else False
+    table_data = TableBuilder.build_table_data(stats_data, is_multi_column)
+    
+    # Create table with appropriate column widths
+    if is_multi_column:
+        n_cols = len(table_data[0])
+        col_widths = [style.multi_col_metric_width] + [(1 - style.multi_col_metric_width) / (n_cols - 1)] * (n_cols - 1)
+        cell_loc = 'center'
+    else:
+        col_widths = [style.single_col_widths['metric'], style.single_col_widths['value']]
+        cell_loc = 'left'
+    
+    table = table_ax.table(
+        cellText=table_data,
+        loc='center',
+        cellLoc=cell_loc,
+        colWidths=col_widths
+    )
+    
+    # Apply consistent styling
+    TableBuilder.style_table(table, table_data, style)
+    
+    return table
+
 
 # def add_correlation_stats_table(figure, stats_data, dataset_name="Correlation Analysis", **kwargs):
 #     """Convenience function for correlation statistics"""
 #     return add_stats_table(
 #         figure, stats_data, StatsTableType.CORRELATION, dataset_name, **kwargs
 #     )
-import matplotlib.pyplot as plt
-from matplotlib.colors import ListedColormap
+
 import matplotlib.pyplot as plt
 from matplotlib.colors import ListedColormap
 from typing import Dict, Optional
-
-# def add_colored_correlation_table(
-#     ax: plt.Axes,
-#     stats_data: Dict[str, any],
-#     fontsize: int = 10,
-#     color_strength: bool = True
-# ):
-#     """
-#     Add a two-column matplotlib table with metrics and values,
-#     coloring the 'strength_interpretation' row automatically based on coefficient.
-#     Excludes 'is_significant' row.
-#     """
-#     ax.clear()
-#     ax.axis("off")
-
-#     # Use the order defined in StatsMetric definitions for correlation table
-#     metrics_def = StatisticsCalculator.METRIC_DEFINITIONS[StatsTableType.CORRELATION]
-
-#     table_data = []
-
-#     for metric in metrics_def:
-#         if metric.key == "is_significant":
-#             continue  # Skip this row entirely
-#         value = stats_data.get(metric.key)
-#         table_data.append([metric.label, StatisticsCalculator.format_value(value, metric)])
-
-#     # Create table: Metric | Value
-#     table = ax.table(
-#         cellText=table_data,
-#         colLabels=["Metric", "Value"],
-#         loc='center',
-#         cellLoc='center',
-#         colLoc='center'
-#     )
-
-#     table.auto_set_font_size(False)
-#     table.set_fontsize(fontsize)
-
-#     # Automatic coloring based on coefficient for 'strength_interpretation' row
-#     if color_strength and "coefficient" in stats_data and "strength_interpretation" in stats_data:
-#         coef = stats_data["coefficient"]
-#         abs_coef = abs(coef)
-
-#         # Map correlation strength to color
-#         if abs_coef < 0.3:
-#             color = "#f4cccc"  # Weak → red-ish
-#         elif abs_coef < 0.5:
-#             color = "#ffe599"  # Moderate → yellow
-#         elif abs_coef < 0.7:
-#             color = "#b6d7a8"  # Strong → light green
-#         else:
-#             color = "#6aa84f"  # Very strong → dark green
-
-#         # Loop over all cells to find the "Interpretation" row
-#         for (i, j), cell in table.get_celld().items():
-#             # Only check first column (Metric labels)
-#             if j == 0 and "Interpretation" in str(cell.get_text().get_text()):
-#                 # Color the value cell in the same row
-#                 table[(i, 1)].set_facecolor(color)
-#                 table[(i, 1)].set_text_props(weight='bold')
-
-#     return table
 
 def add_colored_correlation_table(
     ax: plt.Axes,
@@ -518,178 +506,3 @@ def add_colored_correlation_table(
             )
 
     return table
-
-
-
-# # api/charts/statistics.py
-
-# import numpy as np
-# import pandas as pd
-# from scipy import stats
-# from api.schemas import BusinessLogicException
-# from typing import Dict, Any
-# import matplotlib.pyplot as plt
-
-
-# def calculate_descriptive_stats(data: pd.Series, column_name: str = "") -> Dict[str, Any]:
-#     """
-#     Berechnet deskriptive Statistiken für eine Datenreihe.
-    
-#     Args:
-#         data: Pandas Series mit numerischen Werten
-#         column_name: Name der Spalte für Ausgabe
-        
-#     Returns:
-#         Dictionary mit statistischen Kennzahlen
-        
-#     Raises:
-#         BusinessLogicException: Bei ungültigen Daten
-#     """
-#     try:
-#         clean_data = data.dropna()
-#         n = len(clean_data)
-
-#         # Validate dataset size
-#         if n == 0:
-#             raise BusinessLogicException(
-#                 error_code="error_validation",
-#                 field="data",
-#                 details={"message": "Dataset contains only NaN values or is empty"}
-#             )
-        
-#         if n == 1:
-#             raise BusinessLogicException(
-#                 error_code="error_validation",
-#                 field="data",
-#                 details={
-#                     "message": "At least two valid data points are required to calculate statistics"
-#                 }
-#             )
-#         # Compute basic statistics       
-#         average = np.mean(clean_data)
-#         median = np.median(clean_data)
-#         minimum = np.min(clean_data)
-#         maximum = np.max(clean_data)
-#         std_dev = np.std(clean_data, ddof=1)
-
-#         q1 = np.percentile(clean_data, 25)
-#         q3 = np.percentile(clean_data, 75)
-#         iqr = q3 - q1
-
-#         ci_lower, ci_upper = stats.t.interval(
-#             confidence=0.95,
-#             df=n-1,
-#             loc=average,
-#             scale=std_dev/np.sqrt(n)
-#         )
-
-#         # Return all metrics in a dictionary
-#         return {
-#             "column_name": column_name,
-#             "n": n,
-#             "average": float(average),
-#             "median": float(median),
-#             "min": float(minimum),
-#             "max": float(maximum),
-#             "range": f"{minimum:.2f} - {maximum:.2f}",
-#             "standard_deviation": float(std_dev),
-#             "ci_95_lower": float(ci_lower),
-#             "ci_95_upper": float(ci_upper),
-#             "ci_95": f"[{ci_lower:.2f}, {ci_upper:.2f}]",
-#             "q1": float(q1),
-#             "q3": float(q3),
-#             "iqr": float(iqr)
-#         }
-
-#     except BusinessLogicException:
-#         raise
-#     except ValueError as e:
-#         # Non-numeric or invalid data
-#         raise BusinessLogicException(
-#             error_code="error_validation",
-#             field=column_name or "data",
-#             details={"message": f"Invalid numeric data: {str(e)}"}
-#         )
-#     except Exception as e:
-#         # Catch-all for unexpected errors
-#         raise BusinessLogicException(
-#             error_code="error_calculation",
-#             field="statistics",
-#             details={"message": f"Unexpected error calculating statistics: {str(e)}"}
-#         )
-        
-# def add_stats_table(
-#     figure,
-#     stats_data: Dict[str, Any],
-#     dataset_name: str = "Dataset",
-#     position: tuple = (0.13, 0.02),
-#     fontsize: int = 9
-# ) -> None:
-#     """
-#     Adds a statistics table to a Matplotlib figure.
-
-#     The table is column-oriented, with each dataset column displayed side-by-side.
-#     Common metrics such as n, average, median, range, std deviation, quartiles, IQR,
-#     and 95% confidence interval are included.
-
-#     Args:
-#         figure (matplotlib.figure.Figure): Figure to add the table to.
-#         stats_data (dict): Dictionary with statistics per column (output of calculate_descriptive_stats).
-#         dataset_name (str): Optional name of the dataset for labeling.
-#         position (tuple): (x, y) coordinates for the table's lower-left corner in figure coordinates.
-#         fontsize (int): Font size for the table text.
-
-#     Returns:
-#         None: Modifies the figure in-place.
-#     """
-#     x_pos, y_pos = position
-
-#     # Define metrics to include in the table
-#     metrics = [
-#         ("n", "n"),
-#         ("average", "Average"),
-#         ("median", "Median"),
-#         ("range", "Range"),
-#         ("standard_deviation", "Std Dev"),
-#         ("ci_95", "95% CI"),
-#         ("q1", "Q1"),
-#         ("q3", "Q3"),
-#         ("iqr", "IQR"),
-#     ]
-
-#     column_names = list(stats_data.keys())
-
-#     # Build table header and separator lines
-#     header = ["Metric"] + column_names
-#     table_lines = [
-#         f"Dataset: {dataset_name}",
-#         "-" * (14 * (len(column_names) + 1)),
-#         "  ".join(f"{h:<12}" for h in header),
-#         "-" * (14 * (len(column_names) + 1)),
-#     ]
-
-#     # Build table rows
-#     for key, label in metrics:
-#         row = [f"{label:<12}"]
-#         for col in column_names:
-#             value = stats_data[col].get(key, "")
-#             if isinstance(value, float):
-#                 row.append(f"{value:<12.2f}")
-#             else:
-#                 row.append(f"{str(value):<12}")
-#         table_lines.append("  ".join(row))
-
-#     # Render the table as text on the figure
-#     figure.text(
-#         x_pos,
-#         y_pos,
-#         "\n".join(table_lines),
-#         fontsize=fontsize,
-#         fontfamily="monospace",
-#         verticalalignment="bottom",
-#         transform=figure.transFigure,
-#         bbox=dict(boxstyle="round", facecolor="white", alpha=0.85)
-#     )
-    
-    
-

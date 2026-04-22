@@ -18,38 +18,6 @@ async def generate_histogram(request: dict):
     from .histogram import Histogram
     return await generate_chart(request, Histogram, "error_processing")
 
-
-# Histogram endpoints
-# @router.post("/histogram1")
-# async def generate_histogram1(request: dict):
-#     from .histogram1 import Histogram1
-#     return await generate_chart(request, Histogram1, "error_processing")
-
-
-# @router.post("/histogram2")
-# async def generate_histogram2(request: dict):
-#     from .histogram2 import Histogram2
-#     return await generate_chart(request, Histogram2, "error_processing")
-
-
-# @router.post("/histogram3")
-# async def generate_histogram3(request: dict):
-#     from .histogram3 import Histogram3
-#     return await generate_chart(request, Histogram3, "error_processing")
-
-
-# @router.post("/histogram4")
-# async def generate_histogram4(request: dict):
-#     from .histogram4 import Histogram4
-#     return await generate_chart(request, Histogram4, "error_processing")
-
-
-# @router.post("/histogram5")
-# async def generate_histogram5(request: dict):
-#     from .histogram5 import Histogram5
-#     return await generate_chart(request, Histogram5, "error_processing")
-
-
 # Individual endpoints
 @router.post("/individual1")
 async def generate_individual1(request: dict):

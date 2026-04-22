@@ -1,4 +1,8 @@
+
+
 # api/charts/evaluation/histogram.py
+
+
 
 from api.charts.core.base_chart import BaseChart
 from api.charts.evaluation.histogram_schemas import HistogramRequest
@@ -7,6 +11,9 @@ from api.charts.core.styling import draw_histogram
 class Histogram(BaseChart):
 
     request_model = HistogramRequest
+    
+    # Add class constant for title margin (narrow gap)
+    DEFAULT_TITLE_TOP_MARGIN = 0.92  # Narrow gap between title and table
 
     def process(self):
         df = self.get_dataframe()
@@ -28,9 +35,11 @@ class Histogram(BaseChart):
         else:
             raise ValueError(f"Unsupported histogram mode: {mode}")
 
+        # Pass the title_top_margin parameter!
         return self.finalize(
             add_stats=self.config.show_stats,
-            dataset_name="Histogram Data"
+            dataset_name="Histogram Data",
+            title_top_margin=self.DEFAULT_TITLE_TOP_MARGIN  # ← ADD THIS
         )
 
     # ----------------------------
@@ -38,12 +47,22 @@ class Histogram(BaseChart):
     # ----------------------------
 
     def _single(self, df):
-        ax = self.create_figure(layout="single")[0]
+        # Create figure with table space only if stats are shown
+        if self.config.show_stats:
+            ax = self.create_figure(
+                layout="single", 
+                with_table=True,
+                table_height=self.DEFAULT_TABLE_HEIGHT,
+                table_gap=self.DEFAULT_TABLE_GAP
+            )[0]
+        else:
+            ax = self.create_figure(layout="single")[0]
 
         draw_histogram(
             ax,
-            df.iloc[:, 0],
-            bins=self.config.bins
+            df,
+            bins=self.config.bins,
+            x=df.columns[0]
         )
 
         ax.set_title(self.config.title)
@@ -51,7 +70,16 @@ class Histogram(BaseChart):
         ax.set_ylabel(self.config.labely)
 
     def _stacked(self, df):
-        ax = self.create_figure(layout="single")[0]
+        # Create figure with table space only if stats are shown
+        if self.config.show_stats:
+            ax = self.create_figure(
+                layout="single", 
+                with_table=True,
+                table_height=self.DEFAULT_TABLE_HEIGHT,
+                table_gap=self.DEFAULT_TABLE_GAP
+            )[0]
+        else:
+            ax = self.create_figure(layout="single")[0]
 
         melted = df.melt(var_name="variable", value_name="value")
 
@@ -71,11 +99,22 @@ class Histogram(BaseChart):
         cols = 2
         rows = (n + 1) // 2
 
-        axes = self.create_figure(
-            layout="multipanel",
-            rows=rows,
-            cols=cols
-        )
+        # Create figure with table space only if stats are shown
+        if self.config.show_stats:
+            axes = self.create_figure(
+                layout="multipanel",
+                rows=rows,
+                cols=cols,
+                with_table=True,
+                table_height=self.DEFAULT_TABLE_HEIGHT,
+                table_gap=self.DEFAULT_TABLE_GAP
+            )
+        else:
+            axes = self.create_figure(
+                layout="multipanel",
+                rows=rows,
+                cols=cols
+            )
 
         for ax, col in zip(axes, df.columns):
             draw_histogram(
@@ -87,132 +126,7 @@ class Histogram(BaseChart):
             ax.set_title(col)
             ax.set_xlabel(self.config.labelx)
             ax.set_ylabel(self.config.labely)
-
-
-
-
-
-##############################################################################################################################
-# # api/charts/evaluation/histogram.py
-
-# import matplotlib.pyplot as plt
-# from api.charts.core.styling import style_axis
-# from api.charts.constants import COLOR_BLACK, COLOR_PALETTE
-# from .base_histogram import BaseHistogram
-# from api.charts.statistics import (
-#     add_descriptive_stats_table
-# )
-
-# class Histogram(BaseHistogram):
-
-#     def process(self):
-#         df = self.get_dataframe()
-
-#         # Calculate statistics FIRST
-#         #self._compute_statistics(df)
-#         self.statistics = self.compute_statistics(df)
-
-#         mode = self.config.mode
-
-#         if mode == "single":
-#             self._plot_single(df)
-
-#         elif mode == "stacked":
-#             self._plot_stacked(df)
-
-#         elif mode == "subplots":
-#             self._plot_subplots(df)
-
-#         else:
-#             raise ValueError(f"Unsupported histogram mode: {mode}")
-
-#         # OPTIONAL: draw table
-#         if self.config.show_stats:
-#             add_descriptive_stats_table(
-#                 self.figure,
-#                 self.statistics if len(self.statistics) > 1 else list(self.statistics.values())[0],
-#                 dataset_name="Histogram Data"
-#             )
-
-#         # return self._finalize()
-#         return self.finalize(add_stats=self.config.show_stats)
-
-#     # -----------------------------------
-#     # Histogram Variants
-#     # -----------------------------------
-
-#     def _plot_single(self, df):
-#         fig, ax = self._setup_figure()
-#         self.figure = fig
-
-#         data = df.iloc[:, 0]
-
-#         ax.hist(
-#             data,
-#             bins=self.config.bins,
-#             color=COLOR_PALETTE[0],
-#             edgecolor=COLOR_BLACK,
-#             zorder=3
-#         )
-
-#         self._apply_title(ax)
-
-#     def _plot_stacked(self, df):
-#         fig, ax = self._setup_figure()
-#         self.figure = fig
-
-#         data = [df[col].values for col in df.columns]
-#         colors = COLOR_PALETTE[:len(data)]
-
-#         ax.hist(
-#             data,
-#             bins=self.config.bins,
-#             stacked=True,
-#             histtype="barstacked",
-#             edgecolor=COLOR_BLACK,
-#             color=colors,
-#             label=df.columns.tolist(),
-#             zorder=3
-#         )
-
-#         ax.legend(loc="best")
-
-#         self._apply_title(ax)
-
-#     def _plot_subplots(self, df):
-#         num_cols = 2
-#         num_datasets = len(df.columns)
-#         num_rows = (num_datasets + 1) // 2
-
-#         fig, axes = plt.subplots(
-#             num_rows,
-#             num_cols,
-#             figsize=(11.69, num_rows * 5),
-#             squeeze=False
-#         )
-
-#         self.figure = fig
-
-#         for i, col in enumerate(df.columns):
-#             row = i // num_cols
-#             col_idx = i % num_cols
-
-#             ax = axes[row, col_idx]
-
-#             ax.hist(
-#                 df[col],
-#                 bins=self.config.bins,
-#                 color=COLOR_PALETTE[i],
-#                 edgecolor=COLOR_BLACK,
-#                 zorder=3
-#             )
-
-#             ax.set_title(col)
-#             # ax.grid(True)
-#             style_axis(ax)
-
-#         # Remove empty subplot if odd
-#         if num_datasets % 2 != 0:
-#             fig.delaxes(axes[-1, -1])
-
-#         fig.suptitle(self.config.title)
+            
+        # Remove unused subplots
+        for ax in axes[len(df.columns):]:
+            ax.remove()
