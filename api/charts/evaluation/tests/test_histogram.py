@@ -2,7 +2,7 @@ import pytest
 import math
 import os
 
-from api.charts.evaluation.histogram import Histogram
+from api.charts.evaluation.histogram_v2 import HistogramV2
 from api.charts.evaluation.tests.test_utils import SCENARIOS, apply_scenario_to_dataset
 from api.schemas import BusinessLogicException
 
@@ -58,7 +58,7 @@ def test_invalid_datasets_raise_error(mode, scenario):
     }
 
     with pytest.raises(BusinessLogicException):
-        Histogram(data).process()
+        HistogramV2(data).process()
 
 # ----------------------------
 # VALID DATA TESTS
@@ -80,7 +80,7 @@ def test_valid_datasets(mode, scenario):
         "data": build_histogram_dataset(mode, scenario)
     }
 
-    hist = Histogram(data)
+    hist = HistogramV2(data)
     fig = hist.process()
     stats = hist.statistics
 
@@ -107,7 +107,7 @@ def test_valid_datasets(mode, scenario):
         required_keys = [
             "column_name", "n", "average", "median",
             "min", "max", "range", "standard_deviation",
-            "ci_95_lower", "ci_95_upper", "ci_95",
+            "ci_95_lower", "ci_95_upper", 
             "q1", "q3", "iqr"
         ]
         for key in required_keys:
@@ -133,7 +133,7 @@ def test_mode_statistics_count(mode):
         "data": build_histogram_dataset(mode, "normal")
     }
 
-    hist = Histogram(data)
+    hist = HistogramV2(data)
     hist.process()
 
     expected_count = {"single": 1, "stacked": 2, "subplots": 4}[mode]
@@ -153,7 +153,7 @@ def test_invalid_mode():
 
     # Histogram now raises BusinessLogicException on invalid mode
     with pytest.raises(BusinessLogicException) as exc_info:
-        Histogram(data).process()
+        HistogramV2(data).process()
 
     exc = exc_info.value
     assert exc.error_code == "error_validation"

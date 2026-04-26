@@ -3,7 +3,7 @@ import pytest
 import math
 import os
 
-from api.charts.evaluation.boxplot import Boxplot
+from api.charts.evaluation.boxplot_v2 import BoxplotV2 
 from api.charts.evaluation.tests.test_utils import SCENARIOS, apply_scenario_to_dataset
 from api.schemas import BusinessLogicException
 import matplotlib.pyplot as plt
@@ -112,7 +112,7 @@ def test_invalid_datasets_raise_error(variant, scenario):
             "data": dataset
         }
         with pytest.raises(BusinessLogicException):
-            Boxplot(data).process()
+            BoxplotV2(data).process()
 
 # ----------------------------
 # VALID DATASETS TEST
@@ -133,7 +133,7 @@ def test_valid_datasets_compute_stats(variant, scenario):
             "data": dataset
         }
 
-        boxplot_instance = Boxplot(data)
+        boxplot_instance = BoxplotV2(data)
         fig = boxplot_instance.process()  # generate figure
         stats = boxplot_instance.statistics  # table/statistics
 
@@ -179,7 +179,7 @@ def test_faceted_by_group_requires_categories():
         "data": dataset
     }
     with pytest.raises(ValueError):
-        Boxplot(data).process()
+        BoxplotV2(data).process()
 
 def test_unknown_variant_raises_error():
     data = {
@@ -189,7 +189,7 @@ def test_unknown_variant_raises_error():
         "data": {"dataset_name": "Dataset", "values": {"A": [1, 2, 3]}}
     }
     with pytest.raises(BusinessLogicException) as exc_info:
-        Boxplot(data).process()
+        BoxplotV2(data).process()
     exc = exc_info.value
     assert exc.error_code == "error_validation"
     assert "does_not_exist" in exc.details["message"]
