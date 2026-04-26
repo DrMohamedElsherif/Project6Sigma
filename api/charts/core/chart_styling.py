@@ -1,5 +1,5 @@
 
-# api/charts/core/styling.py
+# api/charts/core/chart_styling.py
 
 import seaborn as sns
 

@@ -4,9 +4,9 @@ Migrated boxplot using new architecture.
 Keep old boxplot.py for backward compatibility.
 """
 import pandas as pd
-from api.charts.core.base_chart_compat import BaseChartV2
+from api.charts.core.base_chartv2 import BaseChartV2
 from api.charts.evaluation.boxplot_schemas import BoxplotRequest
-from api.charts.core.styling import draw_boxplot
+from api.charts.core.chart_styling import draw_boxplot
 
 
 class BoxplotV2(BaseChartV2):

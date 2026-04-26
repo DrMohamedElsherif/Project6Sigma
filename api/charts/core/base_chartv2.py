@@ -1,7 +1,5 @@
 # api/charts/core/base_chart_compat.py
-"""
-Backward compatibility layer - NO dependencies on old statistics.py
-"""
+
 import pandas as pd
 import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
@@ -18,7 +16,6 @@ from api.charts.core.table.table_renderer import TableRenderer
 class BaseChartV2(StatisticsMixin):
     """
     BaseChart implementation with modular architecture.
-    NO dependencies on old statistics.py
     """
     
     request_model = None  

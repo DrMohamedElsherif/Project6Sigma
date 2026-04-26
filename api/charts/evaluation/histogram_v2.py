@@ -6,9 +6,9 @@ Migrated histogram using new architecture.
 Keep old histogram.py for backward compatibility.
 """
 # from api.charts.core.base_chart import BaseChart 
-from api.charts.core.base_chart_compat import BaseChartV2
+from api.charts.core.base_chartv2 import BaseChartV2
 from api.charts.evaluation.histogram_schemas import HistogramRequest
-from api.charts.core.styling import draw_histogram
+from api.charts.core.chart_styling import draw_histogram
 
 class HistogramV2(BaseChartV2):
     """Histogram with new architecture - better table handling"""
